@@ -5,6 +5,9 @@ on:
     - cron: '0 21 * * *'   # 3:00 PM CDMX
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   publicar:
     runs-on: ubuntu-latest
