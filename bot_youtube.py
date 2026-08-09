@@ -20,11 +20,6 @@ AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("YOUTUBE_USER_TOKEN") else {}
 
 # ================================================================
-# ID DEL CANAL "Sombras de Medianoche Terror" (FORZADO)
-# ================================================================
-CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"  # <-- ID DE TU CANAL
-
-# ================================================================
 # LIMPIAR PROMPTS PARA EVITAR ERRORES 400 EN AGNES
 # ================================================================
 def limpiar_prompt(prompt):
@@ -37,23 +32,26 @@ def limpiar_prompt(prompt):
     return prompt.strip()[:500]
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON DE DEEPSEEK
+# LIMPIAR RESPUESTA JSON DE DEEPSEEK (MEJORADO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r'```json\s*', '', respuesta)
     respuesta = re.sub(r'```\s*', '', respuesta)
     inicio = respuesta.find('{')
-    fin = respuesta.rfind('}')
-    if inicio != -1 and fin != -1:
-        json_str = respuesta[inicio:fin+1]
-        json_str = re.sub(r',\s*}', '}', json_str)
-        json_str = re.sub(r',\s*\]', ']', json_str)
-        json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
-        return json_str
-    return respuesta
+    if inicio == -1:
+        return respuesta
+    json_str = respuesta[inicio:]
+    fin = json_str.rfind('}')
+    if fin != -1:
+        json_str = json_str[:fin+1]
+    json_str = re.sub(r',\s*}', '}', json_str)
+    json_str = re.sub(r',\s*\]', ']', json_str)
+    json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
+    json_str = re.sub(r'(?<=")([^"]*)\n([^"]*)(?=")', r'\1 \2', json_str)
+    return json_str
 
 # ================================================================
-# GENERAR FALLBACK (para cuando el JSON de DeepSeek falla)
+# GENERAR FALLBACK
 # ================================================================
 def generar_fallback(respuesta):
     print("⚠️ Usando fallback: generando estructura básica desde el texto.")
@@ -156,7 +154,7 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
         return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI (con pausas largas)
+# GENERAR IMAGEN CON AGNES AI
 # ================================================================
 def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     prompt_limpio = limpiar_prompt(prompt)
@@ -186,11 +184,11 @@ def generar_audio(texto, index, intentos=4):
     headers = {
         "Ocp-Apim-Subscription-Key": AZURE_TTS_KEY,
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3"  # Mejor calidad
+        "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3"
     }
     ssml = f"""
     <speak version="1.0" xml:lang="es-MX">
-        <voice name="es-MX-BeatrizNeural">  <!-- Voz más natural -->
+        <voice name="es-MX-BeatrizNeural">
             <prosody rate="0.9" pitch="0%">
                 {texto_limpio}
             </prosody>
@@ -261,7 +259,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (FORZANDO EL CANAL ESPECÍFICO, SIN FALLBACK)
+# SUBIR A YOUTUBE (SIN onBehalfOfContentOwner)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -286,17 +284,16 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     
-    # 🔑 FORZAR EL CANAL "Sombras de Medianoche Terror" (SIN FALLBACK)
+    # 🔑 SIN onBehalfOfContentOwner - el token determina el canal
     request = youtube.videos().insert(
         part="snippet,status",
         body=body,
-        media_body=media,
-        onBehalfOfContentOwner=CANAL_ID_SOMBRAS
+        media_body=media
     )
     response = request.execute()
     
     video_id = response['id']
-    print(f"✅ Video subido a Sombras de Medianoche: https://youtu.be/{video_id}")
+    print(f"✅ Video subido correctamente: https://youtu.be/{video_id}")
     
     if miniatura_path and os.path.exists(miniatura_path):
         try:
