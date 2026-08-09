@@ -37,17 +37,25 @@ def limpiar_prompt(prompt):
     return prompt.strip()[:500]
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON DE DEEPSEEK
+# LIMPIAR RESPUESTA JSON DE DEEPSEEK (MEJORADO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
+    # Eliminar bloques de código markdown
     respuesta = re.sub(r'```json\s*', '', respuesta)
     respuesta = re.sub(r'```\s*', '', respuesta)
+    
+    # Buscar la primera llave y la última llave de cierre
     inicio = respuesta.find('{')
     fin = respuesta.rfind('}')
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio:fin+1]
-        return json_str.strip()
-    return respuesta.strip()
+        # Eliminar comas finales en objetos y arrays
+        json_str = re.sub(r',\s*}', '}', json_str)
+        json_str = re.sub(r',\s*\]', ']', json_str)
+        # Asegurar que las claves tengan comillas dobles
+        json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
+        return json_str
+    return respuesta
 
 # ================================================================
 # GENERAR FALLBACK
@@ -247,7 +255,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (FORZANDO EL CANAL CORRECTO)
+# SUBIR A YOUTUBE (con fallback)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -272,17 +280,31 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     
-    # 🔑 FORZAR EL CANAL "Sombras de Medianoche Terror"
-    request = youtube.videos().insert(
-        part="snippet,status",
-        body=body,
-        media_body=media,
-        onBehalfOfContentOwnerChannel=CANAL_ID_SOMBRAS
-    )
-    response = request.execute()
+    # Intentar subir usando onBehalfOfContentOwner (para canales de marca)
+    try:
+        request = youtube.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media,
+            onBehalfOfContentOwner=CANAL_ID_SOMBRAS
+        )
+        response = request.execute()
+        print("✅ Video subido con onBehalfOfContentOwner (canal: Sombras de Medianoche)")
+    except Exception as e:
+        print(f"⚠️ Falló con onBehalfOfContentOwner: {e}")
+        # Fallback: subir sin parámetro (al canal principal)
+        request = youtube.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media
+        )
+        response = request.execute()
+        print("✅ Video subido al canal principal (fallback)")
+    
     video_id = response['id']
     print(f"✅ Video subido: https://youtu.be/{video_id}")
     
+    # Subir miniatura
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
@@ -291,7 +313,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             print("✅ Miniatura subida correctamente")
         except Exception as e:
             print(f"⚠️ No se pudo subir la miniatura: {e}")
-            
+    
     return response
 
 # ================================================================
