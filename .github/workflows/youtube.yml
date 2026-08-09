@@ -2,7 +2,7 @@ name: Bot YouTube - Publicación
 
 on:
   schedule:
-    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC)
+    - cron: '0 21 * * *'   # 3:00 PM CDMX
   workflow_dispatch:
 
 jobs:
@@ -19,9 +19,16 @@ jobs:
 
       - name: Instalar dependencias
         run: |
-          pip install requests moviepy google-auth google-api-python-client google-auth-oauthlib
+          pip install --upgrade pip
+          pip install moviepy==1.0.3
+          pip install requests google-auth google-api-python-client google-auth-oauthlib
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+
+      - name: Verificar instalación
+        run: |
+          python -c "import moviepy; print('moviepy OK')"
+          python -c "import requests; print('requests OK')"
 
       - name: Ejecutar bot de YouTube
         env:
