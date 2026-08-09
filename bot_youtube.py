@@ -23,23 +23,90 @@ YOUTUBE_CLIENT_SECRET = json.loads(os.getenv("YOUTUBE_CLIENT_SECRET"))
 # ================================================================
 def limpiar_prompt(prompt):
     """Elimina caracteres problemáticos para la API de Agnes."""
+    if not prompt:
+        return "Escena de terror, paisaje oscuro"
     prompt = re.sub(r'\n+', ' ', prompt)           # Saltos de línea a espacios
     prompt = re.sub(r'"', "'", prompt)             # Comillas dobles a simples
-    prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)  # Caracteres no ASCII (opcional)
-    return prompt[:500]  # Limitar longitud (Agnes suele aceptar hasta ~500 caracteres)
+    prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)  # Caracteres no ASCII
+    prompt = re.sub(r'\s+', ' ', prompt)           # Múltiples espacios a uno
+    return prompt.strip()[:500]  # Limitar longitud
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (con limpieza de JSON)
+# LIMPIAR RESPUESTA JSON DE DEEPSEEK
 # ================================================================
 def limpiar_respuesta_json(respuesta):
+    """Limpia la respuesta de DeepSeek para extraer un JSON válido."""
+    # Eliminar bloques de código markdown
     respuesta = re.sub(r'```json\s*', '', respuesta)
     respuesta = re.sub(r'```\s*', '', respuesta)
+    
+    # Buscar la primera llave de apertura y la última de cierre
     inicio = respuesta.find('{')
     fin = respuesta.rfind('}')
     if inicio != -1 and fin != -1:
-        return respuesta[inicio:fin+1]
+        json_str = respuesta[inicio:fin+1]
+        # Reparar comas faltantes entre objetos en arrays
+        json_str = re.sub(r'}\s*{', '},{', json_str)
+        # Eliminar comas finales en arrays y objetos
+        json_str = re.sub(r',\s*}', '}', json_str)
+        json_str = re.sub(r',\s*\]', ']', json_str)
+        # Escapar comillas internas en valores de texto
+        json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
+        return json_str
     return respuesta
 
+# ================================================================
+# GENERAR FALLBACK CUANDO EL JSON FALLA
+# ================================================================
+def generar_fallback(respuesta):
+    """Genera una estructura básica cuando el JSON falla."""
+    print("⚠️ Usando fallback: generando estructura básica desde el texto.")
+    
+    # Intentar extraer título
+    lineas = respuesta.split('\n')
+    titulo = "Relato de terror | Sombras de Medianoche"
+    for linea in lineas[:5]:
+        linea_limpia = linea.strip()
+        if len(linea_limpia) > 10 and not linea_limpia.startswith('{'):
+            if 'título' in linea_limpia.lower() or 'titulo' in linea_limpia.lower():
+                titulo = linea_limpia.replace('título:', '').replace('titulo:', '').strip()
+                break
+            elif len(linea_limpia) > 20:
+                titulo = linea_limpia[:60]
+                break
+    
+    # Limpiar texto
+    texto_limpio = re.sub(r'\n+', ' ', respuesta)
+    texto_limpio = re.sub(r'[{}"]', '', texto_limpio)
+    
+    # Dividir en segmentos
+    segmentos = []
+    chars_por_segmento = 500
+    for i in range(0, len(texto_limpio), chars_por_segmento):
+        segmento = texto_limpio[i:i+chars_por_segmento]
+        if len(segmento.strip()) > 50:
+            segmentos.append({
+                "texto": segmento,
+                "imagen_prompt": f"Escena de terror, {segmento[:50]}..., estilo cinematográfico"
+            })
+    
+    if len(segmentos) == 0:
+        segmentos.append({
+            "texto": respuesta[:500] if respuesta else "Historia de terror no disponible",
+            "imagen_prompt": "Escena de terror, paisaje oscuro"
+        })
+    
+    return {
+        "titulo": titulo,
+        "descripcion": "Relato de terror basado en leyendas urbanas de México. Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
+        "tags": "relatos de terror, leyendas urbanas, México, terror, misterio, miedo, paranormal, historias",
+        "miniatura_prompt": "Escena de terror, paisaje oscuro, colores negro y rojo, impactante, estilo cinematográfico",
+        "segmentos": segmentos[:18]
+    }
+
+# ================================================================
+# GENERAR GUION CON DEEPSEEK
+# ================================================================
 def generar_guion():
     prompt = """Eres un escritor de terror especializado en leyendas urbanas de México.
 Escribe una historia de terror de aproximadamente 9000 caracteres (9 minutos de narración).
@@ -53,15 +120,16 @@ Además, genera:
 - 8 PALABRAS CLAVE separadas por comas.
 - UN PROMPT PARA LA MINIATURA (máximo 200 caracteres) para generar una imagen impactante de 1280x720.
 
-Formato de salida: JSON con esta estructura:
+Formato de salida: SOLO JSON válido, sin texto adicional, sin markdown. Usa comillas dobles para todas las cadenas y escapa las comillas internas con \".
+
 {
-  "titulo": "...",
-  "descripcion": "...",
-  "tags": "...",
-  "miniatura_prompt": "...",
+  "titulo": "El título",
+  "descripcion": "La descripción... Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
+  "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8",
+  "miniatura_prompt": "Prompt para la miniatura",
   "segmentos": [
-    {"texto": "...", "imagen_prompt": "..."},
-    ...
+    {"texto": "texto del segmento 1", "imagen_prompt": "descripción de la imagen 1"},
+    {"texto": "texto del segmento 2", "imagen_prompt": "descripción de la imagen 2"}
   ]
 }
 """
@@ -73,17 +141,31 @@ Formato de salida: JSON con esta estructura:
         r = requests.post(url, headers=headers, json=payload, timeout=120)
         r.raise_for_status()
         respuesta = r.json()["choices"][0]["message"]["content"].strip()
+        print(f"📄 Respuesta cruda (primeros 300 chars): {respuesta[:300]}...")
+        
         json_str = limpiar_respuesta_json(respuesta)
         data = json.loads(json_str)
+        
         if "segmentos" not in data or len(data["segmentos"]) == 0:
-            raise ValueError("No hay segmentos")
+            raise ValueError("La respuesta no contiene segmentos")
+        
+        # Limpiar prompts de imagen para evitar errores 400
+        for seg in data["segmentos"]:
+            if "imagen_prompt" in seg:
+                seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
+            if "texto" in seg:
+                seg["texto"] = limpiar_prompt(seg["texto"])
+        
         return data
+    except json.JSONDecodeError as e:
+        print(f"❌ Error decodificando JSON: {e}")
+        return generar_fallback(respuesta if 'respuesta' in locals() else "")
     except Exception as e:
         print(f"❌ Error en DeepSeek: {e}")
-        return None
+        return generar_fallback(respuesta if 'respuesta' in locals() else "")
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI (con prompt limpio)
+# GENERAR IMAGEN CON AGNES AI (con reintentos)
 # ================================================================
 def generar_imagen(prompt, width=1024, height=1024, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
@@ -105,7 +187,7 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS
+# GENERAR AUDIO CON AZURE TTS (con reintentos)
 # ================================================================
 def generar_audio(texto, index, intentos=3):
     texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
@@ -139,9 +221,12 @@ def generar_audio(texto, index, intentos=3):
     return None
 
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY (corregido)
+# MONTAR VIDEO CON MOVIEPY
 # ================================================================
 def montar_video(imagenes, audios, salida="video_final.mp4"):
+    if len(imagenes) == 0 or len(audios) == 0:
+        raise ValueError("No hay suficientes imágenes o audios")
+    
     clips_imagen = []
     duracion_total = 0.0
     
@@ -149,10 +234,6 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
     for audio_file in audios:
         clip = AudioFileClip(audio_file)
         duracion_total += clip.duration
-    
-    # Si no hay imágenes o audios, abortar
-    if len(imagenes) == 0 or len(audios) == 0:
-        raise ValueError("No hay suficientes imágenes o audios")
     
     duracion_por_imagen = duracion_total / len(imagenes)
     
@@ -183,7 +264,7 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (con miniatura y marcado de IA)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_CLIENT_SECRET)
@@ -194,9 +275,9 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     
     body = {
         "snippet": {
-            "title": titulo,
-            "description": descripcion,
-            "tags": etiquetas,
+            "title": titulo[:100] if len(titulo) > 100 else titulo,
+            "description": descripcion[:5000] if len(descripcion) > 5000 else descripcion,
+            "tags": etiquetas[:15],
             "categoryId": "24"
         },
         "status": {
@@ -237,9 +318,9 @@ def main():
         return
     
     titulo_video = guion_data.get("titulo", "Relato de terror | Sombras de Medianoche")
-    descripcion_video = guion_data.get("descripcion", "Relato de terror... Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982")
-    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México, terror")
-    miniatura_prompt = guion_data.get("miniatura_prompt", "Escena de terror, paisaje oscuro, colores negro y rojo")
+    descripcion_video = guion_data.get("descripcion", "Relato de terror basado en leyendas urbanas de México. Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982")
+    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México, terror, misterio, miedo, paranormal, historias")
+    miniatura_prompt = guion_data.get("miniatura_prompt", "Escena de terror, paisaje oscuro, colores negro y rojo, impactante, estilo cinematográfico")
     segmentos = guion_data.get("segmentos", [])
     
     if len(segmentos) == 0:
@@ -248,8 +329,9 @@ def main():
     
     print(f"✅ Guion generado con {len(segmentos)} segmentos")
     print(f"📌 Título: {titulo_video}")
+    print(f"📌 Tags: {tags_video}")
     
-    # 2. Generar imágenes
+    # 2. Generar imágenes (18 segmentos, pausa de 8 segundos entre cada una)
     print("🎨 Generando imágenes para el video...")
     imagenes = []
     for i, seg in enumerate(segmentos):
@@ -259,26 +341,38 @@ def main():
             imagenes.append(url)
             print(f"      ✅ Imagen {i+1} generada")
         else:
-            print(f"      ❌ Falló imagen {i+1}")
+            print(f"      ❌ Falló imagen {i+1} después de 3 intentos")
         time.sleep(8)
     
-    # 3. Generar miniatura
+    # 3. Generar miniatura (1280x720)
     print("🖼️ Generando miniatura...")
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     if miniatura_url:
-        r = requests.get(miniatura_url)
-        with open("miniatura.jpg", "wb") as f:
-            f.write(r.content)
-        print(f"✅ Miniatura generada")
+        try:
+            r = requests.get(miniatura_url, timeout=30)
+            r.raise_for_status()
+            with open("miniatura.jpg", "wb") as f:
+                f.write(r.content)
+            print(f"✅ Miniatura generada")
+        except Exception as e:
+            print(f"⚠️ Error descargando miniatura: {e}")
+            if imagenes:
+                r = requests.get(imagenes[0], timeout=30)
+                with open("miniatura.jpg", "wb") as f:
+                    f.write(r.content)
+                print("⚠️ Usando primera imagen del video como miniatura")
     else:
         print("⚠️ No se pudo generar miniatura, usando primera imagen del video")
         if imagenes:
-            r = requests.get(imagenes[0])
-            with open("miniatura.jpg", "wb") as f:
-                f.write(r.content)
+            try:
+                r = requests.get(imagenes[0], timeout=30)
+                with open("miniatura.jpg", "wb") as f:
+                    f.write(r.content)
+            except Exception as e:
+                print(f"⚠️ Error descargando imagen de respaldo: {e}")
     time.sleep(8)
     
-    # 4. Generar audios
+    # 4. Generar audios con Azure TTS (pausa de 8 segundos entre cada uno)
     print("🎙️ Generando audios con Azure TTS...")
     audios = []
     for i, seg in enumerate(segmentos):
@@ -288,7 +382,7 @@ def main():
             audios.append(audio)
             print(f"      ✅ Audio {i+1} generado")
         else:
-            print(f"      ❌ Falló audio {i+1}")
+            print(f"      ❌ Falló audio {i+1} después de 3 intentos")
         time.sleep(8)
     
     if len(imagenes) == 0 or len(audios) == 0:
@@ -305,9 +399,13 @@ def main():
     
     # 6. Subir a YouTube
     print("⬆️ Subiendo video y miniatura a YouTube...")
-    subir_a_youtube(video_path, "miniatura.jpg", titulo_video, descripcion_video, tags_video)
+    try:
+        subir_a_youtube(video_path, "miniatura.jpg", titulo_video, descripcion_video, tags_video)
+    except Exception as e:
+        print(f"❌ Error subiendo a YouTube: {e}")
+        return
     
-    print("🎉 Proceso completado")
+    print("🎉 Proceso completado exitosamente")
 
 if __name__ == "__main__":
     try:
