@@ -20,102 +20,94 @@ AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("YOUTUBE_USER_TOKEN") else {}
 
 # ================================================================
-# LIMPIAR PROMPTS PARA EVITAR ERRORES 400 EN AGNES
+# LIMPIAR PROMPTS DE IMAGEN (Inglés + Sin Gore/Zombies)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        return "Escena de terror, paisaje oscuro"
+        return "Cinematic photo of Mexico City historic center at night, streetlights, 35mm photograph, hyperrealistic"
     prompt = re.sub(r'\n+', ' ', prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)
     prompt = re.sub(r'\s+', ' ', prompt)
-    return prompt.strip()[:500]
+    # Refuerzo fotográfico en inglés para evitar estética de horror barato
+    estilo_limpio = " Cinematic lighting, 35mm film photograph, realistic everyday Mexican people, clean skin, no blood, no zombies, no gore, professional photography."
+    return (prompt.strip() + estilo_limpio)[:500]
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON DE DEEPSEEK (MEJORADO)
+# LIMPIAR Y REPARAR RESPUESTA JSON DE DEEPSEEK
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r'```json\s*', '', respuesta)
     respuesta = re.sub(r'```\s*', '', respuesta)
     inicio = respuesta.find('{')
-    if inicio == -1:
-        return respuesta
-    json_str = respuesta[inicio:]
-    fin = json_str.rfind('}')
-    if fin != -1:
-        json_str = json_str[:fin+1]
-    json_str = re.sub(r',\s*}', '}', json_str)
-    json_str = re.sub(r',\s*\]', ']', json_str)
-    json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
-    json_str = re.sub(r'(?<=")([^"]*)\n([^"]*)(?=")', r'\1 \2', json_str)
-    return json_str
+    fin = respuesta.rfind('}')
+    if inicio != -1 and fin != -1:
+        json_str = respuesta[inicio:fin+1]
+        json_str = re.sub(r',\s*}', '}', json_str)
+        json_str = re.sub(r',\s*\]', ']', json_str)
+        return json_str
+    return respuesta
 
 # ================================================================
-# GENERAR FALLBACK
+# GENERAR FALLBACK LIMPIO (Si el JSON falla, no lee los prompts)
 # ================================================================
 def generar_fallback(respuesta):
-    print("⚠️ Usando fallback: generando estructura básica desde el texto.")
+    print("⚠️ Usando fallback limpiado: removiendo etiquetas de prompt del audio.")
     
-    titulo_match = re.search(r'"titulo"\s*:\s*"([^"]+)"', respuesta)
-    if titulo_match:
-        titulo = titulo_match.group(1).strip()
-    else:
-        titulo = "Relato de terror | Sombras de Medianoche"
-    
-    texto_limpio = re.sub(r'\n+', ' ', respuesta)
-    texto_limpio = re.sub(r'[{}"]', '', texto_limpio)
+    # Eliminar bloques de imagen o prompts del texto narrativo
+    texto_narrativo = re.sub(r'imagen_prompt.*?(?=(texto|$))', '', respuesta, flags=re.DOTALL | re.IGNORECASE)
+    texto_narrativo = re.sub(r'prompt.*?:', '', texto_narrativo, flags=re.IGNORECASE)
+    texto_narrativo = re.sub(r'[\{\}\[\]"]', '', texto_narrativo)
+    texto_narrativo = re.sub(r'\s+', ' ', texto_narrativo).strip()
     
     segmentos = []
-    chars_por_segmento = 500
-    for i in range(0, len(texto_limpio), chars_por_segmento):
-        segmento = texto_limpio[i:i+chars_por_segmento]
-        if len(segmento.strip()) > 50:
+    chars_por_segmento = 450
+    for i in range(0, len(texto_narrativo), chars_por_segmento):
+        segmento = texto_narrativo[i:i+chars_por_segmento]
+        if len(segmento.strip()) > 40:
             segmentos.append({
                 "texto": segmento,
-                "imagen_prompt": f"Fotografía hiperrealista de una escena de terror en México. Personas mexicanas de aspecto común, expresión natural. Luz natural, 8k, ultradetallado."
+                "imagen_prompt": "Cinematic photograph of an empty street in Mexico City at night, street lamps, fog, realistic 35mm photo"
             })
     
-    if len(segmentos) == 0:
-        segmentos.append({
-            "texto": respuesta[:500] if respuesta else "Historia de terror no disponible",
-            "imagen_prompt": "Escena de terror, paisaje oscuro"
-        })
-    
     return {
-        "titulo": titulo,
-        "descripcion": "Relato de terror basado en leyendas urbanas de México. Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
-        "tags": "relatos de terror, leyendas urbanas, México, terror, misterio, miedo, paranormal, historias",
-        "miniatura_prompt": "Escena de terror, paisaje oscuro, colores negro y rojo, impactante, estilo cinematográfico",
+        "titulo": "El Silencio de la Calle Madero | Relato de Terror",
+        "descripcion": "Relato de misterio y leyendas urbanas en México. Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
+        "tags": "relatos de terror, leyendas urbanas, Mexico, misterio, suspension",
+        "miniatura_prompt": "A dark empty colonial street corner in Mexico City at night, streetlight, fog, cinematic mystery photograph, 8k",
         "segmentos": segmentos[:18]
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (con prompts de imagen profesionales)
+# GENERAR GUION CON DEEPSEEK (Prompts visuales estrictamente en INGLÉS)
 # ================================================================
 def generar_guion():
-    prompt = """Eres un escritor de terror y experto en dirección cinematográfica.
-Escribe una historia de terror en primera persona de aproximadamente 9000 caracteres.
-Divide la historia en 18 segmentos de ~500 caracteres cada uno.
+    prompt = """Eres un director de cine y guionista galardonado.
+Escribe una historia de terror y suspenso psicológico ambientada en México en primera persona de unos 8000 caracteres.
+Divide la historia en 18 segmentos de ~450 caracteres cada uno.
 
-Para CADA segmento, genera un PROMPT DE IMAGEN PROFESIONAL Y DETALLADO en español que describa la escena principal con:
-- Lugar exacto (ciudad, calle, casa, etc.)
-- Personajes (descripción física realista: edad, vestimenta, expresión natural)
-- Iluminación (luz natural, faros, luna, etc.)
-- Estilo (fotorrealista, 8k, ultradetallado)
-- Especificar que las personas son MEXICANAS de aspecto común, sin maquillaje exagerado, sin efectos de terror excesivos.
-- Evitar rostros genéricos, evitar poses de catálogo.
+REGLAS CRÍTICAS DE IMAGEN (imagen_prompt):
+1. Escribe TODOS los "imagen_prompt" EStrictamente EN INGLÉS.
+2. NUNCA uses las palabras "monster", "zombie", "blood", "scary face", "gore", "mutilated".
+3. Describe escenas FOTOGRÁFICAS REALISTAS de personajes comunes de México (ropa normal, rostro limpio, expresión sobria o angustiada natural).
+4. Varía las tomas: unas de calles coloniales, otras de interiores con velas, objetos antiguos, un perro en el callejón, un altar, etc.
+5. Usa estilo cinematográfico: "Cinematic 35mm photograph, realistic lighting, Mexico City architecture, nocturnal, atmospheric mystery".
 
-REGLA IMPORTANTE: No uses comillas dobles dentro del texto narrativo, usa comillas simples 'así'.
+REGLA DE TEXTO (texto):
+1. Solamente pon lo que el narrador habla. NUNCA incluyas la palabra "prompt" o instrucciones en el texto narrativo.
+2. Usa comillas simples 'así' para diálogos.
 
-Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
+Genera la respuesta estrictamente en formato JSON válido:
 {
-  "titulo": "Título de máximo 60 caracteres",
-  "descripcion": "Descripción del video... Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
-  "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8",
-  "miniatura_prompt": "Prompt cinematográfico para la miniatura",
+  "titulo": "Título atractivo de máximo 60 caracteres",
+  "descripcion": "Descripción del video... Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
+  "tags": "terror, mexico, centro historico, leyendas, misterio",
+  "miniatura_prompt": "Full body cinematic photo of a middle-aged Mexican man on an empty historic Mexico street at night, fog, 35mm film style",
   "segmentos": [
-    {"texto": "texto del segmento 1", "imagen_prompt": "descripción visual profesional para la imagen 1"},
-    {"texto": "texto del segmento 2", "imagen_prompt": "descripción visual profesional para la imagen 2"}
+    {
+      "texto": "Texto que solo leerá la voz en español...",
+      "imagen_prompt": "Detailed English photographic prompt for this specific scene..."
+    }
   ]
 }
 """
@@ -124,8 +116,8 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.85,
-        "max_tokens": 2500,
+        "temperature": 0.7,
+        "max_tokens": 4000,  # Aumentado para evitar JSON cortado
         "response_format": {"type": "json_object"}
     }
     
@@ -134,7 +126,7 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
         r = requests.post(url, headers=headers, json=payload, timeout=120)
         r.raise_for_status()
         respuesta = r.json()["choices"][0]["message"]["content"].strip()
-        print(f"📄 Respuesta cruda (primeros 300 chars): {respuesta[:300]}...")
+        print(f"📄 Respuesta cruda obtenida ({len(respuesta)} caracteres)")
         
         json_str = limpiar_respuesta_json(respuesta)
         data = json.loads(json_str)
@@ -146,7 +138,9 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
             if "imagen_prompt" in seg:
                 seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
             if "texto" in seg:
+                # Limpiar cualquier residuo indeseado del texto hablada
                 seg["texto"] = seg["texto"].replace('"', "'")
+                seg["texto"] = re.sub(r'imagen_prompt.*', '', seg["texto"], flags=re.IGNORECASE)
         
         return data
     except Exception as e:
@@ -156,7 +150,7 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
 # ================================================================
 # GENERAR IMAGEN CON AGNES AI
 # ================================================================
-def generar_imagen(prompt, width=1024, height=1024, intentos=4):
+def generar_imagen(prompt, width=1024, height=1024, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -168,18 +162,21 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=4):
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
             else:
-                print(f"⚠️ Intento {i+1}/{intentos} falló (código {r.status_code})")
-                time.sleep(10)
+                print(f"⚠️ Intento {i+1}/{intentos} fallo imagen (código {r.status_code})")
+                time.sleep(5)
         except Exception as e:
-            print(f"⚠️ Intento {i+1}/{intentos} error: {e}")
-            time.sleep(10)
+            print(f"⚠️ Intento {i+1}/{intentos} error imagen: {e}")
+            time.sleep(5)
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS (voz natural + SSML mejorado)
+# GENERAR AUDIO CON AZURE TTS (Limpio)
 # ================================================================
-def generar_audio(texto, index, intentos=4):
-    texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
+def generar_audio(texto, index, intentos=3):
+    # Filtrado estricto para asegurar que solo vaya el relato
+    texto_limpio = re.sub(r'imagen_prompt.*', '', texto, flags=re.IGNORECASE)
+    texto_limpio = texto_limpio.replace('"', '&quot;').replace("'", "&apos;")
+    
     url = f"https://{AZURE_TTS_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
         "Ocp-Apim-Subscription-Key": AZURE_TTS_KEY,
@@ -197,18 +194,18 @@ def generar_audio(texto, index, intentos=4):
     """
     for i in range(intentos):
         try:
-            r = requests.post(url, headers=headers, data=ssml, timeout=60)
+            r = requests.post(url, headers=headers, data=ssml.encode('utf-8'), timeout=60)
             if r.status_code == 200:
                 filename = f"audio_{index}.mp3"
                 with open(filename, "wb") as f:
                     f.write(r.content)
                 return filename
             else:
-                print(f"⚠️ Audio {index} intento {i+1}/{intentos} falló (código {r.status_code})")
-                time.sleep(10)
+                print(f"⚠️ Audio {index} intento {i+1}/{intentos} fallo (código {r.status_code})")
+                time.sleep(5)
         except Exception as e:
             print(f"⚠️ Audio {index} error: {e}")
-            time.sleep(10)
+            time.sleep(5)
     return None
 
 # ================================================================
@@ -254,12 +251,12 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_final = concatenate_audioclips(clips_audio)
     
     video = video.set_audio(audio_final)
-    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4)
+    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     print(f"✅ Video creado correctamente: {salida}")
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (SIN onBehalfOfContentOwner)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -284,7 +281,6 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     
-    # 🔑 SIN onBehalfOfContentOwner - el token determina el canal
     request = youtube.videos().insert(
         part="snippet,status",
         body=body,
@@ -293,7 +289,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     response = request.execute()
     
     video_id = response['id']
-    print(f"✅ Video subido correctamente: https://youtu.be/{video_id}")
+    print(f"✅ Video subido a YouTube: https://youtu.be/{video_id}")
     
     if miniatura_path and os.path.exists(miniatura_path):
         try:
@@ -310,7 +306,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (con miniatura y IA)")
+    print("🎬 Iniciando Bot de YouTube (Optimizado para Prompts e Imágenes Limpias)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     guion_data = generar_guion()
@@ -320,8 +316,8 @@ def main():
     
     titulo_video = guion_data.get("titulo", "Relato de terror | Sombras de Medianoche")
     descripcion_video = guion_data.get("descripcion", "Relato de terror basado en leyendas urbanas de México.")
-    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México")
-    miniatura_prompt = guion_data.get("miniatura_prompt", "Escena de terror, paisaje oscuro, colores negro y rojo")
+    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, Mexico")
+    miniatura_prompt = guion_data.get("miniatura_prompt", "Cinematic photo of Mexico City at night, fog, streetlight, 35mm")
     segmentos = guion_data.get("segmentos", [])
     
     if not segmentos:
@@ -330,7 +326,6 @@ def main():
     
     print(f"✅ Guion generado con {len(segmentos)} segmentos")
     print(f"📌 Título: {titulo_video}")
-    print(f"📌 Tags: {tags_video}")
     
     elementos_validos = []
     imagen_ultimo_recurso = None
@@ -341,13 +336,12 @@ def main():
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
         
         if i > 0:
-            print("⏳ Esperando 12 segundos antes de la siguiente imagen...")
-            time.sleep(12)
+            time.sleep(4)
         
         url_img = generar_imagen(seg["imagen_prompt"], width=1024, height=1024)
         if url_img:
             imagen_ultimo_recurso = url_img
-            print(f"✅ Imagen {i+1} generada")
+            print(f"✅ Imagen {i+1} generada con prompt cinemático")
         elif imagen_ultimo_recurso:
             print(f"⚠️ Reutilizando imagen previa para segmento {i+1}")
             url_img = imagen_ultimo_recurso
@@ -355,8 +349,7 @@ def main():
             print(f"❌ Sin imagen disponible para segmento {i+1}, se salta.")
             continue
         
-        print("⏳ Esperando 5 segundos antes del audio...")
-        time.sleep(5)
+        time.sleep(2)
         
         audio_file = generar_audio(seg["texto"], i)
         if not audio_file:
@@ -370,7 +363,7 @@ def main():
         print(f"✅ Segmento {i+1} completado")
     
     print("\n🖼️ Generando miniatura...")
-    time.sleep(8)
+    time.sleep(4)
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     
