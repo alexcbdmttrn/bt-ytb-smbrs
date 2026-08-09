@@ -2,7 +2,7 @@ name: Bot YouTube - Publicación
 
 on:
   schedule:
-    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC)
+    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC) -> un video por día
   workflow_dispatch:
 
 jobs:
