@@ -139,9 +139,9 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
         return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI
+# GENERAR IMAGEN CON AGNES AI (con reintentos y pausas largas)
 # ================================================================
-def generar_imagen(prompt, width=1024, height=1024, intentos=3):
+def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -154,16 +154,16 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=3):
                 return r.json()["data"][0]["url"]
             else:
                 print(f"⚠️ Intento {i+1}/{intentos} falló (código {r.status_code})")
-                time.sleep(5)
+                time.sleep(10)  # Pausa de 10 segundos entre reintentos
         except Exception as e:
             print(f"⚠️ Intento {i+1}/{intentos} error: {e}")
-            time.sleep(5)
+            time.sleep(10)
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS
+# GENERAR AUDIO CON AZURE TTS (con reintentos y pausas largas)
 # ================================================================
-def generar_audio(texto, index, intentos=3):
+def generar_audio(texto, index, intentos=4):
     texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
     url = f"https://{AZURE_TTS_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
@@ -188,10 +188,10 @@ def generar_audio(texto, index, intentos=3):
                 return filename
             else:
                 print(f"⚠️ Audio {index} intento {i+1}/{intentos} falló (código {r.status_code})")
-                time.sleep(5)
+                time.sleep(10)  # Pausa de 10 segundos entre reintentos
         except Exception as e:
             print(f"⚠️ Audio {index} error: {e}")
-            time.sleep(5)
+            time.sleep(10)
     return None
 
 # ================================================================
@@ -244,10 +244,9 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (con el token de usuario)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
-    # Autenticación con el token de usuario (refresh_token)
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
     
@@ -286,7 +285,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     return response
 
 # ================================================================
-# MAIN
+# MAIN (con pausas entre segmentos para no saturar)
 # ================================================================
 def main():
     print("🎬 Iniciando Bot de YouTube (con miniatura y IA)")
@@ -319,31 +318,42 @@ def main():
     for i, seg in enumerate(segmentos):
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
         
-        # Audio
-        audio_file = generar_audio(seg["texto"], i)
-        if not audio_file:
-            print(f"❌ Falló el audio {i+1}, se salta el segmento.")
-            continue
-            
-        # Imagen
+        # PAUSA PREVIA: 12 segundos antes de cada imagen (excepto la primera)
+        if i > 0:
+            print("⏳ Esperando 12 segundos antes de la siguiente imagen...")
+            time.sleep(12)
+        
+        # 1. GENERAR IMAGEN
         url_img = generar_imagen(seg["imagen_prompt"], width=1024, height=1024)
         if url_img:
             imagen_ultimo_recurso = url_img
+            print(f"✅ Imagen {i+1} generada")
         elif imagen_ultimo_recurso:
             print(f"⚠️ Reutilizando imagen previa para segmento {i+1}")
             url_img = imagen_ultimo_recurso
         else:
             print(f"❌ Sin imagen disponible para segmento {i+1}, se salta.")
             continue
-            
+        
+        # PAUSA ENTRE IMAGEN Y AUDIO: 5 segundos
+        print("⏳ Esperando 5 segundos antes del audio...")
+        time.sleep(5)
+        
+        # 2. GENERAR AUDIO
+        audio_file = generar_audio(seg["texto"], i)
+        if not audio_file:
+            print(f"❌ Falló el audio {i+1}, se salta el segmento.")
+            continue
+        
         elementos_validos.append({
             "imagen_url": url_img,
             "audio_path": audio_file
         })
-        time.sleep(3)
-
-    # Miniatura
+        print(f"✅ Segmento {i+1} completado")
+    
+    # Miniatura (con pausa previa)
     print("\n🖼️ Generando miniatura...")
+    time.sleep(8)  # Pausa antes de la miniatura
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     
