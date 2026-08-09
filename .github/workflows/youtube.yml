@@ -25,7 +25,7 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
-          pip install Pillow>=10.0.0   # Versión moderna (no usa ANTIALIAS)
+          pip install Pillow>=10.0.0
           pip install moviepy==1.0.3
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           sudo apt-get update
@@ -43,5 +43,5 @@ jobs:
           AZURE_TTS_KEY: ${{ secrets.AZURE_TTS_KEY }}
           AZURE_TTS_REGION: ${{ secrets.AZURE_TTS_REGION }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_USER_TOKEN: ${{ secrets.YOUTUBE_USER_TOKEN }}
         run: python bot_youtube.py
