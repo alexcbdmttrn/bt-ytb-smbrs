@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-import random
 import time
 from datetime import datetime
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
@@ -19,7 +18,7 @@ AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_CLIENT_SECRET = json.loads(os.getenv("YOUTUBE_CLIENT_SECRET"))
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (historia + título + desc + tags + miniatura)
+# GENERAR GUION CON DEEPSEEK (historia + metadatos + miniatura)
 # ================================================================
 def generar_guion():
     prompt = """Eres un escritor de terror especializado en leyendas urbanas de México.
@@ -149,7 +148,7 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON MINIATURA)
+# SUBIR A YOUTUBE (con miniatura y marcado de IA)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_CLIENT_SECRET)
@@ -163,10 +162,12 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             "title": titulo,
             "description": descripcion,
             "tags": etiquetas,
-            "categoryId": "24"
+            "categoryId": "24"  # Entretenimiento
         },
         "status": {
-            "privacyStatus": "public"
+            "privacyStatus": "public",
+            "selfDeclaredMadeForKids": False,
+            "containsSyntheticMedia": True  # <--- MARCA EL VIDEO COMO CREADO CON IA
         }
     }
     
@@ -177,11 +178,11 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     video_id = response['id']
     print(f"✅ Video subido: https://youtu.be/{video_id}")
     
-    # Subir la miniatura (se hace por separado)
+    # Subir la miniatura
     try:
         media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
         thumb_request = youtube.thumbnails().set(videoId=video_id, media_body=media_thumb)
-        thumb_response = thumb_request.execute()
+        thumb_request.execute()
         print(f"✅ Miniatura subida correctamente")
     except Exception as e:
         print(f"⚠️ No se pudo subir la miniatura: {e}")
@@ -192,7 +193,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (con miniatura)")
+    print("🎬 Iniciando Bot de YouTube (con miniatura y IA)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # 1. Generar guion completo
@@ -203,28 +204,28 @@ def main():
         return
     
     titulo_video = guion_data.get("titulo", "Relato de terror | Sombras de Medianoche")
-    descripcion_video = guion_data.get("descripcion", "Relato de terror... Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982")
-    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México, terror")
+    descripcion_video = guion_data.get("descripcion", "Relato de terror basado en leyendas urbanas de México. Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982")
+    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México, terror, misterio")
     miniatura_prompt = guion_data.get("miniatura_prompt", "Escena de terror, paisaje oscuro, colores negro y rojo")
     segmentos = guion_data["segmentos"]
     
     print(f"✅ Guion generado con {len(segmentos)} segmentos")
     print(f"📌 Título: {titulo_video}")
     
-    # 2. Generar imágenes para el video
-    print("🎨 Generando imágenes para el video (18)...")
+    # 2. Generar imágenes para el video (18)
+    print("🎨 Generando imágenes para el video...")
     imagenes = []
     for i, seg in enumerate(segmentos):
-        print(f"   Imagen {i+1}/18...")
+        print(f"   Imagen {i+1}/{len(segmentos)}...")
         url = generar_imagen(seg["imagen_prompt"], width=1024, height=1024)
         if url:
             imagenes.append(url)
             print(f"      ✅ Imagen {i+1} generada")
         else:
             print(f"      ❌ Falló imagen {i+1}")
-        time.sleep(8)
+        time.sleep(8)  # Pausa de 8 segundos
     
-    # 3. Generar miniatura (resolución 1280x720)
+    # 3. Generar miniatura (1280x720)
     print("🖼️ Generando miniatura...")
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     if miniatura_url:
@@ -233,26 +234,25 @@ def main():
             f.write(r.content)
         print(f"✅ Miniatura generada")
     else:
-        print("⚠️ No se pudo generar miniatura, se usará la primera imagen del video")
-        # Usar la primera imagen del video como miniatura
+        print("⚠️ No se pudo generar miniatura, usando primera imagen del video")
         if imagenes:
             r = requests.get(imagenes[0])
             with open("miniatura.jpg", "wb") as f:
                 f.write(r.content)
     time.sleep(8)
     
-    # 4. Generar audios
+    # 4. Generar audios con Azure TTS
     print("🎙️ Generando audios con Azure TTS...")
     audios = []
     for i, seg in enumerate(segmentos):
-        print(f"   Audio {i+1}/18...")
+        print(f"   Audio {i+1}/{len(segmentos)}...")
         audio = generar_audio(seg["texto"], i)
         if audio:
             audios.append(audio)
             print(f"      ✅ Audio {i+1} generado")
         else:
             print(f"      ❌ Falló audio {i+1}")
-        time.sleep(8)
+        time.sleep(8)  # Pausa de 8 segundos
     
     if len(imagenes) == 0 or len(audios) == 0:
         print("❌ No se generaron suficientes imágenes o audios. Abortando.")
@@ -262,7 +262,7 @@ def main():
     print("🎬 Montando video con MoviePy...")
     video_path = montar_video(imagenes, audios, "video_final.mp4")
     
-    # 6. Subir a YouTube con miniatura
+    # 6. Subir a YouTube con miniatura y marcado de IA
     print("⬆️ Subiendo video y miniatura a YouTube...")
     subir_a_youtube(video_path, "miniatura.jpg", titulo_video, descripcion_video, tags_video)
     
