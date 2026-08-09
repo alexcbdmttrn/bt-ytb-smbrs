@@ -17,6 +17,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Limpiar caché de pip
+        run: |
+          pip cache purge
+          echo "✅ Caché de pip limpiada"
+
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
@@ -25,10 +30,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Verificar instalación
+      - name: Verificar instalación de moviepy
         run: |
           python -c "import moviepy; print('moviepy OK')"
-          python -c "import requests; print('requests OK')"
+          python -c "from moviepy.editor import ImageClip; print('ImageClip importado OK')"
+          echo "✅ Todas las dependencias están listas"
 
       - name: Ejecutar bot de YouTube
         env:
