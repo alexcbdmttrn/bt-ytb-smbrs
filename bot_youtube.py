@@ -29,7 +29,6 @@ def limpiar_prompt(prompt):
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)
     prompt = re.sub(r'\s+', ' ', prompt)
-    # Refuerzo fotográfico en inglés para evitar estética de horror barato
     estilo_limpio = " Cinematic lighting, 35mm film photograph, realistic everyday Mexican people, clean skin, no blood, no zombies, no gore, professional photography."
     return (prompt.strip() + estilo_limpio)[:500]
 
@@ -49,12 +48,11 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR FALLBACK LIMPIO (Si el JSON falla, no lee los prompts)
+# GENERAR FALLBACK LIMPIO (Si el JSON falla)
 # ================================================================
 def generar_fallback(respuesta):
     print("⚠️ Usando fallback limpiado: removiendo etiquetas de prompt del audio.")
     
-    # Eliminar bloques de imagen o prompts del texto narrativo
     texto_narrativo = re.sub(r'imagen_prompt.*?(?=(texto|$))', '', respuesta, flags=re.DOTALL | re.IGNORECASE)
     texto_narrativo = re.sub(r'prompt.*?:', '', texto_narrativo, flags=re.IGNORECASE)
     texto_narrativo = re.sub(r'[\{\}\[\]"]', '', texto_narrativo)
@@ -72,44 +70,95 @@ def generar_fallback(respuesta):
     
     return {
         "titulo": "El Silencio de la Calle Madero | Relato de Terror",
-        "descripcion": "Relato de misterio y leyendas urbanas en México. Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
-        "tags": "relatos de terror, leyendas urbanas, Mexico, misterio, suspension",
-        "miniatura_prompt": "A dark empty colonial street corner in Mexico City at night, streetlight, fog, cinematic mystery photograph, 8k",
+        "descripcion": "Relato de misterio y leyendas urbanas en México. Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982 #TerrorMexicano #LeyendasUrbanas #Misterio #Paranormal #HistoriasDeMiedo",
+        "tags": "relatos de terror, leyendas urbanas, Mexico, misterio, suspension, terror mexicano, historias de miedo, casos paranormales, la llorona, el charro negro, nahuales, casas embrujadas, centro historico, calle Madero, testimonios reales",
+        "miniatura_prompt": "Close-up portrait of a middle-aged Mexican man with a terrified expression, looking off-screen, dark alley background with orange and red neon reflections, cinematic lighting, shallow depth of field, hyperrealistic, 8k, space for text at bottom",
         "segmentos": segmentos[:18]
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (Prompts visuales estrictamente en INGLÉS)
+# GENERAR GUION + SEO CON DEEPSEEK (Título, descripción, tags, hashtags, miniatura)
 # ================================================================
 def generar_guion():
-    prompt = """Eres un director de cine y guionista galardonado.
-Escribe una historia de terror y suspenso psicológico ambientada en México en primera persona de unos 8000 caracteres.
-Divide la historia en 18 segmentos de ~450 caracteres cada uno.
+    prompt = """Eres un EXPERTO EN SEO DE YOUTUBE Y COPYWRITING para canales de terror, leyendas urbanas y misterio.
 
-REGLAS CRÍTICAS DE IMAGEN (imagen_prompt):
-1. Escribe TODOS los "imagen_prompt" EStrictamente EN INGLÉS.
-2. NUNCA uses las palabras "monster", "zombie", "blood", "scary face", "gore", "mutilated".
-3. Describe escenas FOTOGRÁFICAS REALISTAS de personajes comunes de México (ropa normal, rostro limpio, expresión sobria o angustiada natural).
-4. Varía las tomas: unas de calles coloniales, otras de interiores con velas, objetos antiguos, un perro en el callejón, un altar, etc.
-5. Usa estilo cinematográfico: "Cinematic 35mm photograph, realistic lighting, Mexico City architecture, nocturnal, atmospheric mystery".
+Tu tarea es escribir una historia de terror en primera persona ambientada en México (8000 caracteres, 18 segmentos de 450 caracteres cada uno) y, además, generar los METADATOS MÁS OPTIMIZADOS para posicionar el video en las primeras posiciones de búsqueda de YouTube.
 
-REGLA DE TEXTO (texto):
-1. Solamente pon lo que el narrador habla. NUNCA incluyas la palabra "prompt" o instrucciones en el texto narrativo.
-2. Usa comillas simples 'así' para diálogos.
+REGLAS ESTRICTAS PARA CADA METADATO:
 
-Genera la respuesta estrictamente en formato JSON válido:
+---
+
+### 🔥 1. TÍTULO (máximo 60 caracteres)
+- **OBLIGATORIO**: Coloca la PALABRA CLAVE PRINCIPAL al principio.
+- **INTENCIÓN**: Debe generar CURIOSIDAD y URGENCIA.
+- **ESTRUCTURA SUGERIDA**: [Palabra clave + gancho emocional + ubicación/contexto].
+- **EJEMPLOS**: 
+  ❌ Mal: "La leyenda de la calle Madero" (aburrido)
+  ✅ Bien: "El SILENCIO de la Calle Madero | Terror en CDMX"
+  ✅ Mejor: "La Llorona del Viaducto: Testimonio REAL"
+
+---
+
+### 📝 2. DESCRIPCIÓN (máximo 500 caracteres)
+- **DEBE INCLUIR**:
+  - Un resumen atractivo que enganche al lector (con la palabra clave principal en los primeros 100 caracteres).
+  - Palabras clave secundarias de alto volumen (ej: "leyendas urbanas mexicanas", "casas embrujadas", "historias de miedo reales").
+  - **HASHTAGS**: 5 hashtags específicos y de nicho (relacionados con terror/misterio mexicano). Ej: #TerrorMexicano #LeyendasUrbanas #Misterio #Paranormal #HistoriasDeMiedo
+  - **LLAMADA A LA ACCIÓN**: Al final, invita a suscribirse y a seguirte en Facebook.
+  - **ENLACE OBLIGATORIO**: https://www.facebook.com/profile.php?id=61593237382982
+
+- **EJEMPLO DE ESTRUCTURA**:
+  "En el corazón de la Ciudad de México, la Calle Madero guarda un secreto que nadie se atreve a contar. Esta es mi historia... [resumen]. 🌙 Si te gusta el terror mexicano, no olvides suscribirte y activar la campanita. 🔔 Síguenos también en Facebook: [enlace] #TerrorMexicano #LeyendasUrbanas #Misterio #Paranormal #HistoriasDeMiedo"
+
+---
+
+### 🏷️ 3. ETIQUETAS (TAGS) - máximo 500 caracteres
+- **DEBEN SER**: 
+  - Las 10-15 palabras clave más buscadas EN YOUTUBE MÉXICO para terror.
+  - Deben incluir combinaciones de:
+    * Términos generales: "terror", "miedo", "leyendas", "misterio"
+    * Términos locales: "México", "CDMX", "Centro Histórico", "Mixcoac", "Tepito", etc.
+    * Términos de cola larga: "historias de terror mexicanas", "leyendas de la calle Madero", "la llorona en el viaducto"
+- **FORMATO**: Separadas por comas, sin espacios adicionales.
+
+---
+
+### 🖼️ 4. PROMPT PARA LA MINIATURA (máximo 200 caracteres en INGLÉS)
+- Debe describir un PRIMER PLANO de una persona mexicana común (ropa normal, rostro limpio, expresión de miedo o sorpresa genuina).
+- El fondo debe ser oscuro (noche, niebla, calle vacía) para crear contraste.
+- Los colores dominantes deben ser NARANJA, ROJO Y AMARILLO (para llamar la atención en el feed de YouTube).
+- Incluye un elemento de misterio (algo borroso al fondo, una sombra, una luz extraña).
+- Estilo: "Close-up portrait, hyperrealistic, cinematic lighting, shallow depth of field, 8k".
+- SIN GORE, SIN SANGRE, SIN ZOMBIES.
+- DEBE tener espacio para texto (esquina inferior o superior) para añadir un título corto.
+
+**EJEMPLO DE PROMPT PARA MINIATURA:**
+"Close-up portrait of a middle-aged Mexican man with a terrified expression, looking off-screen, dark alley background with orange and red neon reflections, cinematic lighting, shallow depth of field, hyperrealistic, 8k, space for text at bottom"
+
+---
+
+### 📖 HISTORIA
+- Narración en primera persona, 18 segmentos de 450 caracteres.
+- Usa comillas simples para diálogos.
+- El texto SOLO debe ser la narración, sin instrucciones visuales.
+
+---
+
+### FORMATO DE SALIDA (JSON):
 {
-  "titulo": "Título atractivo de máximo 60 caracteres",
-  "descripcion": "Descripción del video... Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
-  "tags": "terror, mexico, centro historico, leyendas, misterio",
-  "miniatura_prompt": "Full body cinematic photo of a middle-aged Mexican man on an empty historic Mexico street at night, fog, 35mm film style",
+  "titulo": "El Título Impactante (máx 60 caracteres)",
+  "descripcion": "Descripción con resumen, palabras clave, hashtags, llamado a la acción y enlace a Facebook.",
+  "tags": "terror, leyendas urbanas, Mexico, misterio, terror mexicano, historias de miedo, casos paranormales, la llorona, el charro negro, nahuales, casas embrujadas, centro historico, calle Madero, testimonios reales",
+  "miniatura_prompt": "Close-up portrait of a middle-aged Mexican man with a terrified expression...",
   "segmentos": [
     {
-      "texto": "Texto que solo leerá la voz en español...",
-      "imagen_prompt": "Detailed English photographic prompt for this specific scene..."
+      "texto": "Texto de la narración...",
+      "imagen_prompt": "Detailed English cinematic photographic prompt for this specific scene"
     }
   ]
 }
+
+**IMPORTANTE:** Asegúrate de que el JSON sea 100% válido y que los metadatos estén optimizados para posicionar en búsquedas de terror en México.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -117,35 +166,38 @@ Genera la respuesta estrictamente en formato JSON válido:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 4000,  # Aumentado para evitar JSON cortado
+        "max_tokens": 4000,
         "response_format": {"type": "json_object"}
     }
     
     respuesta = ""
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=120)
-        r.raise_for_status()
-        respuesta = r.json()["choices"][0]["message"]["content"].strip()
-        print(f"📄 Respuesta cruda obtenida ({len(respuesta)} caracteres)")
-        
-        json_str = limpiar_respuesta_json(respuesta)
-        data = json.loads(json_str)
-        
-        if "segmentos" not in data or len(data["segmentos"]) == 0:
-            raise ValueError("La respuesta no contiene segmentos")
-        
-        for seg in data["segmentos"]:
-            if "imagen_prompt" in seg:
-                seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
-            if "texto" in seg:
-                # Limpiar cualquier residuo indeseado del texto hablada
-                seg["texto"] = seg["texto"].replace('"', "'")
-                seg["texto"] = re.sub(r'imagen_prompt.*', '', seg["texto"], flags=re.IGNORECASE)
-        
-        return data
-    except Exception as e:
-        print(f"❌ Error procesando guion con DeepSeek: {e}")
-        return generar_fallback(respuesta)
+    for intento in range(3):
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=120)
+            r.raise_for_status()
+            respuesta = r.json()["choices"][0]["message"]["content"].strip()
+            print(f"📄 Respuesta obtenida ({len(respuesta)} caracteres)")
+            
+            json_str = limpiar_respuesta_json(respuesta)
+            data = json.loads(json_str)
+            
+            if "segmentos" not in data or len(data["segmentos"]) == 0:
+                raise ValueError("La respuesta no contiene segmentos")
+            
+            for seg in data["segmentos"]:
+                if "imagen_prompt" in seg:
+                    seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
+                if "texto" in seg:
+                    seg["texto"] = seg["texto"].replace('"', "'")
+                    seg["texto"] = re.sub(r'imagen_prompt.*', '', seg["texto"], flags=re.IGNORECASE)
+            
+            return data
+        except Exception as e:
+            print(f"❌ Intento {intento+1}/3 falló: {e}")
+            time.sleep(2)
+    
+    print("❌ Todos los intentos fallaron. Usando fallback.")
+    return generar_fallback(respuesta)
 
 # ================================================================
 # GENERAR IMAGEN CON AGNES AI
@@ -173,7 +225,6 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=3):
 # GENERAR AUDIO CON AZURE TTS (Limpio)
 # ================================================================
 def generar_audio(texto, index, intentos=3):
-    # Filtrado estricto para asegurar que solo vaya el relato
     texto_limpio = re.sub(r'imagen_prompt.*', '', texto, flags=re.IGNORECASE)
     texto_limpio = texto_limpio.replace('"', '&quot;').replace("'", "&apos;")
     
@@ -306,7 +357,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (Optimizado para Prompts e Imágenes Limpias)")
+    print("🎬 Iniciando Bot de YouTube (SEO Optimizado + Miniatura Impactante)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     guion_data = generar_guion()
@@ -317,7 +368,7 @@ def main():
     titulo_video = guion_data.get("titulo", "Relato de terror | Sombras de Medianoche")
     descripcion_video = guion_data.get("descripcion", "Relato de terror basado en leyendas urbanas de México.")
     tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, Mexico")
-    miniatura_prompt = guion_data.get("miniatura_prompt", "Cinematic photo of Mexico City at night, fog, streetlight, 35mm")
+    miniatura_prompt = guion_data.get("miniatura_prompt", "Close-up portrait of a Mexican man with terrified expression, dark alley, orange and red neon, cinematic, 8k")
     segmentos = guion_data.get("segmentos", [])
     
     if not segmentos:
@@ -326,6 +377,8 @@ def main():
     
     print(f"✅ Guion generado con {len(segmentos)} segmentos")
     print(f"📌 Título: {titulo_video}")
+    print(f"📌 Tags: {tags_video}")
+    print(f"📌 Descripción: {descripcion_video[:150]}...")
     
     elementos_validos = []
     imagen_ultimo_recurso = None
@@ -365,7 +418,11 @@ def main():
     print("\n🖼️ Generando miniatura...")
     time.sleep(4)
     miniatura_path = "miniatura.jpg"
-    miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
+    
+    # 🔥 REFORZAR EL PROMPT PARA SEO VISUAL
+    miniatura_prompt_refinado = f"{miniatura_prompt} High contrast, orange and red tones, dark background, text space at bottom, ultra detailed, 8k"
+    
+    miniatura_url = generar_imagen(miniatura_prompt_refinado, width=1280, height=720)
     
     if miniatura_url:
         try:
@@ -373,7 +430,7 @@ def main():
             r.raise_for_status()
             with open(miniatura_path, "wb") as f:
                 f.write(r.content)
-            print("✅ Miniatura generada")
+            print("✅ Miniatura generada con colores llamativos")
         except Exception as e:
             print(f"⚠️ Error al guardar miniatura: {e}")
             miniatura_path = None
