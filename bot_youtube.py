@@ -20,6 +20,11 @@ AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("YOUTUBE_USER_TOKEN") else {}
 
 # ================================================================
+# ID DEL CANAL "Sombras de Medianoche Terror"
+# ================================================================
+CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"
+
+# ================================================================
 # LIMPIAR PROMPTS PARA EVITAR ERRORES 400 EN AGNES
 # ================================================================
 def limpiar_prompt(prompt):
@@ -139,7 +144,7 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
         return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI (con reintentos y pausas largas)
+# GENERAR IMAGEN CON AGNES AI (con pausas largas)
 # ================================================================
 def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     prompt_limpio = limpiar_prompt(prompt)
@@ -154,14 +159,14 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=4):
                 return r.json()["data"][0]["url"]
             else:
                 print(f"⚠️ Intento {i+1}/{intentos} falló (código {r.status_code})")
-                time.sleep(10)  # Pausa de 10 segundos entre reintentos
+                time.sleep(10)
         except Exception as e:
             print(f"⚠️ Intento {i+1}/{intentos} error: {e}")
             time.sleep(10)
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS (con reintentos y pausas largas)
+# GENERAR AUDIO CON AZURE TTS (con pausas largas)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
@@ -188,7 +193,7 @@ def generar_audio(texto, index, intentos=4):
                 return filename
             else:
                 print(f"⚠️ Audio {index} intento {i+1}/{intentos} falló (código {r.status_code})")
-                time.sleep(10)  # Pausa de 10 segundos entre reintentos
+                time.sleep(10)
         except Exception as e:
             print(f"⚠️ Audio {index} error: {e}")
             time.sleep(10)
@@ -212,14 +217,12 @@ def montar_video(elementos, salida="video_final.mp4"):
             audio_clip = AudioFileClip(audio_path)
             duracion = audio_clip.duration
             
-            # Descargar imagen
             r = requests.get(img_url, timeout=30)
             r.raise_for_status()
             img_path = f"temp_img_{i}.jpg"
             with open(img_path, "wb") as f:
                 f.write(r.content)
             
-            # Redimensionar a HD/FHD con PIL
             with Image.open(img_path) as img:
                 img_resized = img.resize((1920, 1080), Image.Resampling.LANCZOS)
                 img_resized.save(img_path)
@@ -244,7 +247,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (FORZANDO EL CANAL CORRECTO)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -268,7 +271,14 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     }
     
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    
+    # 🔑 FORZAR EL CANAL "Sombras de Medianoche Terror"
+    request = youtube.videos().insert(
+        part="snippet,status",
+        body=body,
+        media_body=media,
+        onBehalfOfContentOwnerChannel=CANAL_ID_SOMBRAS
+    )
     response = request.execute()
     video_id = response['id']
     print(f"✅ Video subido: https://youtu.be/{video_id}")
@@ -318,12 +328,10 @@ def main():
     for i, seg in enumerate(segmentos):
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
         
-        # PAUSA PREVIA: 12 segundos antes de cada imagen (excepto la primera)
         if i > 0:
             print("⏳ Esperando 12 segundos antes de la siguiente imagen...")
             time.sleep(12)
         
-        # 1. GENERAR IMAGEN
         url_img = generar_imagen(seg["imagen_prompt"], width=1024, height=1024)
         if url_img:
             imagen_ultimo_recurso = url_img
@@ -335,11 +343,9 @@ def main():
             print(f"❌ Sin imagen disponible para segmento {i+1}, se salta.")
             continue
         
-        # PAUSA ENTRE IMAGEN Y AUDIO: 5 segundos
         print("⏳ Esperando 5 segundos antes del audio...")
         time.sleep(5)
         
-        # 2. GENERAR AUDIO
         audio_file = generar_audio(seg["texto"], i)
         if not audio_file:
             print(f"❌ Falló el audio {i+1}, se salta el segmento.")
@@ -351,9 +357,8 @@ def main():
         })
         print(f"✅ Segmento {i+1} completado")
     
-    # Miniatura (con pausa previa)
     print("\n🖼️ Generando miniatura...")
-    time.sleep(8)  # Pausa antes de la miniatura
+    time.sleep(8)
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     
