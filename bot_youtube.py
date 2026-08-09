@@ -20,7 +20,7 @@ AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("YOUTUBE_USER_TOKEN") else {}
 
 # ================================================================
-# ID DEL CANAL "Sombras de Medianoche Terror"
+# ID DEL CANAL "Sombras de Medianoche Terror" (FORZADO)
 # ================================================================
 CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"
 
@@ -40,25 +40,20 @@ def limpiar_prompt(prompt):
 # LIMPIAR RESPUESTA JSON DE DEEPSEEK (MEJORADO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
-    # Eliminar bloques de código markdown
     respuesta = re.sub(r'```json\s*', '', respuesta)
     respuesta = re.sub(r'```\s*', '', respuesta)
-    
-    # Buscar la primera llave y la última llave de cierre
     inicio = respuesta.find('{')
     fin = respuesta.rfind('}')
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio:fin+1]
-        # Eliminar comas finales en objetos y arrays
         json_str = re.sub(r',\s*}', '}', json_str)
         json_str = re.sub(r',\s*\]', ']', json_str)
-        # Asegurar que las claves tengan comillas dobles
         json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
         return json_str
     return respuesta
 
 # ================================================================
-# GENERAR FALLBACK
+# GENERAR FALLBACK (para cuando el JSON de DeepSeek falla)
 # ================================================================
 def generar_fallback(respuesta):
     print("⚠️ Usando fallback: generando estructura básica desde el texto.")
@@ -152,7 +147,7 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
         return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI (con pausas largas)
+# GENERAR IMAGEN CON AGNES AI
 # ================================================================
 def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     prompt_limpio = limpiar_prompt(prompt)
@@ -174,7 +169,7 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS (con pausas largas)
+# GENERAR AUDIO CON AZURE TTS
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
@@ -255,7 +250,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (con fallback)
+# SUBIR A YOUTUBE (FORZANDO EL CANAL ESPECÍFICO, SIN FALLBACK)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -280,31 +275,20 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     
-    # Intentar subir usando onBehalfOfContentOwner (para canales de marca)
-    try:
-        request = youtube.videos().insert(
-            part="snippet,status",
-            body=body,
-            media_body=media,
-            onBehalfOfContentOwner=CANAL_ID_SOMBRAS
-        )
-        response = request.execute()
-        print("✅ Video subido con onBehalfOfContentOwner (canal: Sombras de Medianoche)")
-    except Exception as e:
-        print(f"⚠️ Falló con onBehalfOfContentOwner: {e}")
-        # Fallback: subir sin parámetro (al canal principal)
-        request = youtube.videos().insert(
-            part="snippet,status",
-            body=body,
-            media_body=media
-        )
-        response = request.execute()
-        print("✅ Video subido al canal principal (fallback)")
+    # 🔑 FORZAR EL CANAL "Sombras de Medianoche Terror" (SIN FALLBACK)
+    CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"
+    
+    request = youtube.videos().insert(
+        part="snippet,status",
+        body=body,
+        media_body=media,
+        onBehalfOfContentOwner=CANAL_ID_SOMBRAS
+    )
+    response = request.execute()
     
     video_id = response['id']
-    print(f"✅ Video subido: https://youtu.be/{video_id}")
+    print(f"✅ Video subido a Sombras de Medianoche: https://youtu.be/{video_id}")
     
-    # Subir miniatura
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
@@ -317,7 +301,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     return response
 
 # ================================================================
-# MAIN (con pausas entre segmentos para no saturar)
+# MAIN
 # ================================================================
 def main():
     print("🎬 Iniciando Bot de YouTube (con miniatura y IA)")
