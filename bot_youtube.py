@@ -17,7 +17,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 AZURE_TTS_KEY = os.getenv("AZURE_TTS_KEY")
 AZURE_TTS_REGION = os.getenv("AZURE_TTS_REGION")
 AGNES_API_KEY = os.getenv("AGNES_API_KEY")
-YOUTUBE_CLIENT_SECRET = json.loads(os.getenv("YOUTUBE_CLIENT_SECRET")) if os.getenv("YOUTUBE_CLIENT_SECRET") else {}
+YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("YOUTUBE_USER_TOKEN") else {}
 
 # ================================================================
 # LIMPIAR PROMPTS PARA EVITAR ERRORES 400 EN AGNES
@@ -244,10 +244,11 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (con el token de usuario)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
-    creds = Credentials.from_authorized_user_info(YOUTUBE_CLIENT_SECRET)
+    # Autenticación con el token de usuario (refresh_token)
+    creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
     
     if isinstance(etiquetas, str):
@@ -310,12 +311,10 @@ def main():
     print(f"📌 Título: {titulo_video}")
     print(f"📌 Tags: {tags_video}")
     
-    # Process paired elements (Image + Audio)
     elementos_validos = []
+    imagen_ultimo_recurso = None
     
     print("🎨 y 🎙️ Generando imágenes y audios para cada segmento...")
-    
-    imagen_ultimo_recurso = None
     
     for i, seg in enumerate(segmentos):
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
