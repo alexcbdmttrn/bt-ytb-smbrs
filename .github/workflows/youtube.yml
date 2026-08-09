@@ -30,11 +30,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Verificar instalación de moviepy
+      - name: Verificar instalación
         run: |
           python -c "import moviepy; print('moviepy OK')"
-          python -c "from moviepy.editor import ImageClip; print('ImageClip importado OK')"
-          echo "✅ Todas las dependencias están listas"
+          python -c "from moviepy.editor import ImageClip; print('ImageClip OK')"
 
       - name: Ejecutar bot de YouTube
         env:
