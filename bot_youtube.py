@@ -5,6 +5,7 @@ import requests
 import time
 from datetime import datetime
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
+from PIL import Image  # <--- NUEVO IMPORT
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -98,7 +99,7 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK
+# GENERAR GUION CON DEEPSEEK (con response_format JSON)
 # ================================================================
 def generar_guion():
     prompt = """Eres un escritor de terror especializado en leyendas urbanas de México.
@@ -128,7 +129,13 @@ Formato de salida: SOLO JSON válido, sin texto adicional, sin markdown. Usa com
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "temperature": 0.85, "max_tokens": 2300}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.85,
+        "max_tokens": 2300,
+        "response_format": {"type": "json_object"}  # <--- FORZA JSON VÁLIDO
+    }
     
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=120)
@@ -213,7 +220,7 @@ def generar_audio(texto, index, intentos=3):
     return None
 
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY (con parche para Pillow)
+# MONTAR VIDEO CON MOVIEPY (con PIL para redimensionar ANTES)
 # ================================================================
 def montar_video(imagenes, audios, salida="video_final.mp4"):
     if len(imagenes) == 0 or len(audios) == 0:
@@ -232,18 +239,27 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
         try:
             r = requests.get(img_url, timeout=30)
             r.raise_for_status()
-            with open(f"temp_img_{i}.jpg", "wb") as f:
+            img_path = f"temp_img_{i}.jpg"
+            
+            # Guardar imagen descargada
+            with open(img_path, "wb") as f:
                 f.write(r.content)
-            clip = ImageClip(f"temp_img_{i}.jpg").set_duration(duracion_por_imagen)
-            # Redimensionar manualmente sin ANTIALIAS (usando resize con método None)
-            clip = clip.resize(width=1920, method=None)
+            
+            # Redimensionar con PIL antes de MoviePy (solución al error ANTIALIAS / method)
+            with Image.open(img_path) as img:
+                # Redimensionar a 1920x1080 manteniendo proporción
+                img_resized = img.resize((1920, 1080), Image.Resampling.LANCZOS)
+                img_resized.save(img_path)
+            
+            # Crear clip con la imagen ya redimensionada
+            clip = ImageClip(img_path).set_duration(duracion_por_imagen)
             clips_imagen.append(clip)
         except Exception as e:
-            print(f"⚠️ Error descargando imagen {i}: {e}")
+            print(f"⚠️ Error procesando imagen {i}: {e}")
             continue
     
     if len(clips_imagen) == 0:
-        raise ValueError("No se pudo descargar ninguna imagen")
+        raise ValueError("No se pudo procesar ninguna imagen")
     
     video = concatenate_videoclips(clips_imagen, method="compose")
     
