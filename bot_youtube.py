@@ -22,64 +22,57 @@ YOUTUBE_CLIENT_SECRET = json.loads(os.getenv("YOUTUBE_CLIENT_SECRET"))
 # LIMPIAR PROMPTS PARA EVITAR ERRORES 400 EN AGNES
 # ================================================================
 def limpiar_prompt(prompt):
-    """Elimina caracteres problemáticos para la API de Agnes."""
     if not prompt:
         return "Escena de terror, paisaje oscuro"
-    prompt = re.sub(r'\n+', ' ', prompt)           # Saltos de línea a espacios
-    prompt = re.sub(r'"', "'", prompt)             # Comillas dobles a simples
-    prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)  # Caracteres no ASCII
-    prompt = re.sub(r'\s+', ' ', prompt)           # Múltiples espacios a uno
-    return prompt.strip()[:500]  # Limitar longitud
+    prompt = re.sub(r'\n+', ' ', prompt)
+    prompt = re.sub(r'"', "'", prompt)
+    prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)
+    prompt = re.sub(r'\s+', ' ', prompt)
+    return prompt.strip()[:500]
 
 # ================================================================
 # LIMPIAR RESPUESTA JSON DE DEEPSEEK
 # ================================================================
 def limpiar_respuesta_json(respuesta):
-    """Limpia la respuesta de DeepSeek para extraer un JSON válido."""
-    # Eliminar bloques de código markdown
     respuesta = re.sub(r'```json\s*', '', respuesta)
     respuesta = re.sub(r'```\s*', '', respuesta)
-    
-    # Buscar la primera llave de apertura y la última de cierre
     inicio = respuesta.find('{')
     fin = respuesta.rfind('}')
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio:fin+1]
-        # Reparar comas faltantes entre objetos en arrays
         json_str = re.sub(r'}\s*{', '},{', json_str)
-        # Eliminar comas finales en arrays y objetos
         json_str = re.sub(r',\s*}', '}', json_str)
         json_str = re.sub(r',\s*\]', ']', json_str)
-        # Escapar comillas internas en valores de texto
         json_str = re.sub(r'(?<!")(\w+)(?=":)', r'"\1"', json_str)
         return json_str
     return respuesta
 
 # ================================================================
-# GENERAR FALLBACK CUANDO EL JSON FALLA
+# GENERAR FALLBACK (MEJORADO)
 # ================================================================
 def generar_fallback(respuesta):
-    """Genera una estructura básica cuando el JSON falla."""
     print("⚠️ Usando fallback: generando estructura básica desde el texto.")
     
-    # Intentar extraer título
-    lineas = respuesta.split('\n')
-    titulo = "Relato de terror | Sombras de Medianoche"
-    for linea in lineas[:5]:
-        linea_limpia = linea.strip()
-        if len(linea_limpia) > 10 and not linea_limpia.startswith('{'):
-            if 'título' in linea_limpia.lower() or 'titulo' in linea_limpia.lower():
-                titulo = linea_limpia.replace('título:', '').replace('titulo:', '').strip()
-                break
-            elif len(linea_limpia) > 20:
-                titulo = linea_limpia[:60]
-                break
+    # Extraer título usando regex
+    titulo_match = re.search(r'"titulo"\s*:\s*"([^"]+)"', respuesta)
+    if titulo_match:
+        titulo = titulo_match.group(1).strip()
+    else:
+        lineas = respuesta.split('\n')
+        titulo = "Relato de terror | Sombras de Medianoche"
+        for linea in lineas[:5]:
+            linea_limpia = linea.strip()
+            if len(linea_limpia) > 10 and not linea_limpia.startswith('{'):
+                if 'título' in linea_limpia.lower() or 'titulo' in linea_limpia.lower():
+                    titulo = linea_limpia.replace('título:', '').replace('titulo:', '').strip()
+                    break
+                elif len(linea_limpia) > 20:
+                    titulo = linea_limpia[:60]
+                    break
     
-    # Limpiar texto
     texto_limpio = re.sub(r'\n+', ' ', respuesta)
     texto_limpio = re.sub(r'[{}"]', '', texto_limpio)
     
-    # Dividir en segmentos
     segmentos = []
     chars_por_segmento = 500
     for i in range(0, len(texto_limpio), chars_por_segmento):
@@ -149,7 +142,6 @@ Formato de salida: SOLO JSON válido, sin texto adicional, sin markdown. Usa com
         if "segmentos" not in data or len(data["segmentos"]) == 0:
             raise ValueError("La respuesta no contiene segmentos")
         
-        # Limpiar prompts de imagen para evitar errores 400
         for seg in data["segmentos"]:
             if "imagen_prompt" in seg:
                 seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
@@ -221,7 +213,7 @@ def generar_audio(texto, index, intentos=3):
     return None
 
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY
+# MONTAR VIDEO CON MOVIEPY (con parche para Pillow)
 # ================================================================
 def montar_video(imagenes, audios, salida="video_final.mp4"):
     if len(imagenes) == 0 or len(audios) == 0:
@@ -230,7 +222,6 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
     clips_imagen = []
     duracion_total = 0.0
     
-    # Cargar duración de audios
     for audio_file in audios:
         clip = AudioFileClip(audio_file)
         duracion_total += clip.duration
@@ -243,7 +234,9 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
             r.raise_for_status()
             with open(f"temp_img_{i}.jpg", "wb") as f:
                 f.write(r.content)
-            clip = ImageClip(f"temp_img_{i}.jpg").set_duration(duracion_por_imagen).resize(width=1920)
+            clip = ImageClip(f"temp_img_{i}.jpg").set_duration(duracion_por_imagen)
+            # Redimensionar manualmente sin ANTIALIAS (usando resize con método None)
+            clip = clip.resize(width=1920, method=None)
             clips_imagen.append(clip)
         except Exception as e:
             print(f"⚠️ Error descargando imagen {i}: {e}")
@@ -254,7 +247,6 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
     
     video = concatenate_videoclips(clips_imagen, method="compose")
     
-    # Concatenar audios
     audios_clips = [AudioFileClip(a) for a in audios]
     audio_final = concatenate_audioclips(audios_clips)
     
@@ -310,8 +302,6 @@ def main():
     print("🎬 Iniciando Bot de YouTube (con miniatura y IA)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # 1. Generar guion
-    print("📝 Generando guion y metadatos con DeepSeek...")
     guion_data = generar_guion()
     if not guion_data:
         print("❌ No se pudo generar el guion. Abortando.")
@@ -331,7 +321,6 @@ def main():
     print(f"📌 Título: {titulo_video}")
     print(f"📌 Tags: {tags_video}")
     
-    # 2. Generar imágenes (18 segmentos, pausa de 8 segundos entre cada una)
     print("🎨 Generando imágenes para el video...")
     imagenes = []
     for i, seg in enumerate(segmentos):
@@ -344,7 +333,6 @@ def main():
             print(f"      ❌ Falló imagen {i+1} después de 3 intentos")
         time.sleep(8)
     
-    # 3. Generar miniatura (1280x720)
     print("🖼️ Generando miniatura...")
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     if miniatura_url:
@@ -372,7 +360,6 @@ def main():
                 print(f"⚠️ Error descargando imagen de respaldo: {e}")
     time.sleep(8)
     
-    # 4. Generar audios con Azure TTS (pausa de 8 segundos entre cada uno)
     print("🎙️ Generando audios con Azure TTS...")
     audios = []
     for i, seg in enumerate(segmentos):
@@ -389,7 +376,6 @@ def main():
         print("❌ No se generaron suficientes imágenes o audios. Abortando.")
         return
     
-    # 5. Montar video
     print("🎬 Montando video con MoviePy...")
     try:
         video_path = montar_video(imagenes, audios, "video_final.mp4")
@@ -397,7 +383,6 @@ def main():
         print(f"❌ Error montando video: {e}")
         return
     
-    # 6. Subir a YouTube
     print("⬆️ Subiendo video y miniatura a YouTube...")
     try:
         subir_a_youtube(video_path, "miniatura.jpg", titulo_video, descripcion_video, tags_video)
