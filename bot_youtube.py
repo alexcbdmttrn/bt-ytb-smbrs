@@ -22,7 +22,7 @@ YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("Y
 # ================================================================
 # ID DEL CANAL "Sombras de Medianoche Terror" (FORZADO)
 # ================================================================
-CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"
+CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"  # <-- ID DE TU CANAL
 
 # ================================================================
 # LIMPIAR PROMPTS PARA EVITAR ERRORES 400 EN AGNES
@@ -37,7 +37,7 @@ def limpiar_prompt(prompt):
     return prompt.strip()[:500]
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON DE DEEPSEEK (MEJORADO)
+# LIMPIAR RESPUESTA JSON DE DEEPSEEK
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r'```json\s*', '', respuesta)
@@ -74,7 +74,7 @@ def generar_fallback(respuesta):
         if len(segmento.strip()) > 50:
             segmentos.append({
                 "texto": segmento,
-                "imagen_prompt": f"Escena de terror, {segmento[:50]}..., estilo cinematográfico"
+                "imagen_prompt": f"Fotografía hiperrealista de una escena de terror en México. Personas mexicanas de aspecto común, expresión natural. Luz natural, 8k, ultradetallado."
             })
     
     if len(segmentos) == 0:
@@ -92,12 +92,21 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK
+# GENERAR GUION CON DEEPSEEK (con prompts de imagen profesionales)
 # ================================================================
 def generar_guion():
-    prompt = """Eres un escritor de terror especializado en leyendas urbanas de México.
+    prompt = """Eres un escritor de terror y experto en dirección cinematográfica.
 Escribe una historia de terror en primera persona de aproximadamente 9000 caracteres.
 Divide la historia en 18 segmentos de ~500 caracteres cada uno.
+
+Para CADA segmento, genera un PROMPT DE IMAGEN PROFESIONAL Y DETALLADO en español que describa la escena principal con:
+- Lugar exacto (ciudad, calle, casa, etc.)
+- Personajes (descripción física realista: edad, vestimenta, expresión natural)
+- Iluminación (luz natural, faros, luna, etc.)
+- Estilo (fotorrealista, 8k, ultradetallado)
+- Especificar que las personas son MEXICANAS de aspecto común, sin maquillaje exagerado, sin efectos de terror excesivos.
+- Evitar rostros genéricos, evitar poses de catálogo.
+
 REGLA IMPORTANTE: No uses comillas dobles dentro del texto narrativo, usa comillas simples 'así'.
 
 Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
@@ -107,8 +116,8 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8",
   "miniatura_prompt": "Prompt cinematográfico para la miniatura",
   "segmentos": [
-    {"texto": "texto del segmento 1", "imagen_prompt": "descripción visual 1 en inglés o español"},
-    {"texto": "texto del segmento 2", "imagen_prompt": "descripción visual 2 en inglés o español"}
+    {"texto": "texto del segmento 1", "imagen_prompt": "descripción visual profesional para la imagen 1"},
+    {"texto": "texto del segmento 2", "imagen_prompt": "descripción visual profesional para la imagen 2"}
   ]
 }
 """
@@ -147,7 +156,7 @@ Genera la respuesta estrictamente en este formato JSON sin markdown adicional:
         return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI
+# GENERAR IMAGEN CON AGNES AI (con pausas largas)
 # ================================================================
 def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     prompt_limpio = limpiar_prompt(prompt)
@@ -169,7 +178,7 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=4):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS
+# GENERAR AUDIO CON AZURE TTS (voz natural + SSML mejorado)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
@@ -177,12 +186,14 @@ def generar_audio(texto, index, intentos=4):
     headers = {
         "Ocp-Apim-Subscription-Key": AZURE_TTS_KEY,
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3"
+        "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3"  # Mejor calidad
     }
     ssml = f"""
     <speak version="1.0" xml:lang="es-MX">
-        <voice name="es-MX-DaliaNeural">
-            {texto_limpio}
+        <voice name="es-MX-BeatrizNeural">  <!-- Voz más natural -->
+            <prosody rate="0.9" pitch="0%">
+                {texto_limpio}
+            </prosody>
         </voice>
     </speak>
     """
@@ -276,8 +287,6 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     
     # 🔑 FORZAR EL CANAL "Sombras de Medianoche Terror" (SIN FALLBACK)
-    CANAL_ID_SOMBRAS = "UCBH3NWZ4cILxP5N2qsnb3wQ"
-    
     request = youtube.videos().insert(
         part="snippet,status",
         body=body,
