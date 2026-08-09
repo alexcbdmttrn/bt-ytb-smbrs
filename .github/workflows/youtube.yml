@@ -25,6 +25,7 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
+          pip install Pillow==9.5.0   # Versión compatible con MoviePy
           pip install moviepy==1.0.3
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           sudo apt-get update
@@ -34,6 +35,7 @@ jobs:
         run: |
           python -c "import moviepy; print('moviepy OK')"
           python -c "from moviepy.editor import ImageClip; print('ImageClip OK')"
+          python -c "import PIL; print('Pillow OK')"
 
       - name: Ejecutar bot de YouTube
         env:
