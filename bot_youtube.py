@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import requests
 import time
 from datetime import datetime
@@ -18,8 +19,21 @@ AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_CLIENT_SECRET = json.loads(os.getenv("YOUTUBE_CLIENT_SECRET"))
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (historia + metadatos + miniatura)
+# GENERAR GUION CON DEEPSEEK (con limpieza de JSON)
 # ================================================================
+def limpiar_respuesta_json(respuesta):
+    """Limpia la respuesta de DeepSeek para extraer un JSON válido."""
+    # Eliminar bloques de código markdown
+    respuesta = re.sub(r'```json\s*', '', respuesta)
+    respuesta = re.sub(r'```\s*', '', respuesta)
+    
+    # Buscar la primera llave de apertura y la última de cierre
+    inicio = respuesta.find('{')
+    fin = respuesta.rfind('}')
+    if inicio != -1 and fin != -1:
+        return respuesta[inicio:fin+1]
+    return respuesta
+
 def generar_guion():
     prompt = """Eres un escritor de terror especializado en leyendas urbanas de México.
 Escribe una historia de terror de aproximadamente 9000 caracteres (9 minutos de narración).
@@ -54,12 +68,47 @@ Formato de salida: JSON con esta estructura:
         r = requests.post(url, headers=headers, json=payload, timeout=120)
         r.raise_for_status()
         respuesta = r.json()["choices"][0]["message"]["content"].strip()
-        if respuesta.startswith("```json"):
-            respuesta = respuesta.replace("```json", "").replace("```", "").strip()
-        return json.loads(respuesta)
+        
+        # Limpiar y extraer JSON
+        json_str = limpiar_respuesta_json(respuesta)
+        data = json.loads(json_str)
+        
+        # Validar estructura básica
+        if "segmentos" not in data or len(data["segmentos"]) == 0:
+            raise ValueError("La respuesta no contiene segmentos")
+        
+        return data
+    except json.JSONDecodeError as e:
+        print(f"❌ Error decodificando JSON: {e}")
+        print(f"📄 Respuesta cruda (primeros 500 chars): {respuesta[:500]}")
+        # Fallback: crear estructura mínima desde el texto
+        return generar_fallback(respuesta)
     except Exception as e:
         print(f"❌ Error en DeepSeek: {e}")
         return None
+
+def generar_fallback(respuesta):
+    """Genera una estructura básica cuando el JSON falla."""
+    print("⚠️ Usando fallback: generando estructura básica desde el texto.")
+    # Dividir el texto en segmentos aproximados (cada ~500 caracteres)
+    texto_limpio = re.sub(r'\n+', ' ', respuesta)
+    segmentos = []
+    chars_por_segmento = 500
+    for i in range(0, len(texto_limpio), chars_por_segmento):
+        segmento = texto_limpio[i:i+chars_por_segmento]
+        if len(segmento.strip()) > 50:
+            segmentos.append({
+                "texto": segmento,
+                "imagen_prompt": f"Escena de terror, {segmento[:50]}..., estilo cinematográfico"
+            })
+    
+    return {
+        "titulo": "Relato de terror | Sombras de Medianoche",
+        "descripcion": "Relato de terror basado en leyendas urbanas de México. Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
+        "tags": "relatos de terror, leyendas urbanas, México, terror, misterio, miedo, paranormal, historias",
+        "miniatura_prompt": "Escena de terror, paisaje oscuro, colores negro y rojo, impactante, estilo cinematográfico",
+        "segmentos": segmentos[:18]  # máximo 18 segmentos
+    }
 
 # ================================================================
 # GENERAR IMAGEN CON AGNES AI (con reintentos)
@@ -92,10 +141,12 @@ def generar_audio(texto, index, intentos=3):
         "Content-Type": "application/ssml+xml",
         "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3"
     }
+    # Limpiar texto para SSML (escapar caracteres especiales)
+    texto_limpio = texto.replace('"', '&quot;').replace("'", "&apos;")
     ssml = f"""
     <speak version="1.0" xml:lang="es-MX">
         <voice name="es-MX-DaliaNeural">
-            {texto}
+            {texto_limpio}
         </voice>
     </speak>
     """
@@ -126,7 +177,7 @@ def montar_video(imagenes, audios, salida="video_final.mp4"):
         clip = AudioFileClip(audio_file)
         duracion_total += clip.duration
     
-    duracion_por_imagen = duracion_total / len(imagenes)
+    duracion_por_imagen = duracion_total / len(imagenes) if imagenes else 10
     
     for i, img_url in enumerate(imagenes):
         r = requests.get(img_url)
@@ -162,23 +213,21 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             "title": titulo,
             "description": descripcion,
             "tags": etiquetas,
-            "categoryId": "24"  # Entretenimiento
+            "categoryId": "24"
         },
         "status": {
             "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True  # <--- MARCA EL VIDEO COMO CREADO CON IA
+            "containsSyntheticMedia": True
         }
     }
     
-    # Subir el video
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = request.execute()
     video_id = response['id']
     print(f"✅ Video subido: https://youtu.be/{video_id}")
     
-    # Subir la miniatura
     try:
         media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
         thumb_request = youtube.thumbnails().set(videoId=video_id, media_body=media_thumb)
@@ -196,23 +245,27 @@ def main():
     print("🎬 Iniciando Bot de YouTube (con miniatura y IA)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # 1. Generar guion completo
+    # 1. Generar guion
     print("📝 Generando guion y metadatos con DeepSeek...")
     guion_data = generar_guion()
     if not guion_data:
-        print("❌ No se pudo generar el guion.")
+        print("❌ No se pudo generar el guion. Abortando.")
         return
     
     titulo_video = guion_data.get("titulo", "Relato de terror | Sombras de Medianoche")
     descripcion_video = guion_data.get("descripcion", "Relato de terror basado en leyendas urbanas de México. Síguenos también en Facebook: https://www.facebook.com/profile.php?id=61593237382982")
-    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México, terror, misterio")
+    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, México, terror")
     miniatura_prompt = guion_data.get("miniatura_prompt", "Escena de terror, paisaje oscuro, colores negro y rojo")
-    segmentos = guion_data["segmentos"]
+    segmentos = guion_data.get("segmentos", [])
+    
+    if len(segmentos) == 0:
+        print("❌ No se generaron segmentos. Abortando.")
+        return
     
     print(f"✅ Guion generado con {len(segmentos)} segmentos")
     print(f"📌 Título: {titulo_video}")
     
-    # 2. Generar imágenes para el video (18)
+    # 2. Generar imágenes
     print("🎨 Generando imágenes para el video...")
     imagenes = []
     for i, seg in enumerate(segmentos):
@@ -223,9 +276,9 @@ def main():
             print(f"      ✅ Imagen {i+1} generada")
         else:
             print(f"      ❌ Falló imagen {i+1}")
-        time.sleep(8)  # Pausa de 8 segundos
+        time.sleep(8)
     
-    # 3. Generar miniatura (1280x720)
+    # 3. Generar miniatura
     print("🖼️ Generando miniatura...")
     miniatura_url = generar_imagen(miniatura_prompt, width=1280, height=720)
     if miniatura_url:
@@ -241,7 +294,7 @@ def main():
                 f.write(r.content)
     time.sleep(8)
     
-    # 4. Generar audios con Azure TTS
+    # 4. Generar audios
     print("🎙️ Generando audios con Azure TTS...")
     audios = []
     for i, seg in enumerate(segmentos):
@@ -252,7 +305,7 @@ def main():
             print(f"      ✅ Audio {i+1} generado")
         else:
             print(f"      ❌ Falló audio {i+1}")
-        time.sleep(8)  # Pausa de 8 segundos
+        time.sleep(8)
     
     if len(imagenes) == 0 or len(audios) == 0:
         print("❌ No se generaron suficientes imágenes o audios. Abortando.")
@@ -262,7 +315,7 @@ def main():
     print("🎬 Montando video con MoviePy...")
     video_path = montar_video(imagenes, audios, "video_final.mp4")
     
-    # 6. Subir a YouTube con miniatura y marcado de IA
+    # 6. Subir a YouTube
     print("⬆️ Subiendo video y miniatura a YouTube...")
     subir_a_youtube(video_path, "miniatura.jpg", titulo_video, descripcion_video, tags_video)
     
