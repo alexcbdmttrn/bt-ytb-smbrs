@@ -31,7 +31,7 @@ YOUTUBE_USER_TOKEN = (
 )
 
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
-CANAL_LINK = "https://www.youtube.com/@TUCANAL"  # <-- REEMPLAZA CON TU LINK
+CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"  # <-- REEMPLAZA CON TU LINK
 
 ESTADO_FILE = "estado_shorts.json"
 
