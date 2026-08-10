@@ -155,16 +155,13 @@ def generar_perfil_personaje_shorts():
         "enfermero de 30 años en un psiquiátrico abandonado",
         "minero de 48 años en una mina clausurada",
     ]
-    
     genero = random.choice(generos)
-    
     if genero == "man":
         profesion = random.choice(profesiones_masculinas + profesiones_neutras)
         articulo = "un"
     else:
         profesion = random.choice(profesiones_femeninas + profesiones_neutras)
         articulo = "una"
-    
     perfil_fisico = (
         f"a {random.choice(edades)} Mexican {genero}, "
         f"{random.choice(rasgos)}, "
@@ -218,16 +215,14 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
+# 🧼 LIMPIADOR DE PROMPTS (recorte inteligente)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
         prompt = "Mexican street at night, bright lighting"
-
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
-
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -236,17 +231,14 @@ def limpiar_prompt(prompt):
     ]
     for pattern in palabras_sucias:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
-
-    prompt = re.sub(r"\s+", " ", prompt).strip()
-
+    prompt_base = re.sub(r"\s+", " ", prompt).strip()[:200]
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "vertical 9:16 portrait format for mobile, single solitary person, exactly one person, "
         "clean smooth skin, natural facial complexion with light skin tone, no face blemishes, "
-        "no cloned faces, sharp focus, bright well-lit scene, no dark underexposed areas, "
-        "no text, no watermark"
+        "sharp focus, bright well-lit scene, no dark underexposed areas, no text, no watermark"
     )
-    return (prompt + modificadores_calidad)[:500]
+    return prompt_base + modificadores_calidad
 
 # ================================================================
 # LIMPIAR RESPUESTA JSON
@@ -283,15 +275,10 @@ def guardar_estado(estado):
 # ================================================================
 def limpiar_texto_para_audio(texto):
     """Limpia emojis, caracteres de control, comillas y saltos de línea. MANTIENE eñes y acentos."""
-    # Eliminar emojis (Unicode Emoji)
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
-    # Eliminar caracteres de control
     texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
-    # Reemplazar comillas dobles por simples
     texto = texto.replace('"', "'")
-    # Reemplazar saltos de línea por espacios
     texto = texto.replace('\n', ' ')
-    # Eliminar espacios dobles
     texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
 
@@ -394,17 +381,15 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "max_tokens": 800,
         "response_format": {"type": "json_object"}
     }
-
+    respuesta = ""
     for intento in range(5):
         try:
             print(f"🔄 Intento {intento+1}/5 generando historia...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
-            
             respuesta = re.sub(r"```json\s*", "", respuesta)
             respuesta = re.sub(r"```\s*", "", respuesta)
-            
             try:
                 data = json.loads(respuesta)
             except json.JSONDecodeError as e:
@@ -421,21 +406,15 @@ Devuelve ESTRICTAMENTE este JSON válido:
                     data = json.loads(respuesta)
                 else:
                     raise e
-            
             if "texto_completo" not in data or len(data["texto_completo"]) < 50:
                 raise ValueError("Texto demasiado corto")
-            
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
-            
-            # Validar título
             titulo = data.get("titulo", "").strip()
             if len(titulo) < 40:
                 data["titulo"] = f"{titulo} | Relato de Terror"[:60]
             elif len(titulo) > 60:
                 data["titulo"] = titulo[:57] + "..."
-            
-            # Validar tags (mínimo 20)
             tags = data.get("tags", "")
             tags_list = [t.strip() for t in tags.split(",") if t.strip()]
             if len(tags_list) < 20:
@@ -443,18 +422,14 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 while len(tags_list) < 20:
                     tags_list.append(random.choice(extras))
             data["tags"] = ", ".join(tags_list[:20])
-            
             return data
-            
         except Exception as e:
             print(f"❌ Intento {intento+1}/5 falló: {e}")
             if intento < 4:
                 print(f"⏳ Esperando {10 + intento * 5} segundos...")
                 time.sleep(10 + intento * 5)
-    
     print("⚠️ Creando fallback manual...")
     texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él. El pueblo de {ESTADO_HISTORIA_SHORTS} guarda muchos secretos, y esa noche él descubriría uno de los más oscuros."
-    
     return {
         "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS}",
         "texto_completo": texto_fallback,
@@ -470,7 +445,6 @@ def dividir_texto(texto):
     if len(palabras) < 10:
         mitad = len(texto) // 2
         return texto[:mitad].strip(), texto[mitad:].strip()
-    
     mitad = len(palabras) // 2
     for i in range(mitad, min(mitad + 30, len(palabras))):
         if palabras[i].endswith('.') or palabras[i].endswith('?') or palabras[i].endswith('!'):
@@ -482,12 +456,11 @@ def dividir_texto(texto):
     return parte1.strip(), parte2.strip()
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL CON NEGATIVE PROMPT
+# GENERAR IMÁGENES VERTICALES (3 por Short para mejorar retención)
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt_completo = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, {prompt}, bright cinematic lighting, intense facial expression of fear or surprise, high contrast colors, vibrant highlights, sharp focus, dramatic shadows"
     prompt_limpio = limpiar_prompt(prompt_completo)
-    
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
@@ -498,7 +471,6 @@ def generar_imagen_vertical(prompt, intentos=3):
         "height": 1920,
         "num_images": 1
     }
-
     for _ in range(intentos):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
@@ -510,37 +482,28 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON VALIDACIÓN DE LONGITUD Y FALLBACK
+# GENERAR AUDIO CON FALLBACK Y ASYNC RUN
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
-    
-    # 🔥 VALIDAR LONGITUD CON FALLBACK
     if len(texto_limpio) < 100:
         print(f"⚠️ Texto demasiado corto ({len(texto_limpio)} caracteres). Rellenando...")
-        texto_limpio = texto_limpio + " El miedo crecía con cada paso. El silencio era ensordecedor. Sabía que algo lo observaba desde las sombras."
+        texto_limpio += " El miedo crecía con cada paso. El silencio era ensordecedor. Sabía que algo lo observaba desde las sombras."
         if len(texto_limpio) < 100:
             print("⚠️ Texto sigue corto. Usando fallback genérico...")
             texto_limpio = "Esa noche en la carretera, el trailero sintió que algo no andaba bien. El silencio era pesado. El miedo lo envolvía todo. No podía escapar."
-    
     if not texto_limpio:
         return None
-
     filename = f"audio_short_{index}.mp3"
     voz = CONFIG_VOZ_ACTUAL["voz"]
-    rate = CONFIG_VOZ_ACTUAL["velocidad"]  # +5%
+    rate = CONFIG_VOZ_ACTUAL["velocidad"]
     pitch = CONFIG_VOZ_ACTUAL["tono"]
-
     async def _generar():
         communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
         await communicate.save(filename)
-
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(_generar())
-        loop.close()
+        asyncio.run(_generar())
         print(f"✅ Audio Short generado con {voz} (1.05x)")
         return filename
     except Exception as e:
@@ -548,40 +511,33 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO VERTICAL
+# MONTAR VIDEO VERTICAL CON CIERRE DE RECURSOS
 # ================================================================
 def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
     clips_video = []
     clips_audio = []
-
     for i, elem in enumerate(elementos):
         try:
             audio_clip = AudioFileClip(elem["audio_path"])
             duracion = audio_clip.duration
-
             r = requests.get(elem["imagen_url"], timeout=30)
             r.raise_for_status()
             img_path = f"temp_short_{i}.jpg"
             with open(img_path, "wb") as f:
                 f.write(r.content)
-
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
-
             video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
             clips_audio.append(audio_clip)
         except Exception as e:
             print(f"⚠️ Error segmento {i}: {e}")
             continue
-
     if not clips_video or not clips_audio:
-        raise ValueError("No hay clips")
-
+        raise ValueError("No hay clips válidos para montar")
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
-
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -591,15 +547,19 @@ def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print(f"🎵 Audio de fondo usado: {fondo_path}")
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
-
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
+    video.close()
+    audio_final.close()
+    for c in clips_video:
+        c.close()
+    for a in clips_audio:
+        a.close()
     print(f"✅ Short vertical creado: {salida}")
     return salida
 
@@ -609,17 +569,14 @@ def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
 def subir_a_youtube(video_path, miniatura_path, titulo, texto_corto, etiquetas, parte):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
-
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
-
     descripcion = f"""📌 {texto_corto[:150]}...
 
 🔴 SUSCRÍBETE para más historias: {CANAL_LINK}
 📱 Facebook: {FACEBOOK_LINK}
 
 #Shorts #Terror #LeyendasMexicanas {' '.join(['#'+t for t in etiquetas])} #RelatosDeTerror #Paranormal"""
-
     body = {
         "snippet": {
             "title": f"{titulo} - Parte {parte}" if parte else titulo,
@@ -635,12 +592,28 @@ def subir_a_youtube(video_path, miniatura_path, titulo, texto_corto, etiquetas, 
             "containsSyntheticMedia": True,
         },
     }
-
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = request.execute()
     video_id = response["id"]
     print(f"✅ Short subido: https://youtu.be/{video_id}")
+
+# ================================================================
+# LIMPIEZA DE TEMPORALES DE SHORTS
+# ================================================================
+def limpiar_temporales_shorts():
+    for f in os.listdir("."):
+        if (f.startswith("temp_short_") or f.startswith("audio_short_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
+            try:
+                os.remove(f)
+            except Exception:
+                pass
+    if os.path.exists("short_final.mp4"):
+        try:
+            os.remove("short_final.mp4")
+        except Exception:
+            pass
+    print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
 # MAIN
@@ -652,11 +625,9 @@ def main():
     print(f"🎭 Personaje: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}")
     print(f"📍 Ubicación: {ESTADO_HISTORIA_SHORTS}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:60]}...")
-
     estado = cargar_estado()
     parte_actual = estado.get("parte", 1)
     print(f"📌 Estado actual: Parte {parte_actual}")
-
     fondo_path = seleccionar_fondo_disponible(estado)
     if fondo_path:
         print(f"🎵 Fondo seleccionado: {fondo_path}")
@@ -669,10 +640,7 @@ def main():
         if not historia:
             print("❌ No se pudo generar la historia")
             return
-        
         texto_completo = historia.get("texto_completo", "")
-        
-        # 🔥 CONTROL DE LONGITUD (300-400 palabras)
         palabras = len(texto_completo.split())
         if palabras < 250:
             print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
@@ -682,76 +650,75 @@ def main():
             texto_completo = truncar_texto_largo(texto_completo, 350)
         else:
             print(f"✅ Texto con longitud ideal ({palabras} palabras)")
-        
         historia["texto_completo"] = texto_completo
-        
+        parte1, parte2 = dividir_texto(texto_completo)
         estado["historia"] = {
             "titulo": historia.get("titulo", "Relato de Terror Nocturno"),
             "texto_completo": texto_completo,
+            "parte2_texto": parte2,
             "palabras_portada": historia.get("palabras_portada", "TERROR"),
             "tags": historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
         }
-        estado["parte"] = 2
         guardar_estado(estado)
-
-        parte1, parte2 = dividir_texto(texto_completo)
-        estado["historia"]["parte2"] = parte2
-        guardar_estado(estado)
-
-        texto_publicar = parte1
-        cta = "\n\nParte 2 mañana a la misma hora. No te la pierdas."
-        texto_publicar += cta
-        parte_num = 1
-        print(f"📝 Publicando Parte 1 ({len(texto_publicar)} caracteres, {len(parte1.split())} palabras)")
+        # Generar 3 imágenes para la Parte 1
+        print("🎨 Generando 3 imágenes para la Parte 1...")
+        imagenes = []
+        prompts_part1 = [
+            f"Escena inicial impactante, {parte1[:150]}",
+            f"Momento de tensión, {parte1[150:300]}",
+            f"Cliffhanger final, {parte1[-150:]}"
+        ]
+        for idx, p in enumerate(prompts_part1):
+            img = generar_imagen_vertical(p)
+            if img:
+                imagenes.append(img)
+            else:
+                print(f"⚠️ Falló imagen {idx+1}, reusando última")
+                imagenes.append(imagenes[-1] if imagenes else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror")
+            time.sleep(4)
+        print("🎙️ Generando audio Parte 1...")
+        audio_path = generar_audio(parte1, 1)
+        if audio_path:
+            elementos = [{"imagen_url": img, "audio_path": audio_path} for img in imagenes]
+            video_out = montar_video_shorts(elementos, fondo_path, "short_final.mp4")
+            subir_a_youtube(video_out, None, estado["historia"]["titulo"], parte1, estado["historia"]["tags"], parte=1)
+            estado["parte"] = 2
+            guardar_estado(estado)
     else:
+        print("📌 Publicando Parte 2...")
         historia = estado.get("historia")
-        if not historia or not historia.get("parte2"):
-            print("❌ No hay historia para Parte 2. Reiniciando.")
+        if not historia or not historia.get("parte2_texto"):
+            print("❌ No hay historia guardada para la Parte 2. Reiniciando...")
             estado["parte"] = 1
             guardar_estado(estado)
             return
-
-        texto_publicar = historia.get("parte2", "")
-        cta = "\n\n¿Te gustó este relato? Suscríbete para más historias de terror."
-        texto_publicar += cta
-        titulo = historia.get("titulo", "Relato de Terror Nocturno")
-        palabras_portada = historia.get("palabras_portada", "TERROR")
-        tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
-        parte_num = 2
-        print(f"📝 Publicando Parte 2 ({len(texto_publicar)} caracteres, {len(historia.get('parte2', '').split())} palabras)")
-
-        estado["parte"] = 1
-        estado["historia"] = None
-        guardar_estado(estado)
-
-    # Generar imagen vertical
-    print("🎨 Generando imagen vertical con personaje y negative prompt...")
-    prompt_img = f"escena de terror en {ESTADO_HISTORIA_SHORTS}, vertical 9:16"
-    imagen_url = generar_imagen_vertical(prompt_img)
-    if not imagen_url:
-        print("⚠️ Falló imagen, usando placeholder")
-        imagen_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-
-    print("⏳ Esperando 6 segundos antes del audio...")
-    time.sleep(6)
-
-    print("🎙️ Generando audio (1.05x)...")
-    audio_path = generar_audio(texto_publicar, 0)
-    if not audio_path:
-        print("❌ Falló audio")
-        return
-
-    elementos = [{"imagen_url": imagen_url, "audio_path": audio_path}]
-    print("🎬 Montando Short vertical...")
-    video_path = montar_video_shorts(elementos, fondo_path, "short_final.mp4")
-
-    titulo = historia.get("titulo", "Relato de Terror Nocturno") if parte_actual == 2 else historia.get("titulo", "Relato de Terror Nocturno")
-    tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias") if parte_actual == 2 else historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
-    
-    print("⬆️ Subiendo Short...")
-    subir_a_youtube(video_path, None, titulo, texto_publicar, tags, parte_num)
-
-    print("🎉 Short publicado exitosamente!")
+        parte2 = historia.get("parte2_texto", "")
+        print("🎨 Generando 3 imágenes para la Parte 2...")
+        imagenes = []
+        prompts_part2 = [
+            f"Clímax y desenlace inicio, {parte2[:150]}",
+            f"Momento de revelación, {parte2[150:300]}",
+            f"Final impactante, {parte2[-150:]}"
+        ]
+        for idx, p in enumerate(prompts_part2):
+            img = generar_imagen_vertical(p)
+            if img:
+                imagenes.append(img)
+            else:
+                print(f"⚠️ Falló imagen {idx+1}, reusando última")
+                imagenes.append(imagenes[-1] if imagenes else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror")
+            time.sleep(4)
+        print("🎙️ Generando audio Parte 2...")
+        audio_path = generar_audio(parte2, 2)
+        if audio_path:
+            elementos = [{"imagen_url": img, "audio_path": audio_path} for img in imagenes]
+            video_out = montar_video_shorts(elementos, fondo_path, "short_final.mp4")
+            subir_a_youtube(video_out, None, historia.get("titulo", "Relato de Terror"), parte2, historia.get("tags", "terror, shorts, mexico"), parte=2)
+            estado["parte"] = 1
+            estado["historia"] = None
+            guardar_estado(estado)
+    limpiar_temporales_shorts()
+    print("🎉 Proceso de Shorts completado")
 
 if __name__ == "__main__":
     try:
