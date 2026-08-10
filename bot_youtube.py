@@ -3,8 +3,9 @@ import json
 import re
 import requests
 import time
+import random
 from datetime import datetime
-from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips, CompositeAudioClip
 from PIL import Image
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -19,17 +20,36 @@ AZURE_TTS_REGION = os.getenv("AZURE_TTS_REGION")
 AGNES_API_KEY = os.getenv("AGNES_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("YOUTUBE_USER_TOKEN") else {}
 
+FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
+
 # ================================================================
-# LIMPIAR PROMPTS DE IMAGEN (2K, Inglés, Sin Gore)
+# LISTA DE ARCHIVOS DE FONDO DISPONIBLES (selección aleatoria)
+# ================================================================
+FONDOS_DISPONIBLES = [
+    "Ash and Marrow.mp3",
+    "Black Maw.mp3",
+    "Cold Hollow.mp3",
+    "Hollow Marrow.mp3",
+    "Sunken Dread.mp3",
+    "Sunless Vault.mp3",
+    "The Deep Rot.mp3"
+]
+
+# Elegir uno al azar para cada video
+FONDO_AUDIO_FILE = random.choice(FONDOS_DISPONIBLES)
+print(f"🎵 Audio de fondo seleccionado: {FONDO_AUDIO_FILE}")
+
+# ================================================================
+# LIMPIAR PROMPTS DE IMAGEN (2K, Inglés, Sin Gore, Sin Texto)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        return "Cinematic photo of Mexico City historic center at night, streetlights, 35mm photograph, hyperrealistic, 2k, ultra detailed"
+        return "Cinematic photo of Mexico City historic center at night, streetlights, 35mm photograph, hyperrealistic, 2k, ultra detailed, no text, no letters"
     prompt = re.sub(r'\n+', ' ', prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r'[^\x00-\x7F]+', '', prompt)
     prompt = re.sub(r'\s+', ' ', prompt)
-    estilo_limpio = " Cinematic lighting, 35mm film photograph, realistic everyday Mexican people, clean skin, no blood, no zombies, no gore, professional photography, 2k, hyperrealistic, ultra detailed, sharp focus."
+    estilo_limpio = " Cinematic lighting, 35mm film photograph, realistic everyday Mexican people, clean skin, no blood, no zombies, no gore, professional photography, 2k, hyperrealistic, ultra detailed, sharp focus, no text, no words, no signs, no typography, no writing."
     return (prompt.strip() + estilo_limpio)[:500]
 
 # ================================================================
@@ -65,14 +85,16 @@ def generar_fallback(respuesta):
         if len(segmento.strip()) > 40:
             segmentos.append({
                 "texto": segmento,
-                "imagen_prompt": "Cinematic photograph of an empty street in Mexico City at night, street lamps, fog, realistic 35mm photo, 2k"
+                "imagen_prompt": "Cinematic photograph of an empty street in Mexico City at night, street lamps, fog, realistic 35mm photo, 2k, no text, no writing"
             })
     
+    tags_fallback = "relatos de terror, leyendas urbanas, Mexico, misterio, suspenso, terror mexicano, historias de miedo, casos paranormales, la llorona, el charro negro, nahuales, casas embrujadas, centro historico, calle Madero, testimonios reales, creepypasta, cuentos de terror, mitos mexicanos, apariciones, espectros, miedo, noche, terror en vivo, podcast de terror, leyendas reales"
+    
     return {
-        "titulo": "El Silencio de la Calle Madero | Relato de Terror",
-        "descripcion": "Relato de misterio y leyendas urbanas en México. Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982 #TerrorMexicano #LeyendasUrbanas #Misterio #Paranormal #HistoriasDeMiedo",
-        "tags": "relatos de terror, leyendas urbanas, Mexico, misterio, suspension, terror mexicano, historias de miedo, casos paranormales, la llorona, el charro negro, nahuales, casas embrujadas, centro historico, calle Madero, testimonios reales",
-        "miniatura_prompt": "Close-up portrait of a middle-aged Mexican man with a terrified expression, looking off-screen, dark alley background with orange and red neon reflections, cinematic lighting, shallow depth of field, hyperrealistic, 2k, space for text at bottom",
+        "titulo": "El Terror Nocturno de la Calle Madero | Leyenda Real",
+        "descripcion": f"Una terrorífica leyenda urbana mexicana contada en primera persona. ¿Has sentido el aliento de lo desconocido en la oscuridad?\n\nSíguenos en nuestra página oficial de Facebook: {FACEBOOK_LINK}\n\nSuscríbete al canal para más historias y testimonios de terror.\n\n#leyendasurbanas #Terror #Misterio #mexico #HistoriasDeMiedo",
+        "tags": tags_fallback,
+        "miniatura_prompt": "Close-up portrait of a middle-aged Mexican man with a terrified expression, looking off-screen, dark alley background with orange and red neon reflections, cinematic lighting, shallow depth of field, hyperrealistic, 2k, no text, no words",
         "segmentos": segmentos[:24]
     }
 
@@ -80,42 +102,45 @@ def generar_fallback(respuesta):
 # GENERAR GUION + SEO CON DEEPSEEK (24 segmentos, voz natural)
 # ================================================================
 def generar_guion():
-    prompt = """Eres un EXPERTO EN SEO DE YOUTUBE Y COPYWRITING para canales de terror, leyendas urbanas y misterio.
+    prompt = f"""Eres un EXPERTO EN SEO DE YOUTUBE Y COPYWRITING para canales de terror, leyendas urbanas y misterio.
 También eres un LOCUTOR PROFESIONAL DE PODCASTS DE TERROR.
 
 Tu tarea es escribir una historia de terror en primera persona ambientada en México (aproximadamente 10000 caracteres).
 Divide la historia en 24 segmentos de ~450 caracteres cada uno.
 
+REGLAS STRICTAS DE ESTRUCTURA Y SEO:
+1. TÍTULO: OBLIGATORIAMENTE debe tener ENTRE 45 Y 60 CARACTERES exactos. Debe ser impactante, dar miedo y llamar al clic.
+2. DESCRIPCIÓN: Debe ser una sinopsis envolvente de 3 a 4 oraciones. DEBE INCLUIR OBLIGATORIAMENTE la frase: "Síguenos en Facebook: {FACEBOOK_LINK}" y al final 5 hashtags relevantes (#leyendasurbanas #Terror #Misterio #mexico #HistoriasDeMiedo).
+3. TAGS: Genera entre 25 y 30 palabras clave separadas por comas. El texto total de los tags DEBE SUPERAR LOS 400 CARACTERES.
+
 REGLAS OBLIGATORIAS DE REDACCIÓN PARA VOZ (Para evitar que suene robótica):
-1. RITMO Y PAUSAS: Usa oraciones CORTAS. Abusa de los puntos suspensivos (...) y los guiones largos (—) para forzar pausas dramáticas y silencios tensos.
-2. DIÁLOGOS Y EXCLAMACIONES: Usa signos de interrogación (¿?) y exclamación (¡!) en los momentos de miedo, duda o sorpresa.
-3. ESTILO ORAL: Usa lenguaje natural de una persona asustada contando su historia (ej. "Y entonces... no lo van a creer, pero...", "Se los juro, me quedé helado...").
-4. PALABRAS OMATOPÉYICAS O SUSTOS: Escribe interjecciones como "¡Ah!", "Shhh...", "Escuchen...", "Uff..." para darle matices orgánicos.
-5. SIN TEXTO TÉCNICO: Jamás pongas paréntesis con acotaciones teatrales como (suspirando) o (susurrando), solo escribe el texto puro que la voz deba pronunciar.
+1. RITMO Y DINAMISMO: Usa oraciones cortas e intercala preguntas y exclamaciones de forma fluida.
+2. PAUSAS NATURALES: Usa puntos y comas de forma orgánica. Usa puntos suspensivos (...) solo en revelaciones o giros dramáticos.
+3. ESTILO ORAL: Usa lenguaje narrativo directo y expresivo ("De pronto...", "Créanme...", "Sentí cómo se me helaba la sangre...").
+4. SIN TEXTO TÉCNICO: Jamás incluyas paréntesis con acotaciones teatrales como (suspirando) o (susurrando).
 
 REGLAS CRÍTICAS DE IMAGEN (imagen_prompt):
 1. Escribe TODOS los "imagen_prompt" ESTRICTAMENTE EN INGLÉS.
 2. Prompts fotográficos cinematográficos: "35mm film photo, Mexico City, night, fog, realistic, no gore, no zombies, 2k".
-3. Describe escenas FOTOGRÁFICAS REALISTAS de personajes comunes de México.
-4. Usa estilo cinematográfico: "Cinematic 35mm photograph, realistic lighting, Mexico City architecture, nocturnal, atmospheric mystery".
+3. ABSOLUTAMENTE NINGÚN TEXTO EN LA IMAGEN: Agrega siempre "no text, no letters, no words, no signs, no typography" para evitar errores tipográficos.
 
 REGLA DE TEXTO (texto):
-1. Solamente pon lo que el narrador habla. NUNCA incluyas la palabra "prompt" o instrucciones.
+1. Solamente pon lo que el narrador habla. NUNCA incluyas la palabra "prompt" ni instrucciones.
 2. Usa comillas simples 'así' para diálogos.
 
 Genera la respuesta estrictamente en formato JSON válido:
-{
-  "titulo": "Título atractivo de máximo 60 caracteres",
-  "descripcion": "Descripción del video con palabras clave y 5 hashtags... Síguenos en Facebook: https://www.facebook.com/profile.php?id=61593237382982",
-  "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15",
-  "miniatura_prompt": "Close-up portrait of a middle-aged Mexican man with a terrified expression, looking off-screen, dark alley background with orange and red neon reflections, cinematic lighting, shallow depth of field, hyperrealistic, 2k, space for text at bottom",
+{{
+  "titulo": "Título de terror impactante entre 45 y 60 caracteres",
+  "descripcion": "Sinopsis atrayente... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Terror #Misterio #mexico #HistoriasDeMiedo",
+  "tags": "tag1, tag2, tag3, ..., tag30 (extensión total > 400 caracteres)",
+  "miniatura_prompt": "Close-up portrait of a Mexican man with a terrified expression, dark alley, neon reflections, cinematic lighting, 2k, no text, no words",
   "segmentos": [
-    {
-      "texto": "Texto que solo leerá la voz en español...",
-      "imagen_prompt": "Detailed English photographic prompt for this specific scene, 2k"
-    }
+    {{
+      "texto": "Texto narrativo que leerá la voz...",
+      "imagen_prompt": "Detailed English photographic prompt for this scene, 2k, no text, no letters"
+    }}
   ]
-}
+}}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -141,6 +166,19 @@ Genera la respuesta estrictamente en formato JSON válido:
             if "segmentos" not in data or len(data["segmentos"]) == 0:
                 raise ValueError("La respuesta no contiene segmentos")
             
+            # Validación y ajuste del título (Rango 45 - 60 caracteres)
+            titulo = data.get("titulo", "")
+            if len(titulo) < 45 or len(titulo) > 60:
+                print(f"⚠️ Ajustando longitud del título original ({len(titulo)} caracteres)...")
+                if len(titulo) > 60:
+                    data["titulo"] = titulo[:57] + "..."
+                elif len(titulo) < 45:
+                    data["titulo"] = f"{titulo} | Relato de Terror Real"[:60]
+            
+            # Asegurar link de Facebook en la descripción
+            if FACEBOOK_LINK not in data.get("descripcion", ""):
+                data["descripcion"] = f"{data.get('descripcion', '')}\n\nSíguenos en Facebook: {FACEBOOK_LINK}"
+
             for seg in data["segmentos"]:
                 if "imagen_prompt" in seg:
                     seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
@@ -157,7 +195,7 @@ Genera la respuesta estrictamente en formato JSON válido:
     return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI (2K)
+# GENERAR IMAGEN CON AGNES AI (2K, Sin Texto)
 # ================================================================
 def generar_imagen(prompt, width=2048, height=2048, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
@@ -179,18 +217,18 @@ def generar_imagen(prompt, width=2048, height=2048, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS (CandelaNeural + SSML con pausas)
+# GENERAR AUDIO CON AZURE TTS (CandelaNeural, Ritmo Humano Normal)
 # ================================================================
 def generar_audio(texto, index, intentos=3):
     texto_limpio = re.sub(r'imagen_prompt.*', '', texto, flags=re.IGNORECASE)
     texto_limpio = texto_limpio.replace('"', '&quot;').replace("'", "&apos;")
     
-    # Inyectar pausas SSML automáticas basadas en la puntuación
-    texto_ssml = texto_limpio.replace('...', '<break time="800ms"/>')
-    texto_ssml = texto_ssml.replace('. ', '. <break time="400ms"/>')
-    texto_ssml = texto_ssml.replace(', ', ', <break time="200ms"/>')
-    texto_ssml = texto_ssml.replace('! ', '! <break time="500ms"/>')
-    texto_ssml = texto_ssml.replace('? ', '? <break time="500ms"/>')
+    # Puntuación SSML modulada para fluidez y velocidad humana normal
+    texto_ssml = texto_limpio.replace('...', '<break time="500ms"/>')
+    texto_ssml = texto_ssml.replace('. ', '. <break time="250ms"/>')
+    texto_ssml = texto_ssml.replace(', ', ', <break time="100ms"/>')
+    texto_ssml = texto_ssml.replace('! ', '! <break time="300ms"/>')
+    texto_ssml = texto_ssml.replace('? ', '? <break time="300ms"/>')
     
     url = f"https://{AZURE_TTS_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
@@ -199,10 +237,11 @@ def generar_audio(texto, index, intentos=3):
         "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3"
     }
     
+    # Velocidad normal (0%) y tono natural (-1%)
     ssml = f"""
     <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="es-MX">
         <voice name="es-MX-CandelaNeural">
-            <prosody rate="-8%" pitch="-3%">
+            <prosody rate="0%" pitch="-1%">
                 {texto_ssml}
             </prosody>
         </voice>
@@ -225,7 +264,7 @@ def generar_audio(texto, index, intentos=3):
     return None
 
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY
+# MONTAR VIDEO CON MOVIEPY (CON FONDO ALEATORIO)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     if not elementos:
@@ -263,9 +302,33 @@ def montar_video(elementos, salida="video_final.mp4"):
     if not clips_video or not clips_audio:
         raise ValueError("No se pudieron procesar los clips de video o audio")
 
+    # Crear video y audio principal
     video = concatenate_videoclips(clips_video, method="compose")
-    audio_final = concatenate_audioclips(clips_audio)
-    
+    audio_narracion = concatenate_audioclips(clips_audio)
+    duracion_total = audio_narracion.duration
+
+    # 🎵 Agregar audio de fondo (archivo aleatorio)
+    fondo_path = FONDO_AUDIO_FILE
+    if os.path.exists(fondo_path):
+        try:
+            fondo_clip = AudioFileClip(fondo_path)
+            # Repetir en loop hasta que dure lo mismo que la narración
+            if fondo_clip.duration < duracion_total:
+                veces = int(duracion_total / fondo_clip.duration) + 1
+                fondo_clip = fondo_clip * veces
+            fondo_clip = fondo_clip.subclip(0, duracion_total)
+            # Reducir volumen al 15%
+            fondo_clip = fondo_clip.volumex(0.15)
+            # Mezclar con la narración
+            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
+            print(f"🎵 Audio de fondo mezclado: {FONDO_AUDIO_FILE} (volumen 15%)")
+        except Exception as e:
+            print(f"⚠️ Error procesando fondo: {e}. Usando solo narración.")
+            audio_final = audio_narracion
+    else:
+        print(f"⚠️ No se encontró el archivo: {fondo_path}. Usando solo narración.")
+        audio_final = audio_narracion
+
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     print(f"✅ Video creado correctamente: {salida}")
@@ -279,13 +342,13 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     youtube = build("youtube", "v3", credentials=creds)
     
     if isinstance(etiquetas, str):
-        etiquetas = [tag.strip() for tag in etiquetas.split(",")]
+        etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
     body = {
         "snippet": {
             "title": titulo[:100],
             "description": descripcion[:5000],
-            "tags": etiquetas[:15],
+            "tags": etiquetas[:30],
             "categoryId": "24"
         },
         "status": {
@@ -322,18 +385,19 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (2K, 24 segmentos, Voz Natural)")
+    print("🎬 Iniciando Bot de YouTube (2K, 24 segmentos, Voz Dinámica, SEO Optimizado)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🎵 Archivo de fondo seleccionado: {FONDO_AUDIO_FILE}")
     
     guion_data = generar_guion()
     if not guion_data:
         print("❌ No se pudo generar el guion. Abortando.")
         return
     
-    titulo_video = guion_data.get("titulo", "Relato de terror | Sombras de Medianoche")
-    descripcion_video = guion_data.get("descripcion", "Relato de terror basado en leyendas urbanas de México.")
-    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, Mexico")
-    miniatura_prompt = guion_data.get("miniatura_prompt", "Close-up portrait of a Mexican man with terrified expression, dark alley, orange and red neon, cinematic, 2k")
+    titulo_video = guion_data.get("titulo", "El Terror Nocturno de la Calle Madero | Leyenda Real")
+    descripcion_video = guion_data.get("descripcion", f"Relato de terror basado en leyendas urbanas de México.\n\nSíguenos en Facebook: {FACEBOOK_LINK}")
+    tags_video = guion_data.get("tags", "relatos de terror, leyendas urbanas, Mexico, misterio, suspenso")
+    miniatura_prompt = guion_data.get("miniatura_prompt", "Close-up portrait of a Mexican man with terrified expression, dark alley, orange and red neon, cinematic, 2k, no text")
     segmentos = guion_data.get("segmentos", [])
     
     if not segmentos:
@@ -341,8 +405,8 @@ def main():
         return
     
     print(f"✅ Guion generado con {len(segmentos)} segmentos")
-    print(f"📌 Título: {titulo_video}")
-    print(f"📌 Tags: {tags_video}")
+    print(f"📌 Título ({len(titulo_video)} caracteres): {titulo_video}")
+    print(f"📌 Tags ({len(str(tags_video))} caracteres): {str(tags_video)[:100]}...")
     print(f"📌 Descripción: {descripcion_video[:150]}...")
     
     elementos_validos = []
@@ -386,7 +450,7 @@ def main():
     time.sleep(5)
     miniatura_path = "miniatura.jpg"
     
-    miniatura_prompt_refinado = f"{miniatura_prompt} High contrast, orange and red tones, dark background, text space at bottom, ultra detailed, 2k"
+    miniatura_prompt_refinado = f"{miniatura_prompt} High contrast, orange and red tones, dark background, ultra detailed, 2k, no text, no letters"
     
     miniatura_url = generar_imagen(miniatura_prompt_refinado, width=1280, height=720)
     
