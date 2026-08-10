@@ -23,7 +23,7 @@ YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN")) if os.getenv("Y
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 
 # ================================================================
-# LISTA DE ARCHIVOS DE FONDO DISPONIBLES (selección aleatoria)
+# LISTA DE ARCHIVOS DE FONDO DISPONIBLES
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3",
@@ -35,9 +35,28 @@ FONDOS_DISPONIBLES = [
     "The Deep Rot.mp3"
 ]
 
-# Elegir uno al azar para cada video
-FONDO_AUDIO_FILE = random.choice(FONDOS_DISPONIBLES)
-print(f"🎵 Audio de fondo seleccionado: {FONDO_AUDIO_FILE}")
+def seleccionar_fondo_disponible():
+    """
+    Busca un archivo de fondo disponible en la lista.
+    Devuelve el primer archivo que exista, o None si ninguno existe.
+    """
+    fondos = FONDOS_DISPONIBLES.copy()
+    random.shuffle(fondos)
+    
+    for fondo in fondos:
+        if os.path.exists(fondo):
+            print(f"✅ Audio de fondo encontrado: {fondo}")
+            return fondo
+    
+    print("⚠️ No se encontró ningún archivo de fondo disponible.")
+    return None
+
+# Elegir un fondo disponible al inicio
+FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
+if FONDO_AUDIO_FILE:
+    print(f"🎵 Audio de fondo seleccionado: {FONDO_AUDIO_FILE}")
+else:
+    print("⚠️ No se usará audio de fondo.")
 
 # ================================================================
 # LIMPIAR PROMPTS DE IMAGEN (2K, Inglés, Sin Gore, Sin Texto)
@@ -223,7 +242,6 @@ def generar_audio(texto, index, intentos=3):
     texto_limpio = re.sub(r'imagen_prompt.*', '', texto, flags=re.IGNORECASE)
     texto_limpio = texto_limpio.replace('"', '&quot;').replace("'", "&apos;")
     
-    # Puntuación SSML modulada para fluidez y velocidad humana normal
     texto_ssml = texto_limpio.replace('...', '<break time="500ms"/>')
     texto_ssml = texto_ssml.replace('. ', '. <break time="250ms"/>')
     texto_ssml = texto_ssml.replace(', ', ', <break time="100ms"/>')
@@ -237,7 +255,6 @@ def generar_audio(texto, index, intentos=3):
         "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3"
     }
     
-    # Velocidad normal (0%) y tono natural (-1%)
     ssml = f"""
     <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="es-MX">
         <voice name="es-MX-CandelaNeural">
@@ -264,7 +281,7 @@ def generar_audio(texto, index, intentos=3):
     return None
 
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY (CON FONDO ALEATORIO)
+# MONTAR VIDEO CON MOVIEPY (CON FONDO ALEATORIO CON REINTENTOS)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     if not elementos:
@@ -307,26 +324,27 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
 
-    # 🎵 Agregar audio de fondo (archivo aleatorio)
+    # 🎵 Agregar audio de fondo (con reintentos)
     fondo_path = FONDO_AUDIO_FILE
-    if os.path.exists(fondo_path):
+    if fondo_path and not os.path.exists(fondo_path):
+        print(f"⚠️ El archivo seleccionado ({fondo_path}) no existe. Buscando otro...")
+        fondo_path = seleccionar_fondo_disponible()
+    
+    if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
-            # Repetir en loop hasta que dure lo mismo que la narración
             if fondo_clip.duration < duracion_total:
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = fondo_clip * veces
             fondo_clip = fondo_clip.subclip(0, duracion_total)
-            # Reducir volumen al 15%
             fondo_clip = fondo_clip.volumex(0.15)
-            # Mezclar con la narración
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print(f"🎵 Audio de fondo mezclado: {FONDO_AUDIO_FILE} (volumen 15%)")
+            print(f"🎵 Audio de fondo mezclado: {fondo_path} (volumen 15%)")
         except Exception as e:
             print(f"⚠️ Error procesando fondo: {e}. Usando solo narración.")
             audio_final = audio_narracion
     else:
-        print(f"⚠️ No se encontró el archivo: {fondo_path}. Usando solo narración.")
+        print("⚠️ No se encontró ningún archivo de fondo. Usando solo narración.")
         audio_final = audio_narracion
 
     video = video.set_audio(audio_final)
@@ -387,7 +405,11 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 def main():
     print("🎬 Iniciando Bot de YouTube (2K, 24 segmentos, Voz Dinámica, SEO Optimizado)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎵 Archivo de fondo seleccionado: {FONDO_AUDIO_FILE}")
+    
+    if FONDO_AUDIO_FILE:
+        print(f"🎵 Archivo de fondo seleccionado: {FONDO_AUDIO_FILE}")
+    else:
+        print("⚠️ No hay archivo de fondo disponible.")
     
     guion_data = generar_guion()
     if not guion_data:
