@@ -58,7 +58,6 @@ CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 # 🎨 PALETAS REORDENADAS (60% FRÍAS / 40% CÁLIDAS)
 # ================================================================
 PALETAS_COLOR = [
-    # ❄️ FRÍAS (10 paletas - más probables)
     "Cold cyan blue fog, navy blue shadows, pale white moonlight",
     "Emerald green twilight, dark forest haze, muted sage green lighting",
     "Deep violet haze, electric purple ambient light, dark magenta shadows",
@@ -69,7 +68,6 @@ PALETAS_COLOR = [
     "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
     "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
     "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
-    # 🔥 CÁLIDAS (6 paletas - menos probables)
     "Deep crimson red, pitch black shadow, intense orange emergency light accents",
     "Blood red and burnt orange, dark charcoal shadows, hellish glow",
     "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
@@ -135,7 +133,6 @@ def generar_perfil_personaje():
         "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
-    # 🔥 SOLO RASGOS DE PIEL CLARA (sin indígenas ni morenos)
     rasgos = [
         "with mestizo features and light olive skin",
         "with light brown skin and freckles",
@@ -157,7 +154,7 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (CON PERSISTENCIA PARA EVITAR REPETICIÓN)
+# 🎵 AUDIO DE FONDO (CON PERSISTENCIA)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -177,21 +174,13 @@ def guardar_estado_musica(estado):
     print(f"✅ Estado de música guardado: {estado}")
 
 def seleccionar_fondo_disponible():
-    """Selecciona un fondo evitando repetir el último usado (persistido en archivo)."""
     estado_musica = cargar_estado_musica()
     ultimo_fondo = estado_musica.get("ultimo_fondo")
-    
     fondos = FONDOS_DISPONIBLES.copy()
-    
-    # Evitar el último fondo usado
     if ultimo_fondo and ultimo_fondo in fondos:
         fondos.remove(ultimo_fondo)
         print(f"🎵 Evitando repetir fondo: {ultimo_fondo}")
-    
-    # Shuffle para aleatoriedad
     random.shuffle(fondos)
-    
-    # Buscar en el repositorio
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
             continue
@@ -199,13 +188,10 @@ def seleccionar_fondo_disponible():
             for fondo in fondos:
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
-                    # Actualizar estado con el nuevo fondo
                     estado_musica["ultimo_fondo"] = fondo
                     guardar_estado_musica(estado_musica)
                     print(f"✅ Audio de fondo seleccionado: {full_path}")
                     return full_path
-    
-    # Si no hay más opciones, usar el primero disponible
     for root, dirs, files in os.walk("."):
         for file in files:
             for fondo in FONDOS_DISPONIBLES:
@@ -215,7 +201,6 @@ def seleccionar_fondo_disponible():
                     guardar_estado_musica(estado_musica)
                     print(f"✅ Audio de fondo (única opción): {full_path}")
                     return full_path
-    
     print("⚠️ No se encontró ningún archivo de fondo disponible.")
     return None
 
@@ -227,11 +212,9 @@ FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 def limpiar_prompt(prompt):
     if not prompt:
         prompt = "A quiet night scene, bright lighting"
-
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
-
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -240,10 +223,7 @@ def limpiar_prompt(prompt):
     ]
     for pattern in palabras_sucias:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
-
     prompt = re.sub(r"\s+", " ", prompt).strip()
-
-    # 🔥 FORZAR ILUMINACIÓN CLARA Y PIEL CLARA
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "16:9 widescreen format, single solitary person in frame, exactly one person, "
@@ -276,26 +256,21 @@ def agregar_texto_miniatura(img_path, texto_portada):
     if not texto_portada:
         texto_portada = "CASO REAL"
     texto_portada = texto_portada.upper().strip()
-
     try:
         with Image.open(img_path) as img:
             img = img.convert("RGBA")
             w, h = img.size
-
             font_size = int(h * 0.13)
             try:
                 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
             except:
                 font = ImageFont.load_default()
-
             dummy_draw = ImageDraw.Draw(img)
             bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
             text_w = bbox[2] - bbox[0]
             text_h = bbox[3] - bbox[1]
-
             x = (w - text_w) / 2
             y = h - text_h - int(h * 0.08)
-
             overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             draw_overlay = ImageDraw.Draw(overlay)
             pad_x, pad_y = 35, 20
@@ -304,30 +279,24 @@ def agregar_texto_miniatura(img_path, texto_portada):
                 fill=(0, 0, 0, 180)
             )
             img = Image.alpha_composite(img, overlay)
-
             mask = Image.new("L", (w, h), 0)
             draw_mask = ImageDraw.Draw(mask)
             draw_mask.text((x, y), texto_portada, font=font, fill=255)
-
             gradient = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             draw_grad = ImageDraw.Draw(gradient)
-            
             c_top = DEGRADADO_ACTUAL["top"]
             c_bot = DEGRADADO_ACTUAL["bottom"]
-            
             for i in range(h):
                 factor = i / h
                 r = int(c_top[0] + factor * (c_bot[0] - c_top[0]))
                 g = int(c_top[1] + factor * (c_bot[1] - c_top[1]))
                 b = int(c_top[2] + factor * (c_bot[2] - c_top[2]))
                 draw_grad.line([(0, i), (w, i)], fill=(r, g, b, 255))
-
             draw_final = ImageDraw.Draw(img)
             stroke_w = 8
             for ox in range(-stroke_w, stroke_w + 1):
                 for oy in range(-stroke_w, stroke_w + 1):
                     draw_final.text((x + ox, y + oy), texto_portada, font=font, fill=(0, 0, 0, 255))
-
             img.paste(gradient, (0, 0), mask)
             img.convert("RGB").save(img_path)
             print(f"✅ Texto '{texto_portada}' impreso en miniatura.")
@@ -363,7 +332,6 @@ def generar_fallback(respuesta):
     texto_narrativo = re.sub(r"prompt.*?:", "", texto_narrativo, flags=re.IGNORECASE)
     texto_narrativo = re.sub(r'[\{\}\[\]"]', "", texto_narrativo)
     texto_narrativo = re.sub(r"\s+", " ", texto_narrativo).strip()
-
     segmentos = []
     chars_por_segmento = 450
     for i in range(0, len(texto_narrativo), chars_por_segmento):
@@ -373,7 +341,6 @@ def generar_fallback(respuesta):
                 "texto": segmento,
                 "imagen_prompt": "Cinematic 35mm photograph of a quiet street in Mexico City at night, 16:9, 2k, hyperrealistic"
             })
-
     tags_fallback = "relatos paranormales, leyendas urbanas, Mexico, misterio, suspenso"
     return {
         "titulo": "El Misterio Nocturno de la Calle Madero | Relato Real",
@@ -385,7 +352,7 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (CON TÍTULO DIRECTO Y GANCHO)
+# GENERAR GUION CON DEEPSEEK (con título directo y gancho)
 # ================================================================
 def generar_guion():
     prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -439,7 +406,6 @@ Responde con este JSON estructurado:
         "max_tokens": 5000,
         "response_format": {"type": "json_object"}
     }
-
     for intento in range(3):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=150)
@@ -447,14 +413,11 @@ Responde con este JSON estructurado:
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             json_str = limpiar_respuesta_json(respuesta)
             data = json.loads(json_str)
-
             if "segmentos" not in data or len(data["segmentos"]) == 0:
                 raise ValueError("Sin segmentos válidos")
-
             for seg in data["segmentos"]:
                 if "imagen_prompt" in seg:
                     seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
-
             return data
         except Exception as e:
             print(f"❌ Intento {intento+1}/3 falló: {e}")
@@ -476,7 +439,6 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
         "height": height,
         "num_images": 1
     }
-
     for _ in range(intentos):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
@@ -494,7 +456,6 @@ def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     if not texto_limpio:
         return None
-
     filename = f"audio_{index}.mp3"
     async def _generar():
         communicate = edge_tts.Communicate(
@@ -504,7 +465,6 @@ def generar_audio(texto, index):
             pitch=CONFIG_VOZ_ACTUAL["tono"]
         )
         await communicate.save(filename)
-
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -521,34 +481,27 @@ def generar_audio(texto, index):
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
     clips_audio = []
-
     for i, elem in enumerate(elementos):
         try:
             audio_clip = AudioFileClip(elem["audio_path"])
             duracion = audio_clip.duration
-
             r = requests.get(elem["imagen_url"], timeout=30)
             r.raise_for_status()
             img_path = f"temp_img_{i}.jpg"
             with open(img_path, "wb") as f:
                 f.write(r.content)
-
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1920, 1080), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
-
             video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
             clips_audio.append(audio_clip)
         except Exception as e:
             print(f"⚠️ Error en segmento {i}: {e}")
             continue
-
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
-
-    # Usar el fondo seleccionado (evita repetición)
     if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
         try:
             fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
@@ -563,7 +516,6 @@ def montar_video(elementos, salida="video_final.mp4"):
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
-
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     return salida
@@ -574,10 +526,8 @@ def montar_video(elementos, salida="video_final.mp4"):
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
-
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
-
     body = {
         "snippet": {
             "title": titulo[:100],
@@ -593,13 +543,11 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             "containsSyntheticMedia": True,
         },
     }
-
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = request.execute()
     video_id = response["id"]
     print(f"✅ Video subido: https://youtu.be/{video_id}")
-
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
@@ -618,32 +566,26 @@ def main():
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
     print(f"🎵 Fondo musical: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
     guion_data = generar_guion()
     if not guion_data:
         print("❌ No se pudo generar el guion.")
         return
-
     titulo_video = guion_data.get("titulo", "Relato Paranormal")
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
     descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}")
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
     segmentos = guion_data.get("segmentos", [])
-
     textos_registrados = set()
     elementos_validos = []
     imagen_ultimo_recurso = None
-
     for i, seg in enumerate(segmentos):
         texto_limpio = seg["texto"].strip().lower()
         if texto_limpio in textos_registrados:
             print(f"⚠️ Segmento {i} ignorado por repetición.")
             continue
         textos_registrados.add(texto_limpio)
-
         if i > 0:
             time.sleep(4)
-
         url_img = generar_imagen(seg["imagen_prompt"], width=2048, height=1152)
         if url_img:
             imagen_ultimo_recurso = url_img
@@ -651,21 +593,16 @@ def main():
             url_img = imagen_ultimo_recurso
         else:
             continue
-
         audio_file = generar_audio(seg["texto"], i)
         if not audio_file:
             continue
-
         elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
-
     if not elementos_validos:
         print("❌ No hay elementos válidos.")
         return
-
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_imagen(guion_data.get("miniatura_prompt", "Dark mysterious scene"), width=1280, height=720)
-    
     if miniatura_url:
         try:
             r = requests.get(miniatura_url, timeout=30)
@@ -678,13 +615,10 @@ def main():
         except Exception as e:
             print(f"⚠️ Error en miniatura: {e}")
             miniatura_path = None
-
     print("🎬 Montando video...")
     video_path = montar_video(elementos_validos)
-
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
-
     print("🎉 Proceso completado exitosamente")
 
 if __name__ == "__main__":
