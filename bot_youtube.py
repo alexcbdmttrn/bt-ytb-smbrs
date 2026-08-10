@@ -31,7 +31,7 @@ YOUTUBE_USER_TOKEN = (
 )
 
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
-CANAL_LINK = "https://www.youtube.com/@TUCANAL"  # <-- REEMPLAZA CON TU LINK
+CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 # ================================================================
 # 🎤 BANCO DE 12 VOCES
@@ -53,26 +53,22 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 BANCO DE 16 PALETAS DE COLOR (MEZCLA TOTAL)
+# 🎨 BANCO DE 16 PALETAS DE COLOR
 # ================================================================
 PALETAS_COLOR = [
-    # 🔥 Cálidas (rojo/naranja/sangre)
     "Deep crimson red, pitch black shadow, intense orange emergency light accents",
     "Blood red and burnt orange, dark charcoal shadows, hellish glow",
     "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
     "Fiery sunset orange, deep purple shadows, intense red highlights",
     "Rusty red and dark brown, sepia undertones, warm vintage look",
-    # ❄️ Frías (azul/cian/verde)
     "Cold cyan blue fog, navy blue shadows, pale white moonlight",
     "Emerald green twilight, dark forest haze, muted sage green lighting",
     "Deep violet haze, electric purple ambient light, dark magenta shadows",
     "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
     "Dark teal and deep blue, oceanic midnight, cold misty atmosphere",
-    # ⚫ Monocromáticas y neutras
     "Stark black and white high contrast photography, silver moonlight, deep pitch shadows",
     "Muted sepia tones, dark brown amber glow, high contrast shadow",
     "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
-    # 🌈 Neón y vibrantes
     "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
     "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
     "Toxic lime green and pitch black, eerie chemical glow, radioactive haze",
@@ -80,7 +76,7 @@ PALETAS_COLOR = [
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES (limpios)
+# 📷 ESTILOS VISUALES
 # ================================================================
 ESTILOS_VISUALES = [
     "Clean 35mm film photograph, sharp focus, cinematic lighting",
@@ -93,7 +89,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🗺️ ESTADOS DE MÉXICO (para ambientación de historias)
+# 🗺️ ESTADOS DE MÉXICO (para ambientación)
 # ================================================================
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -104,10 +100,9 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (SOLO MEXICANO, SIN ESTADO FIJO)
+# 🧑 GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje():
-    """Genera un perfil mexicano sin estado fijo (diversidad real)."""
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
     generos = ["man", "woman"]
     vestimentas = [
@@ -136,7 +131,6 @@ def generar_perfil_personaje():
         "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
-    # Rasgos físicos adicionales para más diversidad
     rasgos = [
         "with indigenous facial features",
         "with mestizo features",
@@ -154,10 +148,86 @@ def generar_perfil_personaje():
     return perfil
 
 PERFIL_PERSONAJE = generar_perfil_personaje()
-UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)  # Estado para la ambientación de la historia
+UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🖼️ BANCO DE 12 DEGRADADOS PARA MINIATURA
+# 🎵 AUDIO DE FONDO (SIN REPETICIÓN CONSECUTIVA)
+# ================================================================
+FONDOS_DISPONIBLES = [
+    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
+    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
+]
+
+ULTIMO_FONDO = None  # Guarda la última pista usada
+
+def seleccionar_fondo_disponible():
+    global ULTIMO_FONDO
+    fondos = FONDOS_DISPONIBLES.copy()
+    # Evitar repetir el mismo fondo que en la ejecución anterior
+    if ULTIMO_FONDO and ULTIMO_FONDO in fondos:
+        fondos.remove(ULTIMO_FONDO)
+        print(f"🎵 Evitando repetir fondo: {ULTIMO_FONDO}")
+    random.shuffle(fondos)
+    
+    for root, dirs, files in os.walk("."):
+        if "/." in root or "\\." in root:
+            continue
+        for file in files:
+            for fondo in fondos:
+                if file.lower() == fondo.lower():
+                    full_path = os.path.join(root, file)
+                    ULTIMO_FONDO = fondo
+                    print(f"✅ Audio de fondo seleccionado: {full_path}")
+                    return full_path
+    
+    # Si no hay más opciones (solo 1 archivo), usar el primero disponible
+    for root, dirs, files in os.walk("."):
+        for file in files:
+            for fondo in FONDOS_DISPONIBLES:
+                if file.lower() == fondo.lower():
+                    full_path = os.path.join(root, file)
+                    ULTIMO_FONDO = fondo
+                    print(f"✅ Audio de fondo (única opción): {full_path}")
+                    return full_path
+    
+    print("⚠️ No se encontró ningún archivo de fondo disponible.")
+    return None
+
+FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
+
+# ================================================================
+# 🧼 LIMPIADOR DE PROMPTS
+# ================================================================
+def limpiar_prompt(prompt):
+    if not prompt:
+        prompt = "A quiet night scene, moody lighting"
+
+    prompt = re.sub(r"\n+", " ", prompt)
+    prompt = re.sub(r'"', "'", prompt)
+    prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
+
+    palabras_sucias = [
+        r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
+        r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
+        r"\bblood\b", r"\bgore\b", r"\bdemacrad[oa]s?\b", r"\bzombies?\b",
+        r"\bdisfigured\b", r"\bwounds?\b", r"\bmonster\b"
+    ]
+    for pattern in palabras_sucias:
+        prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
+
+    prompt = re.sub(r"\s+", " ", prompt).strip()
+
+    modificadores_calidad = (
+        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
+        "16:9 widescreen format, single solitary person in frame, exactly one person, "
+        "clean smooth skin, natural facial complexion, no face blemishes, no skin spots, "
+        "no cloned faces, no duplicate people, sharp focus, clean anatomical features, "
+        "no text, no watermark"
+    )
+    return (prompt + modificadores_calidad)[:500]
+
+# ================================================================
+# 🖼️ MINIATURA CON DEGRADADO DINÁMICO
 # ================================================================
 DEGRADADOS_MINIATURA = [
     {"top": (255, 30, 0), "bottom": (255, 140, 0)},
@@ -175,64 +245,6 @@ DEGRADADOS_MINIATURA = [
 ]
 DEGRADADO_ACTUAL = random.choice(DEGRADADOS_MINIATURA)
 
-# ================================================================
-# 🎵 AUDIO DE FONDO
-# ================================================================
-FONDOS_DISPONIBLES = [
-    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
-    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
-]
-
-def seleccionar_fondo_disponible():
-    fondos = FONDOS_DISPONIBLES.copy()
-    random.shuffle(fondos)
-    for root, dirs, files in os.walk("."):
-        if "/." in root or "\\." in root:
-            continue
-        for file in files:
-            for fondo in fondos:
-                if file.lower() == fondo.lower():
-                    return os.path.join(root, file)
-    return None
-
-FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
-
-# ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (sin manchas, sin clonación)
-# ================================================================
-def limpiar_prompt(prompt):
-    if not prompt:
-        prompt = "A quiet night scene, moody lighting"
-
-    prompt = re.sub(r"\n+", " ", prompt)
-    prompt = re.sub(r'"', "'", prompt)
-    prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
-
-    # Eliminar palabras que manchan la piel
-    palabras_sucias = [
-        r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
-        r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
-        r"\bblood\b", r"\bgore\b", r"\bdemacrad[oa]s?\b", r"\bzombies?\b",
-        r"\bdisfigured\b", r"\bwounds?\b", r"\bmonster\b"
-    ]
-    for pattern in palabras_sucias:
-        prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
-
-    prompt = re.sub(r"\s+", " ", prompt).strip()
-
-    # Inyección de estilo + paleta + anti-clonación
-    modificadores_calidad = (
-        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
-        "16:9 widescreen format, single solitary person in frame, exactly one person, "
-        "clean smooth skin, natural facial complexion, no face blemishes, no skin spots, "
-        "no cloned faces, no duplicate people, sharp focus, clean anatomical features, "
-        "no text, no watermark"
-    )
-    return (prompt + modificadores_calidad)[:500]
-
-# ================================================================
-# 🖼️ MINIATURA CON DEGRADADO DINÁMICO
-# ================================================================
 def agregar_texto_miniatura(img_path, texto_portada):
     if not texto_portada:
         texto_portada = "CASO REAL"
@@ -346,7 +358,7 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (PERSONAJE MEXICANO + UBICACIÓN ALEATORIA)
+# GENERAR GUION CON DEEPSEEK
 # ================================================================
 def generar_guion():
     prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -362,7 +374,7 @@ REGLAS DE GENERACIÓN VISUAL Y PERSONAJES:
 2. CERO PERSONAJES CLONADOS: Escribe los prompts pidiendo SIEMPRE "single person" o "one solitary character".
 3. PALETA DE COLOR DE ESTE VIDEO: {PALETA_COLOR_ACTUAL}. NO uses luces naranjas ni rojas a menos que sea una llama directa.
 4. TEXTO ÚNICO: Prohibido repetir frases, moralejas o reflexiones de cierre. Cada segmento debe aportar trama nueva.
-5. AMBIENTACIÓN LOCAL: La historia debe incluir referencias a lugares, costumbres o tradiciones del estado de {UBICACION_HISTORIA}. Puedes mencionar pueblos, calles, comidas, leyendas locales.
+5. AMBIENTACIÓN LOCAL: La historia debe incluir referencias a lugares, costumbres o tradiciones del estado de {UBICACION_HISTORIA}.
 
 Responde con este JSON estructurado:
 {{
@@ -411,7 +423,7 @@ Responde con este JSON estructurado:
     return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI
+# GENERAR IMAGEN
 # ================================================================
 def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
@@ -436,7 +448,7 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON EDGE-TTS
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -464,7 +476,7 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO (FONDO AL 8%)
+# MONTAR VIDEO
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
@@ -496,6 +508,8 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
 
+    # Usar el fondo seleccionado (evita repetición)
+    global FONDO_AUDIO_FILE
     if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
         try:
             fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
@@ -504,7 +518,9 @@ def montar_video(elementos, salida="video_final.mp4"):
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-        except Exception:
+            print(f"🎵 Audio de fondo mezclado al 8%: {FONDO_AUDIO_FILE}")
+        except Exception as e:
+            print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
@@ -561,6 +577,7 @@ def main():
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Historia ambientada en: {UBICACION_HISTORIA}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
+    print(f"🎵 Fondo musical: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     guion_data = generar_guion()
