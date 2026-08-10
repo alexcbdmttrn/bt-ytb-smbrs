@@ -35,12 +35,12 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 # ================================================================
 # CONFIGURACIÓN DE EDGE-TTS (1.15x de velocidad)
 # ================================================================
-VOZ_EDGE = "es-MX-JorgeNeural"  # Voz masculina mexicana
-VELOCIDAD_EDGE = "+15%"  # 1.15x más rápida (natural y dinámica)
-TONO_EDGE = "-2Hz"  # Ligeramente más grave para atmósfera de misterio
+VOZ_EDGE = "es-MX-JorgeNeural"
+VELOCIDAD_EDGE = "+15%"
+TONO_EDGE = "-2Hz"
 
 # ================================================================
-# LISTA DE ARCHIVOS DE FONDO DISPONIBLES
+# LISTA DE ARCHIVOS DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3",
@@ -52,12 +52,9 @@ FONDOS_DISPONIBLES = [
     "The Deep Rot.mp3",
 ]
 
-
 def seleccionar_fondo_disponible():
-    """Busca recursivamente un archivo de música en el repositorio."""
     fondos = FONDOS_DISPONIBLES.copy()
     random.shuffle(fondos)
-
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
             continue
@@ -67,10 +64,8 @@ def seleccionar_fondo_disponible():
                     full_path = os.path.join(root, file)
                     print(f"✅ Audio de fondo encontrado: {full_path}")
                     return full_path
-
     print("⚠️ No se encontró ningún archivo de fondo disponible.")
     return None
-
 
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 if FONDO_AUDIO_FILE:
@@ -78,43 +73,23 @@ if FONDO_AUDIO_FILE:
 else:
     print("⚠️ No se usará audio de fondo.")
 
-
 # ================================================================
-# LIMPIAR PROMPTS DE IMAGEN (Mexicanos diversos, Sin asiáticos, Sin objetos deformes)
+# LIMPIAR PROMPTS DE IMAGEN
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        prompt = (
-            "Cinematic 35mm photograph of an old Mexican street at night, foggy"
-            " lights, historic architecture"
-        )
-
+        prompt = "Cinematic 35mm photograph of an old Mexican street at night, foggy lights, historic architecture"
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
-
-    # Palabras prohibidas (gore, terror, sangre, etc.)
     palabras_prohibidas = [
-        r"\bterror\b",
-        r"\bhorror\b",
-        r"\bsangre\b",
-        r"\bblood\b",
-        r"\bgore\b",
-        r"\bdemacrad[oa]s?\b",
-        r"\bzombies?\b",
-        r"\bmuert[oa]s?\b",
-        r"\bmatanza\b",
-        r"\bscary face\b",
-        r"\bmonster\b",
-        r"\bdisfigured\b",
-        r"\bwounds?\b",
+        r"\bterror\b", r"\bhorror\b", r"\bsangre\b", r"\bblood\b", r"\bgore\b",
+        r"\bdemacrad[oa]s?\b", r"\bzombies?\b", r"\bmuert[oa]s?\b", r"\bmatanza\b",
+        r"\bscary face\b", r"\bmonster\b", r"\bdisfigured\b", r"\bwounds?\b",
     ]
     for pattern in palabras_prohibidas:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
-
     prompt = re.sub(r"\s+", " ", prompt).strip()
-
-    # ✅ INSTRUCCIONES CLAVE: Mexicanos diversos, sin asiáticos, sin duplicados
     estilo_limpio = (
         ", 35mm film photograph, 16:9 horizontal widescreen format, cinematic"
         " lighting, authentic Mexican people with diverse Hispanic features,"
@@ -128,24 +103,21 @@ def limpiar_prompt(prompt):
     )
     return (prompt + estilo_limpio)[:500]
 
-
 # ================================================================
-# AGREGAR TEXTO A LA MINIATURA (Pillow)
+# AGREGAR TEXTO A LA MINIATURA CON DEGRADADO ESTILO TERROR
 # ================================================================
 def agregar_texto_miniatura(img_path, texto_portada):
-    """Añade texto de impacto a la miniatura con borde y contraste."""
+    """Añade texto con degradado rojo/naranja y fondo oscuro, estilo terror."""
     if not texto_portada:
         texto_portada = "CASO REAL"
-
     texto_portada = texto_portada.upper().strip()
 
     try:
         with Image.open(img_path) as img:
-            img = img.convert("RGB")
-            draw = ImageDraw.Draw(img)
+            img = img.convert("RGBA")
             w, h = img.size
 
-            font_size = int(h * 0.11)
+            font_size = int(h * 0.13)
             try:
                 font = ImageFont.truetype(
                     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size
@@ -153,34 +125,59 @@ def agregar_texto_miniatura(img_path, texto_portada):
             except:
                 font = ImageFont.load_default()
 
-            bbox = draw.textbbox((0, 0), texto_portada, font=font)
+            # Calcular dimensiones del texto
+            dummy_draw = ImageDraw.Draw(img)
+            bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
             text_w = bbox[2] - bbox[0]
             text_h = bbox[3] - bbox[1]
 
             x = (w - text_w) / 2
-            y = h - text_h - int(h * 0.10)
+            y = h - text_h - int(h * 0.08)
 
-            # Borde negro para contraste
-            stroke_w = 5
-            for offset_x in range(-stroke_w, stroke_w + 1):
-                for offset_y in range(-stroke_w, stroke_w + 1):
-                    draw.text(
-                        (x + offset_x, y + offset_y),
-                        texto_portada,
-                        font=font,
-                        fill="black",
+            # 1. Fondo oscuro de contraste
+            overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
+            pad_x, pad_y = 30, 15
+            draw_overlay.rectangle(
+                [x - pad_x, y - pad_y, x + text_w + pad_x, y + text_h + pad_y * 2],
+                fill=(0, 0, 0, 170),
+            )
+            img = Image.alpha_composite(img, overlay)
+
+            # 2. Máscara para el degradado
+            mask = Image.new("L", (w, h), 0)
+            draw_mask = ImageDraw.Draw(mask)
+            draw_mask.text((x, y), texto_portada, font=font, fill=255)
+
+            # 3. Crear degradado vertical (rojo carmesí -> naranja fuego)
+            gradient = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            draw_grad = ImageDraw.Draw(gradient)
+            for i in range(h):
+                r = 255
+                g = int(30 + (i / h) * 120)  # 30 -> 150 (rojo intenso a naranja)
+                b = 0
+                draw_grad.line([(0, i), (w, i)], fill=(r, max(0, min(255, g)), b, 255))
+
+            # 4. Trazo negro grueso (borde)
+            draw_final = ImageDraw.Draw(img)
+            stroke_w = 7
+            for ox in range(-stroke_w, stroke_w + 1):
+                for oy in range(-stroke_w, stroke_w + 1):
+                    draw_final.text(
+                        (x + ox, y + oy), texto_portada, font=font, fill=(0, 0, 0, 255)
                     )
 
-            # Texto principal en amarillo
-            draw.text((x, y), texto_portada, font=font, fill="#FFCC00")
-            img.save(img_path)
-            print(f"✅ Texto '{texto_portada}' añadido a la miniatura.")
+            # 5. Aplicar degradado usando la máscara
+            img.paste(gradient, (0, 0), mask)
+
+            # Guardar como RGB
+            img.convert("RGB").save(img_path)
+            print(f"✅ Texto estilo terror con degradado '{texto_portada}' en miniatura.")
     except Exception as e:
         print(f"⚠️ Error agregando texto a miniatura: {e}")
 
-
 # ================================================================
-# LIMPIAR RESPUESTA JSON DE DEEPSEEK
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
@@ -194,9 +191,8 @@ def limpiar_respuesta_json(respuesta):
         return json_str
     return respuesta
 
-
 # ================================================================
-# GENERAR FALLBACK LIMPIO
+# FALLBACK
 # ================================================================
 def generar_fallback(respuesta):
     print("⚠️ Usando fallback limpiado.")
@@ -206,9 +202,7 @@ def generar_fallback(respuesta):
         respuesta,
         flags=re.DOTALL | re.IGNORECASE,
     )
-    texto_narrativo = re.sub(
-        r"prompt.*?:", "", texto_narrativo, flags=re.IGNORECASE
-    )
+    texto_narrativo = re.sub(r"prompt.*?:", "", texto_narrativo, flags=re.IGNORECASE)
     texto_narrativo = re.sub(r'[\{\}\[\]"]', "", texto_narrativo)
     texto_narrativo = re.sub(r"\s+", " ", texto_narrativo).strip()
 
@@ -231,7 +225,6 @@ def generar_fallback(respuesta):
         " embrujadas, centro historico, testimonios reales, mitos mexicanos,"
         " apariciones, espectros, noche, podcast paranormal"
     )
-
     return {
         "titulo": "El Misterio Nocturno de la Calle Madero | Relato Real",
         "palabras_portada": "CASO REAL",
@@ -251,39 +244,38 @@ def generar_fallback(respuesta):
         "segmentos": segmentos[:24],
     }
 
-
 # ================================================================
-# GENERAR GUION + SEO CON DEEPSEEK
+# GENERAR GUION + SEO CON DEEPSEEK (CON ANTI-REPETICIÓN Y CONSISTENCIA)
 # ================================================================
 def generar_guion():
-    prompt = f"""Eres un EXPERTO EN SEO DE YOUTUBE Y COPYWRITING para canales de misterio, casos paranormales y leyendas urbanas.
+    prompt = f"""Eres un EXPERTO EN SEO DE YOUTUBE, GUIONISTA DE TERROR Y DIRECTOR VISUAL.
 Escribe un relato de eventos PARANORMALES Y CASOS DE MIEDO reales narrado en primera persona, ambientado en México (~10000 caracteres).
 Divide el relato en 24 segmentos de ~450 caracteres cada uno.
 
-REGLAS DE TÍTULO Y TEXTO DE PORTADA:
-1. TÍTULO: EN ESPAÑOL. Debe tener ENTRE 45 Y 60 CARACTERES exactos. Debe ser una frase COMPLETA, atractiva e intrigante. NUNCA lo dejes a la mitad.
-2. PALABRAS_PORTADA: 1 o 2 PALABRAS de máximo impacto en mayúsculas para imprimir en la miniatura (ejemplo: "CASO REAL", "LA APARICIÓN", "NOCHE DE TERROR").
+REGLAS DE CONSISTENCIA Y SINCRONIZACIÓN VISUAL (IMPORTANTE):
+1. CONSISTENCIA DE PERSONAJE: Define al protagonista al inicio con una descripción física breve (ejemplo: "un hombre mexicano de 32 años, cabello corto oscuro, chaqueta café"). REPITE ESA MISMA DESCRIPCIÓN EXACTA en cada "imagen_prompt" donde el protagonista aparezca, para que su rostro NO cambie durante el video.
+2. SINCRONIZACIÓN NARRATIVA: El "imagen_prompt" DEBE reflejar la acción, objeto o lugar específico que se está narrando en el "texto" de ese segmento.
+3. ANTI-REPETICIÓN: Cada segmento debe aportar información NUEVA. NUNCA repitas frases, moralejas ni cierres. Si la historia se acaba antes, alarga con nuevos detalles sensoriales o reflexiones, NO con repeticiones.
 
-REGLAS DE CONTENIDO:
-1. NO trates sobre sangre, masacres, gore, zombies ni violencia física.
-2. Céntrate en lo PARANORMAL: ruidos extraños, sombras, apariciones sutiles, lugares antiguos, susurros.
-3. Las personas descritas en los prompts deben ser mexicanas normales, diversas (tanto personas blancas como morenas claras), NUNCA rostros asiáticos ni duplicados.
+REGLAS DE TÍTULO Y TEXTO DE PORTADA:
+1. TÍTULO: EN ESPAÑOL. Entre 45 y 60 caracteres exactos. Frase completa.
+2. PALABRAS_PORTADA: 1 o 2 PALABRAS de máximo impacto (ej: "CASO REAL", "NOCHE DE TERROR").
 
 REGLAS DE SEO Y DESCRIPCIÓN:
-1. DESCRIPCIÓN: EN ESPAÑOL. DEBE INCLUIR OBLIGATORIAMENTE: "Síguenos en Facebook: {FACEBOOK_LINK}" y al final 5 hashtags (#leyendasurbanas #Paranormal #Misterio #mexico #HistoriasDeMiedo).
-2. TAGS: EN ESPAÑOL. Entre 25 y 30 palabras clave separadas por comas.
+1. DESCRIPCIÓN: EN ESPAÑOL. Incluir: "Síguenos en Facebook: {FACEBOOK_LINK}" y hashtags (#leyendasurbanas #Paranormal #Misterio #mexico #HistoriasDeMiedo).
+2. TAGS: EN ESPAÑOL. 25-30 palabras clave separadas por comas.
 
 Responde estrictamente en formato JSON válido:
 {{
-  "titulo": "Título de misterio entre 45 y 60 caracteres completos",
+  "titulo": "Título entre 45 y 60 caracteres",
   "palabras_portada": "CASO REAL",
-  "descripcion": "Sinopsis en español... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio #mexico #HistoriasDeMiedo",
-  "tags": "tag1, tag2, tag3, ..., tag30",
-  "miniatura_prompt": "Cinematic 16:9 photograph of an authentic white Mexican man in an old house at night looking with surprise, warm orange ambient, 2k, no text, no words",
+  "descripcion": "Sinopsis... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio #mexico #HistoriasDeMiedo",
+  "tags": "tag1, tag2, ..., tag30",
+  "miniatura_prompt": "Cinematic 16:9 photograph of [descripción del protagonista] looking with fear inside a dark old colonial house, 2k, no text",
   "segmentos": [
     {{
       "texto": "Texto en español que leerá el narrador...",
-      "imagen_prompt": "Detailed English photographic prompt, realistic Mexican person, 16:9 widescreen, 2k, no text, no blood, no demaciated faces"
+      "imagen_prompt": "Detailed photographic prompt synchronized with the text, [misma descripción del protagonista si aparece], 16:9, 2k, no text, no blood"
     }}
   ]
 }}
@@ -301,7 +293,6 @@ Responde estrictamente en formato JSON válido:
         "response_format": {"type": "json_object"},
     }
 
-    respuesta = ""
     for intento in range(3):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=150)
@@ -313,7 +304,6 @@ Responde estrictamente en formato JSON válido:
             if "segmentos" not in data or len(data["segmentos"]) == 0:
                 raise ValueError("La respuesta no contiene segmentos")
 
-            # Ajuste inteligente del título sin cortar palabras a la mitad (máx 60)
             titulo = data.get("titulo", "").strip()
             if len(titulo) > 60:
                 titulo = titulo[:60].rsplit(" ", 1)[0]
@@ -330,6 +320,7 @@ Responde estrictamente en formato JSON válido:
                     seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
                 if "texto" in seg:
                     seg["texto"] = seg["texto"].replace('"', "'")
+                    # Eliminar posibles restos de "imagen_prompt" dentro del texto
                     seg["texto"] = re.sub(
                         r"imagen_prompt.*", "", seg["texto"], flags=re.IGNORECASE
                     )
@@ -340,7 +331,6 @@ Responde estrictamente en formato JSON válido:
             time.sleep(3)
 
     return generar_fallback(respuesta)
-
 
 # ================================================================
 # GENERAR IMAGEN CON AGNES AI
@@ -359,7 +349,6 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
         "height": height,
         "num_images": 1,
     }
-
     for i in range(intentos):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
@@ -371,25 +360,20 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
             time.sleep(8)
     return None
 
-
 # ================================================================
-# GENERAR AUDIO CON EDGE-TTS (1.15x)
+# GENERAR AUDIO CON EDGE-TTS
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
     texto_limpio = texto_limpio.strip()
-
     if not texto_limpio:
         return None
-
     filename = f"audio_{index}.mp3"
-
     async def _generar():
         communicate = edge_tts.Communicate(
             texto_limpio, VOZ_EDGE, rate=VELOCIDAD_EDGE, pitch=TONO_EDGE
         )
         await communicate.save(filename)
-
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -401,9 +385,8 @@ def generar_audio(texto, index):
         print(f"❌ Error generando audio {index}: {e}")
         return None
 
-
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY
+# MONTAR VIDEO CON MOVIEPY (FONDO AL 8%)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     if not elementos:
@@ -427,13 +410,10 @@ def montar_video(elementos, salida="video_final.mp4"):
                 f.write(r.content)
 
             with Image.open(img_path) as img:
-                img_fitted = ImageOps.fit(
-                    img, (1920, 1080), Image.Resampling.LANCZOS
-                )
+                img_fitted = ImageOps.fit(img, (1920, 1080), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
 
             video_clip = ImageClip(img_path).set_duration(duracion)
-
             clips_video.append(video_clip)
             clips_audio.append(audio_clip)
         except Exception as e:
@@ -447,7 +427,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
 
-    # 🎵 Mezclar audio de fondo al 10% de volumen
+    # 🎵 Mezclar audio de fondo al 8% (cambio de 0.10 a 0.08)
     fondo_path = FONDO_AUDIO_FILE
     if fondo_path and os.path.exists(fondo_path):
         try:
@@ -455,11 +435,10 @@ def montar_video(elementos, salida="video_final.mp4"):
             if fondo_clip.duration < duracion_total:
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
-
             fondo_clip = fondo_clip.subclip(0, duracion_total)
-            fondo_clip = fondo_clip.volumex(0.10)  # 10% de volumen
+            fondo_clip = fondo_clip.volumex(0.08)   # <--- 8% de volumen
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print(f"🎵 Audio de fondo mezclado al 10%: {fondo_path}")
+            print(f"🎵 Audio de fondo mezclado al 8%: {fondo_path}")
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
@@ -478,13 +457,10 @@ def montar_video(elementos, salida="video_final.mp4"):
     print(f"✅ Video creado correctamente: {salida}")
     return salida
 
-
 # ================================================================
 # SUBIR A YOUTUBE
 # ================================================================
-def subir_a_youtube(
-    video_path, miniatura_path, titulo, descripcion, etiquetas
-):
+def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
 
@@ -518,25 +494,22 @@ def subir_a_youtube(
 
     if miniatura_path and os.path.exists(miniatura_path):
         try:
-            media_thumb = MediaFileUpload(
-                miniatura_path, chunksize=-1, resumable=True
-            )
+            media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
             thumb_request = youtube.thumbnails().set(
                 videoId=video_id, media_body=media_thumb
             )
             thumb_request.execute()
-            print("✅ Miniatura con texto subida a YouTube")
+            print("✅ Miniatura con texto estilizado subida a YouTube")
         except Exception as e:
             print(f"⚠️ No se pudo subir miniatura: {e}")
 
     return response
 
-
 # ================================================================
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (Voz 1.15x, Filtros de Diversidad, Títulos 45-60)")
+    print("🎬 Iniciando Bot de YouTube (Voz 1.15x, Fondo 8%, Degradado Terror, Consistencia)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if FONDO_AUDIO_FILE:
@@ -549,20 +522,11 @@ def main():
         print("❌ No se pudo generar el guion. Abortando.")
         return
 
-    titulo_video = guion_data.get(
-        "titulo", "El Misterio Nocturno de la Calle Madero | Relato Real"
-    )
+    titulo_video = guion_data.get("titulo", "El Misterio Nocturno de la Calle Madero | Relato Real")
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
-    descripcion_video = guion_data.get(
-        "descripcion", f"Relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}"
-    )
-    tags_video = guion_data.get(
-        "tags", "relatos paranormales, leyendas urbanas, Mexico"
-    )
-    miniatura_prompt = guion_data.get(
-        "miniatura_prompt",
-        "Cinematic portrait of a Mexican man in an old house at night, 16:9, 2k",
-    )
+    descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}")
+    tags_video = guion_data.get("tags", "relatos paranormales, leyendas urbanas, Mexico")
+    miniatura_prompt = guion_data.get("miniatura_prompt", "Cinematic portrait of a Mexican man in an old house at night, 16:9, 2k")
     segmentos = guion_data.get("segmentos", [])
 
     if not segmentos:
@@ -575,11 +539,19 @@ def main():
 
     elementos_validos = []
     imagen_ultimo_recurso = None
+    textos_vistos = set()   # <--- Filtro anti‑repetición local
 
     print("\n🎨 y 🎙️ Generando imágenes (2K 16:9) y audios (edge-tts 1.15x)...")
 
     for i, seg in enumerate(segmentos):
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
+
+        # 📌 Filtro para saltar segmentos con texto duplicado
+        texto_normalizado = seg["texto"].strip().lower()
+        if texto_normalizado in textos_vistos:
+            print(f"⚠️ Segmento {i+1} duplicado (texto repetido). Omitiendo.")
+            continue
+        textos_vistos.add(texto_normalizado)
 
         if i > 0:
             print("⏳ Esperando 6 segundos antes de la siguiente imagen...")
@@ -604,21 +576,17 @@ def main():
             print(f"❌ Falló el audio {i+1}, se salta el segmento.")
             continue
 
-        elementos_validos.append(
-            {"imagen_url": url_img, "audio_path": audio_file}
-        )
+        elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
         print(f"✅ Segmento {i+1} completado")
 
-    # Generación y forzado de Miniatura a 1280x720 (Horizontal 16:9)
+    # Miniatura
     print("\n🖼️ Generando y ajustando miniatura horizontal 1280x720...")
     miniatura_path = "miniatura.jpg"
     miniatura_prompt_refinado = (
         f"{miniatura_prompt} 16:9 landscape aspect ratio, cinematic widescreen, 2k,"
         " no text, no words, no blood, no demaciated faces"
     )
-    miniatura_url = generar_imagen(
-        miniatura_prompt_refinado, width=1280, height=720
-    )
+    miniatura_url = generar_imagen(miniatura_prompt_refinado, width=1280, height=720)
 
     if miniatura_url:
         try:
@@ -626,16 +594,11 @@ def main():
             r.raise_for_status()
             with open(miniatura_path, "wb") as f:
                 f.write(r.content)
-
             with Image.open(miniatura_path) as img:
-                img_fitted = ImageOps.fit(
-                    img, (1280, 720), Image.Resampling.LANCZOS
-                )
+                img_fitted = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
                 img_fitted.save(miniatura_path)
-
-            # Agregar texto a la miniatura
             agregar_texto_miniatura(miniatura_path, palabras_portada)
-            print("✅ Miniatura ajustada a formato 16:9 (1280x720) con texto")
+            print("✅ Miniatura ajustada a 16:9 con texto estilo terror")
         except Exception as e:
             print(f"⚠️ Error al procesar miniatura: {e}")
             miniatura_path = None
@@ -655,19 +618,12 @@ def main():
 
     print("\n⬆️ Subiendo video a YouTube con metadatos en español...")
     try:
-        subir_a_youtube(
-            video_path,
-            miniatura_path,
-            titulo_video,
-            descripcion_video,
-            tags_video,
-        )
+        subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
         return
 
     print("🎉 Proceso completado exitosamente")
-
 
 if __name__ == "__main__":
     try:
