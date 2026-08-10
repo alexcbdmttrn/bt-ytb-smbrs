@@ -34,7 +34,7 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@TUCANAL"  # <-- REEMPLAZA CON TU LINK
 
 # ================================================================
-# 🎤 BANCO DE VOCES (Rotación Automática)
+# 🎤 BANCO DE 12 VOCES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+14%", "tono": "-2Hz"},
@@ -53,43 +53,113 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS DE COLOR DIVERSAS (Elimina la monotonía de rojo/naranja)
+# 🎨 BANCO DE 16 PALETAS DE COLOR (MEZCLA DE FRÍAS Y CÁLIDAS)
 # ================================================================
-PALETAS_COLOR_DIVERSAS = [
-    {"nombre": "Azul Cian y Niebla Marina", "prompt": "cold cyan fog, deep navy blue shadows, pale moonlight, icy atmosphere"},
-    {"nombre": "Verde Esmeralda y Musgo", "prompt": "emerald green twilight, dark forest haze, muted sage green lighting, dark teal"},
-    {"nombre": "Violeta Neón y Púrpura", "prompt": "deep violet haze, electric purple ambient light, dark magenta shadows, eerie neon glow"},
-    {"nombre": "Blanco y Negro Monocromático", "prompt": "stark black and white high contrast photography, silver moonlight, deep pitch shadows"},
-    {"nombre": "Sepia y Ámbar Oscuro", "prompt": "muted amber lighting, dark mahogany shadows, vintage warm bronze haze"},
-    {"nombre": "Gris Pizarra y Azul Helado", "prompt": "slate gray tones, freezing ice blue highlight, dim overcast ambient, desaturated"}
+PALETAS_COLOR = [
+    # 🔥 Cálidas (rojo/naranja/sangre)
+    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
+    "Blood red and burnt orange, dark charcoal shadows, hellish glow",
+    "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
+    "Fiery sunset orange, deep purple shadows, intense red highlights",
+    "Rusty red and dark brown, sepia undertones, warm vintage look",
+    # ❄️ Frías (azul/cian/verde)
+    "Cold cyan blue fog, navy blue shadows, pale white moonlight",
+    "Emerald green twilight, dark forest haze, muted sage green lighting",
+    "Deep violet haze, electric purple ambient light, dark magenta shadows",
+    "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
+    "Dark teal and deep blue, oceanic midnight, cold misty atmosphere",
+    # ⚫ Monocromáticas y neutras
+    "Stark black and white high contrast photography, silver moonlight, deep pitch shadows",
+    "Muted sepia tones, dark brown amber glow, high contrast shadow",
+    "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
+    # 🌈 Neón y vibrantes
+    "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
+    "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
+    "Toxic lime green and pitch black, eerie chemical glow, radioactive haze",
 ]
-PALETA_SELECCIONADA = random.choice(PALETAS_COLOR_DIVERSAS)
+PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES LIMPIOS (Sin marcas ni manchas en la piel)
+# 📷 ESTILOS VISUALES (limpios, sin manchas)
 # ================================================================
 ESTILOS_VISUALES = [
     "Clean 35mm film photograph, sharp focus, cinematic lighting",
-    "Modern photographic thriller style, soft ambient diffusion, clean details",
+    "Modern cinematic thriller photography, soft ambient diffusion, clean details",
     "Documentary realistic photo, natural crisp skin texture, soft shadows",
-    "8k resolution cinematic movie frame, ultra clear facial details"
+    "8k resolution cinematic movie frame, ultra clear facial details",
+    "High-end fashion photography style, dramatic lighting, clean skin",
+    "Cinematic noir style, high contrast, sharp shadows, clean aesthetic",
 ]
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🖼️ BANCO DE COLORES PARA DEGRADADO DE MINIATURAS
+# 🗺️ GENERADOR DE PERSONAJES CON UBICACIÓN GEOGRÁFICA (MÉXICO)
+# ================================================================
+ESTADOS_MEXICO = [
+    "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
+    "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México",
+    "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit",
+    "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí",
+    "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"
+]
+
+def generar_perfil_personaje():
+    """Genera un perfil único con edad, género, vestimenta, cabello y estado."""
+    edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
+    generos = ["man", "woman"]
+    vestimentas = [
+        "wearing a denim jacket and grey shirt",
+        "wearing a dark green coat and wool scarf",
+        "wearing a simple white shirt and leather belt",
+        "wearing an old blue mechanic uniform",
+        "wearing a dark sweater and classic trousers",
+        "wearing a red flannel shirt and jeans",
+        "wearing a black leather jacket and boots",
+        "wearing a traditional embroidered blouse (huipil) and long skirt",
+        "wearing a white guayabera shirt and dark pants",
+        "wearing a charro suit with silver buttons",
+    ]
+    cabellos = [
+        "short curly dark hair",
+        "long straight black hair tied back",
+        "grey cropped hair",
+        "wavy brown shoulder-length hair",
+        "bald with a short beard",
+        "long grey braided hair",
+        "short spiky black hair",
+        "chestnut brown curly hair",
+    ]
+    estado = random.choice(ESTADOS_MEXICO)
+    
+    perfil = (
+        f"a {random.choice(edades)} Mexican {random.choice(generos)} from {estado}, "
+        f"with {random.choice(cabellos)}, {random.choice(vestimentas)}"
+    )
+    return perfil, estado
+
+PERFIL_PERSONAJE, UBICACION_PERSONAJE = generar_perfil_personaje()
+
+# ================================================================
+# 🖼️ BANCO DE 12 DEGRADADOS PARA MINIATURA
 # ================================================================
 DEGRADADOS_MINIATURA = [
-    {"top": (0, 255, 200), "bottom": (0, 80, 220), "nombre": "Cian a Azul"},
-    {"top": (0, 255, 120), "bottom": (0, 100, 80), "nombre": "Verde Neón"},
-    {"top": (220, 0, 255), "bottom": (80, 0, 150), "nombre": "Violeta Púrpura"},
-    {"top": (255, 215, 0), "bottom": (200, 50, 0), "nombre": "Dorado a Carmesí"},
-    {"top": (255, 255, 255), "bottom": (120, 120, 120), "nombre": "Plata Blanco"}
+    {"top": (255, 30, 0), "bottom": (255, 140, 0)},
+    {"top": (0, 255, 200), "bottom": (0, 100, 255)},
+    {"top": (255, 215, 0), "bottom": (200, 50, 0)},
+    {"top": (200, 0, 255), "bottom": (80, 0, 150)},
+    {"top": (255, 255, 255), "bottom": (120, 120, 120)},
+    {"top": (255, 0, 150), "bottom": (0, 200, 255)},
+    {"top": (255, 200, 0), "bottom": (0, 0, 0)},
+    {"top": (0, 200, 100), "bottom": (0, 50, 150)},
+    {"top": (255, 100, 0), "bottom": (150, 0, 200)},
+    {"top": (200, 0, 0), "bottom": (80, 0, 0)},
+    {"top": (150, 200, 255), "bottom": (50, 50, 100)},
+    {"top": (255, 255, 100), "bottom": (200, 100, 0)},
 ]
 DEGRADADO_ACTUAL = random.choice(DEGRADADOS_MINIATURA)
 
 # ================================================================
-# 🎵 ARCHIVOS DE AUDIO DE FONDO
+# 🎵 AUDIO DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -111,7 +181,7 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS CON FILTROS ANTI-CLON Y ANTI-MANCHAS
+# 🧼 LIMPIADOR DE PROMPTS (sin manchas, sin clonación)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -121,7 +191,7 @@ def limpiar_prompt(prompt):
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
 
-    # 1. Eliminar palabras que manchan la piel o ensucian la imagen
+    # Eliminar palabras que manchan la piel
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -133,9 +203,9 @@ def limpiar_prompt(prompt):
 
     prompt = re.sub(r"\s+", " ", prompt).strip()
 
-    # 2. Reglas estricta de 1 solo sujeto y piel limpia
+    # Inyección de estilo + paleta + anti-clonación
     modificadores_calidad = (
-        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_SELECCIONADA['prompt']}, "
+        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "16:9 widescreen format, single solitary person in frame, exactly one person, "
         "clean smooth skin, natural facial complexion, no face blemishes, no skin spots, "
         "no cloned faces, no duplicate people, sharp focus, clean anatomical features, "
@@ -149,7 +219,6 @@ def limpiar_prompt(prompt):
 def agregar_texto_miniatura(img_path, texto_portada):
     if not texto_portada:
         texto_portada = "CASO REAL"
-
     texto_portada = texto_portada.upper().strip()
 
     try:
@@ -205,12 +274,12 @@ def agregar_texto_miniatura(img_path, texto_portada):
 
             img.paste(gradient, (0, 0), mask)
             img.convert("RGB").save(img_path)
-            print(f"✅ Texto '{texto_portada}' impreso en miniatura ({DEGRADADO_ACTUAL['nombre']}).")
+            print(f"✅ Texto '{texto_portada}' impreso en miniatura.")
     except Exception as e:
         print(f"⚠️ Error en miniatura: {e}")
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON DE DEEPSEEK
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
@@ -225,35 +294,58 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR GUION (GENERADOR DINÁMICO DE PERSONAJES)
+# FALLBACK
+# ================================================================
+def generar_fallback(respuesta):
+    print("⚠️ Usando fallback limpiado.")
+    texto_narrativo = re.sub(
+        r"imagen_prompt.*?(?=(texto|$))",
+        "",
+        respuesta,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    texto_narrativo = re.sub(r"prompt.*?:", "", texto_narrativo, flags=re.IGNORECASE)
+    texto_narrativo = re.sub(r'[\{\}\[\]"]', "", texto_narrativo)
+    texto_narrativo = re.sub(r"\s+", " ", texto_narrativo).strip()
+
+    segmentos = []
+    chars_por_segmento = 450
+    for i in range(0, len(texto_narrativo), chars_por_segmento):
+        segmento = texto_narrativo[i: i + chars_por_segmento]
+        if len(segmento.strip()) > 40:
+            segmentos.append({
+                "texto": segmento,
+                "imagen_prompt": "Cinematic 35mm photograph of a quiet street in Mexico City at night, 16:9, 2k, hyperrealistic"
+            })
+
+    tags_fallback = "relatos paranormales, leyendas urbanas, Mexico, misterio, suspenso"
+    return {
+        "titulo": "El Misterio Nocturno de la Calle Madero | Relato Real",
+        "palabras_portada": "CASO REAL",
+        "descripcion": f"Un relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}\n\n#leyendasurbanas #Paranormal #Misterio",
+        "tags": tags_fallback,
+        "miniatura_prompt": "Cinematic portrait of a Mexican person at night, 16:9, 2k",
+        "segmentos": segmentos[:24],
+    }
+
+# ================================================================
+# GENERAR GUION CON DEEPSEEK (CON PERSONAJE Y UBICACIÓN)
 # ================================================================
 def generar_guion():
-    # 1. Generador de perfiles únicos para evitar repetir el mismo protagonista
-    EDADES = ["21-year-old", "35-year-old", "48-year-old", "60-year-old"]
-    GENEROS = ["man", "woman"]
-    VESTIMENTAS = [
-        "wearing a denim jacket and grey shirt",
-        "wearing a dark green coat and wool scarf",
-        "wearing a simple white shirt and leather belt",
-        "wearing an old blue mechanic uniform",
-        "wearing a dark sweater and classic trousers"
-    ]
-    CABELLOS = ["short curly dark hair", "long straight black hair tied back", "grey cropped hair", "wavy brown shoulder-length hair"]
-
-    perfil_personaje = (
-        f"a {random.choice(EDADES)} Mexican {random.choice(GENEROS)} with "
-        f"{random.choice(CABELLOS)}, {random.choice(VESTIMENTAS)}"
-    )
-
     prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
-Escribe un relato de eventos paranormales o misterio real en primera persona (~9000 caracteres).
+
+Escribe un relato de eventos paranormales o misterio real en primera persona (~9000 caracteres), ambientado en el estado de {UBICACION_PERSONAJE}, México.
 Divide la historia en 20 a 24 segmentos cortos.
 
+PERSONAJE PRINCIPAL (ÚNICO PARA ESTE VIDEO):
+"{PERFIL_PERSONAJE}"
+
 REGLAS DE GENERACIÓN VISUAL Y PERSONAJES:
-1. PERSONAJE PRINCIPAL FIJO: En todos los segmentos donde aparezca el protagonista, USA EXACTAMENTE ESTA DESCRIPCIÓN EN INGLÉS: "{perfil_personaje}".
-2. CERO PERSONAJES CLONADOS: Escribe los prompts pidiendo SIEMPRE "single person" o "one solitary character". Nunca uses plurales si solo hay una persona en escena.
-3. PALETA DE COLOR DE ESTE VIDEO: El estilo de color debe inclinarse hacia: {PALETA_SELECCIONADA['prompt']}. NO uses luces naranjas ni rojas a menos que sea una llama directa.
-4. TEXTO ÚNICO: Prohibido repetir frases, moralejas o reflexiones de cierre en múltiples segmentos. Cada segmento debe aportar trama nueva.
+1. PERSONAJE PRINCIPAL FIJO: En todos los segmentos donde aparezca el protagonista, USA EXACTAMENTE ESTA DESCRIPCIÓN EN INGLÉS: "{PERFIL_PERSONAJE}".
+2. CERO PERSONAJES CLONADOS: Escribe los prompts pidiendo SIEMPRE "single person" o "one solitary character".
+3. PALETA DE COLOR DE ESTE VIDEO: {PALETA_COLOR_ACTUAL}. NO uses luces naranjas ni rojas a menos que sea una llama directa.
+4. TEXTO ÚNICO: Prohibido repetir frases, moralejas o reflexiones de cierre. Cada segmento debe aportar trama nueva.
+5. AMBIENTACIÓN LOCAL: La historia debe incluir referencias a lugares, costumbres o tradiciones del estado de {UBICACION_PERSONAJE}.
 
 Responde con este JSON estructurado:
 {{
@@ -261,11 +353,11 @@ Responde con este JSON estructurado:
   "palabras_portada": "PALABRA IMPACTO",
   "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio #mexico",
   "tags": "tag1, tag2, tag3, ..., tag25",
-  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {perfil_personaje} in a mysterious location, {PALETA_SELECCIONADA['prompt']}",
+  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_PERSONAJE}, {PALETA_COLOR_ACTUAL}",
   "segmentos": [
     {{
-      "texto": "Texto narrativo único...",
-      "imagen_prompt": "Detailed cinematic prompt in English with {perfil_personaje} if present, single subject, clean smooth face, 16:9 widescreen, no text"
+      "texto": "Texto narrativo único en español...",
+      "imagen_prompt": "Detailed cinematic prompt in English with {PERFIL_PERSONAJE} if present, single subject, clean smooth face, 16:9, no text"
     }}
   ]
 }}
@@ -299,7 +391,7 @@ Responde con este JSON estructurado:
         except Exception as e:
             print(f"❌ Intento {intento+1}/3 falló: {e}")
             time.sleep(3)
-    return None
+    return generar_fallback(respuesta)
 
 # ================================================================
 # GENERAR IMAGEN CON AGNES AI
@@ -355,7 +447,7 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO CON MOVIEPY (FONDO AL 8%)
+# MONTAR VIDEO (FONDO AL 8%)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
@@ -387,7 +479,6 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
 
-    # Audio de fondo al 8%
     if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
         try:
             fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
@@ -435,21 +526,24 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = request.execute()
     video_id = response["id"]
-    print(f"✅ Video subido a YouTube: https://youtu.be/{video_id}")
+    print(f"✅ Video subido: https://youtu.be/{video_id}")
 
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
             youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-            print("✅ Miniatura subida a YouTube")
+            print("✅ Miniatura subida")
         except Exception as e:
-            print(f"⚠️ No se pudo subir miniatura: {e}")
+            print(f"⚠️ Error miniatura: {e}")
 
 # ================================================================
 # MAIN
 # ================================================================
 def main():
-    print(f"🎬 Bot de Vídeos Largos | Voz: {CONFIG_VOZ_ACTUAL['voz']} | Paleta: {PALETA_SELECCIONADA['nombre']}")
+    print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎭 Personaje: {PERFIL_PERSONAJE}")
+    print(f"📍 Ubicación: {UBICACION_PERSONAJE}")
+    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     guion_data = generar_guion()
@@ -457,7 +551,7 @@ def main():
         print("❌ No se pudo generar el guion.")
         return
 
-    titulo_video = guion_data.get("titulo", "Relato Paranormal Nocturno")
+    titulo_video = guion_data.get("titulo", "Relato Paranormal")
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
     descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}")
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
@@ -492,10 +586,9 @@ def main():
         elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
 
     if not elementos_validos:
-        print("❌ No hay elementos válidos para montar el video.")
+        print("❌ No hay elementos válidos.")
         return
 
-    # Miniatura
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_imagen(guion_data.get("miniatura_prompt", "Dark mysterious scene"), width=1280, height=720)
