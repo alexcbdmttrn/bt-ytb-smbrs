@@ -354,7 +354,7 @@ def generar_fallback():
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK
+# GENERAR GUION CON DEEPSEEK (CON IMAGEN_PROMPT ESPECÍFICO)
 # ================================================================
 def generar_guion():
     prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -377,6 +377,7 @@ REGLAS DE GENERACIÓN VISUAL:
 2. CERO PERSONAJES CLONADOS: Escribe prompts pidiendo "single person".
 3. PALETA DE COLOR: {PALETA_COLOR_ACTUAL}.
 4. TEXTO ÚNICO EN ESPAÑOL: En el campo "texto" solo escribe la narración del relato en español.
+5. IMAGEN_PROMPT: El campo 'imagen_prompt' debe ser un prompt fotográfico detallado EN INGLÉS que describa visualmente EXACTAMENTE lo que ocurre en el 'texto' de ese segmento. Incluye la ubicación, la hora, el personaje principal (si aparece), la acción y la atmósfera. Sé específico y evita descripciones genéricas.
 
 Responde únicamente en formato JSON con esta estructura exacta:
 {{
@@ -388,7 +389,7 @@ Responde únicamente en formato JSON con esta estructura exacta:
   "segmentos": [
     {{
       "texto": "Texto narrativo único en español para ser locutado por voz en off...",
-      "imagen_prompt": "Detailed cinematic prompt in English with {PERFIL_PERSONAJE}, single subject, bright well-lit, 16:9, no text"
+      "imagen_prompt": "Detailed cinematic prompt in English for this specific scene: [describe the scene based on the 'texto' field]. Include {PERFIL_PERSONAJE} if present. Single subject, bright well-lit, 16:9, no text, no gore"
     }}
   ]
 }}
@@ -429,18 +430,20 @@ Responde únicamente en formato JSON con esta estructura exacta:
     return generar_fallback()
 
 # ================================================================
-# GENERAR IMAGEN CON TEXTO DEL SEGMENTO
+# GENERAR IMAGEN CON TEXTO DEL SEGMENTO (300 caracteres)
 # ================================================================
 def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
+    # 🔥 AHORA 300 CARACTERES EN LUGAR DE 150
     if texto_segmento:
-        prompt = f"{prompt}, scene depicting: {texto_segmento[:150]}"
+        prompt = f"{prompt}, scene depicting: {texto_segmento[:300]}"
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado",
+        # 🔥 NEGATIVE PROMPT MEJORADO CON IMPERFECCIONES DE PIEL
+        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections",
         "width": width,
         "height": height,
         "num_images": 1
