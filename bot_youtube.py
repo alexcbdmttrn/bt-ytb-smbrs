@@ -3,6 +3,7 @@ import json
 import re
 import requests
 import time
+import random
 from datetime import datetime
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
 from PIL import Image
@@ -77,7 +78,7 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION + SEO CON DEEPSEEK (Título, descripción, tags, hashtags, miniatura)
+# GENERAR GUION + SEO CON DEEPSEEK
 # ================================================================
 def generar_guion():
     prompt = """Eres un EXPERTO EN SEO DE YOUTUBE Y COPYWRITING para canales de terror, leyendas urbanas y misterio.
@@ -200,9 +201,9 @@ REGLAS ESTRICTAS PARA CADA METADATO:
     return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES AI
+# GENERAR IMAGEN CON AGNES AI (con backoff exponencial)
 # ================================================================
-def generar_imagen(prompt, width=1024, height=1024, intentos=3):
+def generar_imagen(prompt, width=2048, height=2048, intentos=5):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -213,20 +214,31 @@ def generar_imagen(prompt, width=1024, height=1024, intentos=3):
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
+            elif r.status_code == 429:
+                wait = (2 ** i) + random.random()  # Backoff exponencial: 2s, 4s, 8s, 16s...
+                print(f"⚠️ Límite de velocidad (429). Esperando {wait:.1f} segundos...")
+                time.sleep(wait)
             else:
-                print(f"⚠️ Intento {i+1}/{intentos} fallo imagen (código {r.status_code})")
+                print(f"⚠️ Intento {i+1}/{intentos} falló (código {r.status_code})")
                 time.sleep(5)
         except Exception as e:
-            print(f"⚠️ Intento {i+1}/{intentos} error imagen: {e}")
+            print(f"⚠️ Intento {i+1}/{intentos} error: {e}")
             time.sleep(5)
     return None
 
 # ================================================================
-# GENERAR AUDIO CON AZURE TTS (Limpio)
+# GENERAR AUDIO CON AZURE TSS (CandelaNeural + SSML con pausas)
 # ================================================================
 def generar_audio(texto, index, intentos=3):
     texto_limpio = re.sub(r'imagen_prompt.*', '', texto, flags=re.IGNORECASE)
     texto_limpio = texto_limpio.replace('"', '&quot;').replace("'", "&apos;")
+    
+    # Inyectar pausas SSML automáticas
+    texto_ssml = texto_limpio.replace('...', '<break time="800ms"/>')
+    texto_ssml = texto_ssml.replace('. ', '. <break time="400ms"/>')
+    texto_ssml = texto_ssml.replace(', ', ', <break time="200ms"/>')
+    texto_ssml = texto_ssml.replace('! ', '! <break time="500ms"/>')
+    texto_ssml = texto_ssml.replace('? ', '? <break time="500ms"/>')
     
     url = f"https://{AZURE_TTS_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
@@ -234,11 +246,12 @@ def generar_audio(texto, index, intentos=3):
         "Content-Type": "application/ssml+xml",
         "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3"
     }
+    
     ssml = f"""
-    <speak version="1.0" xml:lang="es-MX">
-        <voice name="es-MX-BeatrizNeural">
-            <prosody rate="0.9" pitch="0%">
-                {texto_limpio}
+    <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="es-MX">
+        <voice name="es-MX-CandelaNeural">
+            <prosody rate="-8%" pitch="-3%">
+                {texto_ssml}
             </prosody>
         </voice>
     </speak>
@@ -252,7 +265,7 @@ def generar_audio(texto, index, intentos=3):
                     f.write(r.content)
                 return filename
             else:
-                print(f"⚠️ Audio {index} intento {i+1}/{intentos} fallo (código {r.status_code})")
+                print(f"⚠️ Audio {index} intento {i+1}/{intentos} falló (código {r.status_code})")
                 time.sleep(5)
         except Exception as e:
             print(f"⚠️ Audio {index} error: {e}")
@@ -354,10 +367,10 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     return response
 
 # ================================================================
-# MAIN
+# MAIN (con pausas aumentadas para evitar saturación)
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (SEO Optimizado + Miniatura Impactante)")
+    print("🎬 Iniciando Bot de YouTube (Optimizado para Prompts e Imágenes Limpias)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     guion_data = generar_guion()
@@ -388,10 +401,12 @@ def main():
     for i, seg in enumerate(segmentos):
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
         
+        # Pausa ANTES de la imagen (8 segundos)
         if i > 0:
-            time.sleep(4)
+            print("⏳ Esperando 8 segundos antes de la siguiente imagen...")
+            time.sleep(8)
         
-        url_img = generar_imagen(seg["imagen_prompt"], width=1024, height=1024)
+        url_img = generar_imagen(seg["imagen_prompt"], width=2048, height=2048)
         if url_img:
             imagen_ultimo_recurso = url_img
             print(f"✅ Imagen {i+1} generada con prompt cinemático")
@@ -402,7 +417,9 @@ def main():
             print(f"❌ Sin imagen disponible para segmento {i+1}, se salta.")
             continue
         
-        time.sleep(2)
+        # Pausa ENTRE imagen y audio (5 segundos)
+        print("⏳ Esperando 5 segundos antes del audio...")
+        time.sleep(5)
         
         audio_file = generar_audio(seg["texto"], i)
         if not audio_file:
@@ -419,10 +436,8 @@ def main():
     time.sleep(4)
     miniatura_path = "miniatura.jpg"
     
-    # 🔥 REFORZAR EL PROMPT PARA SEO VISUAL
     miniatura_prompt_refinado = f"{miniatura_prompt} High contrast, orange and red tones, dark background, text space at bottom, ultra detailed, 8k"
-    
-    miniatura_url = generar_imagen(miniatura_prompt_refinado, width=1280, height=720)
+    miniatura_url = generar_imagen(miniatura_prompt_refinado, width=1280, height=720, intentos=5)
     
     if miniatura_url:
         try:
