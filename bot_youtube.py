@@ -102,7 +102,7 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (PIEL CLARA / BLANCA)
+# 🧑 GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -142,7 +142,6 @@ def generar_perfil_personaje():
         "with tan skin and a warm smile",
         "with light beige skin and a serious expression",
     ]
-    
     perfil = (
         f"a {random.choice(edades)} Mexican {random.choice(generos)}, "
         f"{random.choice(rasgos)}, "
@@ -154,7 +153,7 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (CON PERSISTENCIA)
+# 🎵 AUDIO DE FONDO CON PERSISTENCIA
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -207,7 +206,7 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS CON ILUMINACIÓN CLARA
+# 🧼 LIMPIADOR DE PROMPTS (recorte inteligente)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -215,6 +214,7 @@ def limpiar_prompt(prompt):
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
+
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -223,18 +223,20 @@ def limpiar_prompt(prompt):
     ]
     for pattern in palabras_sucias:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
-    prompt = re.sub(r"\s+", " ", prompt).strip()
+
+    prompt_base = re.sub(r"\s+", " ", prompt).strip()[:220]
+
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "16:9 widescreen format, single solitary person in frame, exactly one person, "
         "clean smooth skin, natural facial complexion with light skin tone, no face blemishes, "
-        "no cloned faces, no duplicate people, sharp focus, bright well-lit scene, no dark underexposed areas, "
-        "no text, no watermark"
+        "no cloned faces, no duplicate people, sharp focus, bright well-lit scene, "
+        "no dark underexposed areas, no text, no watermark"
     )
-    return (prompt + modificadores_calidad)[:500]
+    return prompt_base + modificadores_calidad
 
 # ================================================================
-# 🖼️ MINIATURA CON DEGRADADO DINÁMICO
+# 🖼️ MINIATURA CON DEGRADADO DINÁMICO (con fuente robusta)
 # ================================================================
 DEGRADADOS_MINIATURA = [
     {"top": (255, 30, 0), "bottom": (255, 140, 0)},
@@ -263,8 +265,11 @@ def agregar_texto_miniatura(img_path, texto_portada):
             font_size = int(h * 0.13)
             try:
                 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-            except:
-                font = ImageFont.load_default()
+            except Exception:
+                try:
+                    font = ImageFont.truetype("arial.ttf", font_size)
+                except Exception:
+                    font = ImageFont.load_default(size=font_size)
             dummy_draw = ImageDraw.Draw(img)
             bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
             text_w = bbox[2] - bbox[0]
@@ -406,6 +411,7 @@ Responde con este JSON estructurado:
         "max_tokens": 5000,
         "response_format": {"type": "json_object"}
     }
+    respuesta = ""  # <--- INICIALIZACIÓN DE SEGURIDAD
     for intento in range(3):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=150)
@@ -466,17 +472,14 @@ def generar_audio(texto, index):
         )
         await communicate.save(filename)
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(_generar())
-        loop.close()
+        asyncio.run(_generar())
         return filename
     except Exception as e:
         print(f"❌ Error audio {index}: {e}")
         return None
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO CON CIERRE EXPLÍCITO DE RECURSOS
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
@@ -499,6 +502,8 @@ def montar_video(elementos, salida="video_final.mp4"):
         except Exception as e:
             print(f"⚠️ Error en segmento {i}: {e}")
             continue
+    if not clips_video or not clips_audio:
+        raise ValueError("No se pudieron procesar los clips")
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
@@ -518,7 +523,33 @@ def montar_video(elementos, salida="video_final.mp4"):
         audio_final = audio_narracion
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
+    # Cierre explícito de recursos
+    video.close()
+    audio_final.close()
+    for c in clips_video:
+        c.close()
+    for a in clips_audio:
+        a.close()
+    print(f"✅ Video creado: {salida}")
     return salida
+
+# ================================================================
+# LIMPIEZA DE ARCHIVOS TEMPORALES
+# ================================================================
+def limpiar_archivos_temporales():
+    for f in os.listdir("."):
+        if (f.startswith("temp_img_") or f.startswith("audio_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
+            try:
+                os.remove(f)
+            except Exception:
+                pass
+    for aux in ["video_final.mp4", "miniatura.jpg"]:
+        if os.path.exists(aux):
+            try:
+                os.remove(aux)
+            except Exception:
+                pass
+    print("🧹 Archivos temporales eliminados correctamente.")
 
 # ================================================================
 # SUBIR A YOUTUBE
@@ -619,6 +650,7 @@ def main():
     video_path = montar_video(elementos_validos)
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
+    limpiar_archivos_temporales()
     print("🎉 Proceso completado exitosamente")
 
 if __name__ == "__main__":
