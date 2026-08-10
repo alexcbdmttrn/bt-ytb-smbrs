@@ -31,12 +31,12 @@ YOUTUBE_USER_TOKEN = (
 )
 
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
-CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"  # <-- REEMPLAZA CON TU LINK
+CANAL_LINK = "https://www.youtube.com/@TUCANAL"  # <-- REEMPLAZA CON TU LINK
 
 ESTADO_FILE = "estado_shorts.json"
 
 # ================================================================
-# BANCO DE VOCES (12)
+# 🎤 BANCO DE 12 VOCES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+14%", "tono": "-2Hz"},
@@ -55,7 +55,7 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# ESTILOS VISUALES (12)
+# 🎨 BANCO DE 12 ESTILOS VISUALES
 # ================================================================
 ESTILOS_VISUALES = [
     "35mm grainy vintage film photograph",
@@ -74,7 +74,24 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# PROTAGONISTAS (12)
+# 🎨 BANCO DE 10 PALETAS DE COLORES
+# ================================================================
+PALETAS_COLOR = [
+    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
+    "Cold cyan blue fog, navy blue shadows, pale white moonlight",
+    "Muted sepia tones, dark brown amber glow, high contrast shadow",
+    "Emerald green twilight haze, dark moss green hues, striking highlights",
+    "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
+    "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
+    "Dark teal and gold amber, vintage brass tones, warm dim candlelight",
+    "Monochrome high contrast, pure white highlights, deep obsidian black shadows",
+    "Blood orange and deep navy, fiery sunset remnants, dark stormy sky",
+    "Toxic lime green and pitch black, eerie chemical glow, radioactive haze",
+]
+PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
+
+# ================================================================
+# 🌟 BANCO DE 12 PROTAGONISTAS
 # ================================================================
 PROTAGONISTAS = [
     "un trailero de 45 años en carretera nocturna",
@@ -93,7 +110,7 @@ PROTAGONISTAS = [
 PROTAGONISTA_SELECCIONADO = random.choice(PROTAGONISTAS)
 
 # ================================================================
-# AUDIO DE FONDO
+# 🎵 AUDIO DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -115,7 +132,7 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# LIMPIAR PROMPT (VERTICAL 9:16)
+# LIMPIAR PROMPT (VERTICAL 9:16) CON INYECCIÓN DE ESTILO + PALETA
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -134,7 +151,8 @@ def limpiar_prompt(prompt):
     prompt = re.sub(r"\s+", " ", prompt).strip()
 
     estilo_dinamico = (
-        f", {ESTILO_VISUAL_ACTUAL}, vertical 9:16 portrait format for mobile, "
+        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
+        "vertical 9:16 portrait format for mobile, "
         "realistic Mexican human features, unique face, sharp details, "
         "clean anatomical proportions, no text, no letters, no logo"
     )
@@ -156,7 +174,7 @@ def guardar_estado(estado):
     print(f"✅ Estado de Shorts guardado")
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA CON DEEPSEEK (~700-800 palabras)
+# GENERAR HISTORIA COMPLETA CON DEEPSEEK (CORREGIDO)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
@@ -169,8 +187,9 @@ REGLAS:
 - Mitad: un giro o revelación que deje al espectador con ganas de más (CLIFFHANGER). Este será el final de la Parte 1.
 - Final: resolución o nuevo giro en la Parte 2.
 - ANTI-REPETICIÓN: NO repitas frases.
+- IMPORTANTE: ESCAPA todas las comillas dobles dentro del texto (ej: "dijo" -> \"dijo\").
 
-Devuelve ESTRICTAMENTE este JSON:
+Devuelve ESTRICTAMENTE este JSON (validado):
 {{
   "titulo": "Título atractivo para el Short (máx 50 caracteres)",
   "texto_completo": "Historia completa de 700-800 palabras...",
@@ -188,35 +207,85 @@ Devuelve ESTRICTAMENTE este JSON:
         "response_format": {"type": "json_object"}
     }
 
-    for intento in range(3):
+    for intento in range(5):  # 5 intentos en lugar de 3
         try:
+            print(f"🔄 Intento {intento+1}/5 generando historia...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
+            
+            # Limpiar la respuesta (eliminar bloques de código)
             respuesta = re.sub(r"```json\s*", "", respuesta)
             respuesta = re.sub(r"```\s*", "", respuesta)
-            data = json.loads(respuesta)
-            if "texto_completo" not in data:
-                raise ValueError("Falta texto_completo")
+            
+            # Escapar comillas dentro del texto (para evitar errores JSON)
+            # Buscar el contenido entre "texto_completo": "..." y escapar las comillas internas
+            # Usamos un método más robusto: parsear manualmente o usar json.loads con strict=False
+            try:
+                data = json.loads(respuesta)
+            except json.JSONDecodeError as e:
+                print(f"⚠️ Error en JSON: {e}. Intentando limpiar manualmente...")
+                # Intentar extraer el texto_completo con una expresión regular
+                match = re.search(r'"texto_completo"\s*:\s*"([^"]*)"', respuesta, re.DOTALL)
+                if match:
+                    texto = match.group(1)
+                    # Reemplazar comillas dobles internas con comillas simples
+                    texto = texto.replace('"', "'")
+                    # Reconstruir el JSON manualmente
+                    respuesta = re.sub(
+                        r'"texto_completo"\s*:\s*"[^"]*"',
+                        f'"texto_completo": "{texto}"',
+                        respuesta
+                    )
+                    data = json.loads(respuesta)
+                else:
+                    raise e
+            
+            if "texto_completo" not in data or len(data["texto_completo"]) < 100:
+                raise ValueError("Texto demasiado corto o incompleto")
+            
+            # Limpiar el texto_completo (eliminar saltos de línea excesivos)
+            data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
             return data
+            
         except Exception as e:
-            print(f"❌ Intento {intento+1}/3 falló: {e}")
-            time.sleep(3)
-    return None
+            print(f"❌ Intento {intento+1}/5 falló: {e}")
+            if intento < 4:
+                print(f"⏳ Esperando {10 + intento*5} segundos...")
+                time.sleep(10 + intento * 5)
+    
+    # Si todos los intentos fallan, usar un fallback
+    print("⚠️ Creando fallback manual...")
+    return {
+        "titulo": "Relato de Terror Nocturno",
+        "texto_completo": f"""Era una noche oscura cuando {PROTAGONISTA_SELECCIONADO} sintió que algo no andaba bien. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él.""",
+        "palabras_portada": "TERROR",
+        "tags": "terror, shorts, mexico, paranormal, miedo"
+    }
 
 # ================================================================
-# DIVIDIR TEXTO EN DOS PARTES (mitad aproximada)
+# DIVIDIR TEXTO EN DOS PARTES
 # ================================================================
 def dividir_texto(texto):
     """Divide el texto en dos partes aproximadamente iguales, buscando un punto o salto de línea."""
     palabras = texto.split()
+    if len(palabras) < 20:
+        # Texto muy corto, dividir por la mitad
+        mitad = len(texto) // 2
+        return texto[:mitad].strip(), texto[mitad:].strip()
+    
     mitad = len(palabras) // 2
-    # Buscar un punto o salto de línea cerca de la mitad
-    for i in range(mitad, min(mitad + 30, len(palabras))):
+    # Buscar un punto, signo de interrogación o exclamación cerca de la mitad
+    for i in range(mitad, min(mitad + 50, len(palabras))):
         if palabras[i].endswith('.') or palabras[i].endswith('?') or palabras[i].endswith('!'):
             break
     parte1 = ' '.join(palabras[:i+1])
     parte2 = ' '.join(palabras[i+1:])
+    
+    # Si la parte2 es muy corta, tomar un poco más de la parte1
+    if len(parte2) < 50 and i < len(palabras) - 10:
+        parte2 = ' '.join(palabras[i+1:])
+    
     return parte1.strip(), parte2.strip()
 
 # ================================================================
@@ -332,7 +401,6 @@ def subir_a_youtube(video_path, miniatura_path, titulo, texto_corto, etiquetas, 
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    # Descripción con CTA
     descripcion = f"""📌 {texto_corto[:150]}...
 
 🔴 SUSCRÍBETE para más historias: {CANAL_LINK}
