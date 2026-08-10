@@ -33,6 +33,8 @@ YOUTUBE_USER_TOKEN = (
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
+MUSICA_ESTADO_FILE = "estado_musica.json"
+
 # ================================================================
 # 🎤 BANCO DE 12 VOCES
 # ================================================================
@@ -89,7 +91,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🗺️ ESTADOS DE MÉXICO (para ambientación)
+# 🗺️ ESTADOS DE MÉXICO
 # ================================================================
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -151,24 +153,41 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (SIN REPETICIÓN CONSECUTIVA)
+# 🎵 AUDIO DE FONDO (CON PERSISTENCIA PARA EVITAR REPETICIÓN)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
 ]
 
-ULTIMO_FONDO = None  # Guarda la última pista usada
+def cargar_estado_musica():
+    try:
+        with open(MUSICA_ESTADO_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {"ultimo_fondo": None}
+
+def guardar_estado_musica(estado):
+    with open(MUSICA_ESTADO_FILE, "w", encoding="utf-8") as f:
+        json.dump(estado, f, indent=2, ensure_ascii=False)
+    print(f"✅ Estado de música guardado: {estado}")
 
 def seleccionar_fondo_disponible():
-    global ULTIMO_FONDO
+    """Selecciona un fondo evitando repetir el último usado (persistido en archivo)."""
+    estado_musica = cargar_estado_musica()
+    ultimo_fondo = estado_musica.get("ultimo_fondo")
+    
     fondos = FONDOS_DISPONIBLES.copy()
-    # Evitar repetir el mismo fondo que en la ejecución anterior
-    if ULTIMO_FONDO and ULTIMO_FONDO in fondos:
-        fondos.remove(ULTIMO_FONDO)
-        print(f"🎵 Evitando repetir fondo: {ULTIMO_FONDO}")
+    
+    # Evitar el último fondo usado
+    if ultimo_fondo and ultimo_fondo in fondos:
+        fondos.remove(ultimo_fondo)
+        print(f"🎵 Evitando repetir fondo: {ultimo_fondo}")
+    
+    # Shuffle para aleatoriedad
     random.shuffle(fondos)
     
+    # Buscar en el repositorio
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
             continue
@@ -176,17 +195,20 @@ def seleccionar_fondo_disponible():
             for fondo in fondos:
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
-                    ULTIMO_FONDO = fondo
+                    # Actualizar estado con el nuevo fondo
+                    estado_musica["ultimo_fondo"] = fondo
+                    guardar_estado_musica(estado_musica)
                     print(f"✅ Audio de fondo seleccionado: {full_path}")
                     return full_path
     
-    # Si no hay más opciones (solo 1 archivo), usar el primero disponible
+    # Si no hay más opciones, usar el primero disponible
     for root, dirs, files in os.walk("."):
         for file in files:
             for fondo in FONDOS_DISPONIBLES:
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
-                    ULTIMO_FONDO = fondo
+                    estado_musica["ultimo_fondo"] = fondo
+                    guardar_estado_musica(estado_musica)
                     print(f"✅ Audio de fondo (única opción): {full_path}")
                     return full_path
     
@@ -509,7 +531,6 @@ def montar_video(elementos, salida="video_final.mp4"):
     duracion_total = audio_narracion.duration
 
     # Usar el fondo seleccionado (evita repetición)
-    global FONDO_AUDIO_FILE
     if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
         try:
             fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
