@@ -36,7 +36,7 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
 
 # ================================================================
-# 🎤 BANCO DE 12 VOCES (igual que bot largo)
+# 🎤 BANCO DE 12 VOCES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+14%", "tono": "-2Hz"},
@@ -55,7 +55,7 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 BANCO DE 16 PALETAS DE COLOR (igual que bot largo)
+# 🎨 BANCO DE 16 PALETAS DE COLOR
 # ================================================================
 PALETAS_COLOR = [
     "Deep crimson red, pitch black shadow, intense orange emergency light accents",
@@ -78,7 +78,7 @@ PALETAS_COLOR = [
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES (limpios)
+# 📷 ESTILOS VISUALES
 # ================================================================
 ESTILOS_VISUALES = [
     "Clean 35mm film photograph, sharp focus, cinematic lighting",
@@ -91,7 +91,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (diversidad real)
+# 🧑 GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje_shorts():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -162,22 +162,27 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (con mayor variedad)
+# 🎵 AUDIO DE FONDO (CON PERSISTENCIA PARA EVITAR REPETICIÓN)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
 ]
 
-# Último fondo usado (para evitar repetición consecutiva)
-ULTIMO_FONDO = None
-
-def seleccionar_fondo_disponible():
-    global ULTIMO_FONDO
+def seleccionar_fondo_disponible(estado):
+    """Selecciona un fondo evitando repetir el último usado (persistido en estado)."""
     fondos = FONDOS_DISPONIBLES.copy()
-    if ULTIMO_FONDO and ULTIMO_FONDO in fondos:
-        fondos.remove(ULTIMO_FONDO)  # Evitar repetir el mismo consecutivamente
+    ultimo_fondo = estado.get("ultimo_fondo")
+    
+    # Evitar el último fondo usado
+    if ultimo_fondo and ultimo_fondo in fondos:
+        fondos.remove(ultimo_fondo)
+        print(f"🎵 Evitando repetir fondo: {ultimo_fondo}")
+    
+    # Shuffle para aleatoriedad
     random.shuffle(fondos)
+    
+    # Buscar en el repositorio
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
             continue
@@ -185,15 +190,23 @@ def seleccionar_fondo_disponible():
             for fondo in fondos:
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
-                    ULTIMO_FONDO = fondo
-                    print(f"✅ Audio de fondo encontrado: {full_path}")
+                    # Actualizar estado con el nuevo fondo
+                    estado["ultimo_fondo"] = fondo
+                    print(f"✅ Audio de fondo seleccionado: {full_path}")
                     return full_path
-    # Si no encuentra ninguno, usar el primero de la lista
-    if FONDOS_DISPONIBLES:
-        return FONDOS_DISPONIBLES[0]
+    
+    # Si no hay más opciones, usar el primero disponible
+    for root, dirs, files in os.walk("."):
+        for file in files:
+            for fondo in FONDOS_DISPONIBLES:
+                if file.lower() == fondo.lower():
+                    full_path = os.path.join(root, file)
+                    estado["ultimo_fondo"] = fondo
+                    print(f"✅ Audio de fondo (única opción): {full_path}")
+                    return full_path
+    
+    print("⚠️ No se encontró ningún archivo de fondo disponible.")
     return None
-
-FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
 # 🧼 LIMPIADOR DE PROMPTS
@@ -241,14 +254,14 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# ESTADO DE SHORTS
+# 🗂️ ESTADO DE SHORTS
 # ================================================================
 def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except:
-        return {"historia": None, "parte": 1}
+        return {"historia": None, "parte": 1, "ultimo_fondo": None}
 
 def guardar_estado(estado):
     with open(ESTADO_FILE, "w", encoding="utf-8") as f:
@@ -256,7 +269,18 @@ def guardar_estado(estado):
     print(f"✅ Estado de Shorts guardado")
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA CON DEEPSEEK (CON JSON VALIDADO)
+# 🧹 LIMPIAR TEXTO PARA AUDIO (eliminar emojis y caracteres especiales)
+# ================================================================
+def limpiar_texto_para_audio(texto):
+    """Elimina emojis, caracteres especiales y referencias a 'fantasma' del CTA."""
+    # Eliminar emojis (Unicode Emoji)
+    texto = re.sub(r'[^\x00-\x7F]+', '', texto)  # Elimina todo lo que no sea ASCII
+    # Eliminar palabras no deseadas en el CTA
+    texto = re.sub(r'\b(fantasma|espectro|aparecido)\b', 'terror', texto, flags=re.IGNORECASE)
+    return texto.strip()
+
+# ================================================================
+# GENERAR HISTORIA COMPLETA CON DEEPSEEK
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
@@ -274,7 +298,7 @@ REGLAS:
 - Final: resolución o nuevo giro en la Parte 2.
 - ANTI-REPETICIÓN: NO repitas frases.
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-- CTA OBLIGATORIO al final de la Parte 2: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror." (NO uses palabras como "fantasma" o "espectro" en el CTA, debe ser genérico).
+- CTA OBLIGATORIO al final de la Parte 2: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror." (NO uses la palabra "fantasma" ni emojis).
 
 TÍTULO: Debe tener entre 40 y 60 caracteres exactos. Debe ser una frase completa y atractiva.
 
@@ -312,7 +336,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 data = json.loads(respuesta)
             except json.JSONDecodeError as e:
                 print(f"⚠️ Error JSON: {e}. Limpiando manualmente...")
-                # Buscar y reemplazar comillas internas
                 match = re.search(r'"texto_completo"\s*:\s*"([^"]*)"', respuesta, re.DOTALL)
                 if match:
                     texto = match.group(1)
@@ -329,22 +352,21 @@ Devuelve ESTRICTAMENTE este JSON válido:
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto")
             
-            # Limpiar texto (caracteres de control)
             data["texto_completo"] = re.sub(r'[\x00-\x1f\x7f]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
             
-            # Validar título (40-60 caracteres)
+            # Validar título
             titulo = data.get("titulo", "").strip()
             if len(titulo) < 40:
                 data["titulo"] = f"{titulo} | Relato de Terror"[:60]
             elif len(titulo) > 60:
                 data["titulo"] = titulo[:57] + "..."
             
-            # Validar tags (mínimo 20, >200 caracteres)
+            # Validar tags (mínimo 20)
             tags = data.get("tags", "")
             tags_list = [t.strip() for t in tags.split(",") if t.strip()]
             if len(tags_list) < 20:
-                extras = ["terror", "shorts", "mexico", "paranormal", "miedo", "relatos", "leyendas", "misterio", "suspenso", "noche", "oscuridad", "sombras", "aparicion", "escalofrio", "casas", "embrujadas", "pueblo", "fantasma", "real", "historias"]
+                extras = ["terror", "shorts", "mexico", "paranormal", "miedo", "relatos", "leyendas", "misterio", "suspenso", "noche", "oscuridad", "sombras", "aparicion", "escalofrio", "casas", "embrujadas", "pueblo", "real", "historias", "leyenda"]
                 while len(tags_list) < 20:
                     tags_list.append(random.choice(extras))
             data["tags"] = ", ".join(tags_list[:20])
@@ -357,13 +379,12 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 print(f"⏳ Esperando {10 + intento * 5} segundos...")
                 time.sleep(10 + intento * 5)
     
-    # Fallback manual
     print("⚠️ Creando fallback manual...")
     return {
         "titulo": "Relato de Terror Nocturno en México",
         "texto_completo": f"""Era una noche oscura cuando {PERSONAJE_SHORTS} sintió que algo no andaba bien en {ESTADO_HISTORIA_SHORTS}. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él. El pueblo de {ESTADO_HISTORIA_SHORTS} guarda muchos secretos, y esa noche él descubriría uno de los más oscuros.""",
         "palabras_portada": "TERROR",
-        "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, fantasma, real, historias"
+        "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
     }
 
 # ================================================================
@@ -411,10 +432,12 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO
+# GENERAR AUDIO (CON LIMPIEZA DE EMOJIS Y CARACTERES ESPECIALES)
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
+    # LIMPIAR EMOJIS Y CARACTERES ESPECIALES
+    texto_limpio = limpiar_texto_para_audio(texto_limpio)
     if not texto_limpio:
         return None
 
@@ -441,7 +464,7 @@ def generar_audio(texto, index):
 # ================================================================
 # MONTAR VIDEO VERTICAL
 # ================================================================
-def montar_video_shorts(elementos, salida="short_final.mp4"):
+def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
     clips_video = []
     clips_audio = []
 
@@ -473,17 +496,18 @@ def montar_video_shorts(elementos, salida="short_final.mp4"):
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
 
-    global FONDO_AUDIO_FILE
-    if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
+    if fondo_path and os.path.exists(fondo_path):
         try:
-            fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
+            fondo_clip = AudioFileClip(fondo_path)
             duracion_total = audio_narracion.duration
             if fondo_clip.duration < duracion_total:
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-        except Exception:
+            print(f"🎵 Audio de fondo usado: {fondo_path}")
+        except Exception as e:
+            print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
@@ -547,6 +571,13 @@ def main():
     parte_actual = estado.get("parte", 1)
     print(f"📌 Estado actual: Parte {parte_actual}")
 
+    # Seleccionar fondo musical (evitando repetición)
+    fondo_path = seleccionar_fondo_disponible(estado)
+    if fondo_path:
+        print(f"🎵 Fondo seleccionado: {fondo_path}")
+    else:
+        print("⚠️ No hay audio de fondo.")
+
     if parte_actual == 1:
         print("🆕 Generando nueva historia completa...")
         historia = generar_historia_completa()
@@ -558,7 +589,7 @@ def main():
             "titulo": historia.get("titulo", "Relato de Terror Nocturno"),
             "texto_completo": historia.get("texto_completo", ""),
             "palabras_portada": historia.get("palabras_portada", "TERROR"),
-            "tags": historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, fantasma, real, historias")
+            "tags": historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
         }
         estado["parte"] = 2
         guardar_estado(estado)
@@ -568,7 +599,8 @@ def main():
         guardar_estado(estado)
 
         texto_publicar = parte1
-        cta = "\n\n📌 Parte 2 mañana a la misma hora. ¡No te la pierdas! 👻"
+        # CTA sin emojis ni caracteres especiales
+        cta = "\n\nParte 2 mañana a la misma hora. No te la pierdas."
         texto_publicar += cta
         parte_num = 1
         print(f"📝 Publicando Parte 1 ({len(texto_publicar)} caracteres)")
@@ -581,11 +613,12 @@ def main():
             return
 
         texto_publicar = historia.get("parte2", "")
-        cta = "\n\n👻 ¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
+        # CTA sin emojis ni la palabra "fantasma"
+        cta = "\n\n¿Te gustó este relato? Suscríbete para más historias de terror."
         texto_publicar += cta
         titulo = historia.get("titulo", "Relato de Terror Nocturno")
         palabras_portada = historia.get("palabras_portada", "TERROR")
-        tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, fantasma, real, historias")
+        tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
         parte_num = 2
         print(f"📝 Publicando Parte 2 ({len(texto_publicar)} caracteres)")
 
@@ -601,25 +634,21 @@ def main():
         print("⚠️ Falló imagen, usando placeholder")
         imagen_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
 
-    # Esperar 6 segundos (igual que bot largo)
     print("⏳ Esperando 6 segundos antes del audio...")
     time.sleep(6)
 
-    # Generar audio
     print("🎙️ Generando audio...")
     audio_path = generar_audio(texto_publicar, 0)
     if not audio_path:
         print("❌ Falló audio")
         return
 
-    # Montar video
     elementos = [{"imagen_url": imagen_url, "audio_path": audio_path}]
     print("🎬 Montando Short vertical...")
-    video_path = montar_video_shorts(elementos, "short_final.mp4")
+    video_path = montar_video_shorts(elementos, fondo_path, "short_final.mp4")
 
-    # Subir a YouTube
     titulo = historia.get("titulo", "Relato de Terror Nocturno") if parte_actual == 2 else historia.get("titulo", "Relato de Terror Nocturno")
-    tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, fantasma, real, historias") if parte_actual == 2 else historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, fantasma, real, historias")
+    tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias") if parte_actual == 2 else historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
     
     print("⬆️ Subiendo Short...")
     subir_a_youtube(video_path, None, titulo, texto_publicar, tags, parte_num)
