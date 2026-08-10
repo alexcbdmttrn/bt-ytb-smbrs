@@ -215,7 +215,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (recorte inteligente)
+# 🧼 LIMPIADOR DE PROMPTS
 # ================================================================
 def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -243,7 +243,7 @@ def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     return prompt_base + modificadores_calidad
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON (CORREGIDO)
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
@@ -259,14 +259,14 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🗂️ ESTADO DE SHORTS
+# 🗂️ ESTADO DE SHORTS (3 partes)
 # ================================================================
 def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except:
-        return {"historia": None, "parte": 1, "ultimo_fondo": None}
+        return {"parte": 1, "ultimo_fondo": None, "historia": None}
 
 def guardar_estado(estado):
     with open(ESTADO_FILE, "w", encoding="utf-8") as f:
@@ -274,7 +274,7 @@ def guardar_estado(estado):
     print("✅ Estado de Shorts guardado")
 
 # ================================================================
-# 🧹 LIMPIAR TEXTO PARA AUDIO (MEJORADA)
+# 🧹 LIMPIAR TEXTO PARA AUDIO
 # ================================================================
 def limpiar_texto_para_audio(texto):
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
@@ -285,20 +285,20 @@ def limpiar_texto_para_audio(texto):
     return texto.strip()
 
 # ================================================================
-# EXPANDIR TEXTO CORTO
+# EXPANDIR TEXTO CORTO (300-360 palabras)
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 250 y 300 palabras.
-Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
-y más detalles del entorno en {ubicacion}.
-Mantén la trama exactamente igual, solo añade contenido donde sea natural.
+    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 300 y 360 palabras.
+    Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
+    y más detalles del entorno en {ubicacion}.
+    Mantén la trama exactamente igual, solo añade contenido donde sea natural.
 
-RELATO ORIGINAL (debe expandirse):
-{texto_corto}
+    RELATO ORIGINAL (debe expandirse):
+    {texto_corto}
 
-Devuelve SOLO el relato expandido (250-300 palabras), sin títulos ni comentarios adicionales.
-"""
+    Devuelve SOLO el relato expandido (300-360 palabras), sin títulos ni comentarios adicionales.
+    """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
@@ -311,7 +311,7 @@ Devuelve SOLO el relato expandido (250-300 palabras), sin títulos ni comentario
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         texto_expandido = r.json()["choices"][0]["message"]["content"].strip()
-        if len(texto_expandido.split()) > 150:
+        if len(texto_expandido.split()) > 200:
             return texto_expandido
         else:
             return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor."
@@ -320,9 +320,9 @@ Devuelve SOLO el relato expandido (250-300 palabras), sin títulos ni comentario
         return texto_corto
 
 # ================================================================
-# TRUNCAR TEXTO LARGO
+# TRUNCAR TEXTO LARGO (300-360 palabras)
 # ================================================================
-def truncar_texto_largo(texto, max_palabras=280):
+def truncar_texto_largo(texto, max_palabras=340):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -332,12 +332,12 @@ def truncar_texto_largo(texto, max_palabras=280):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA (250-300 PALABRAS)
+# GENERAR HISTORIA COMPLETA (300-360 palabras)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-La historia debe tener EXACTAMENTE entre 250 y 300 palabras (NO más de 300, NO menos de 250), y estar dividida en DOS PARTES claras con un CLIFFHANGER en el punto medio.
+La historia debe tener EXACTAMENTE entre 300 y 360 palabras (NO más de 360, NO menos de 300), y estar dividida en TRES PARTES claras con un CLIFFHANGER en cada punto de división.
 Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
@@ -346,30 +346,29 @@ DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
 REGLAS DE TÍTULO (IMPORTANTE PARA CTR):
 - Debe ser DESCRIPTIVO y DIRECTO. Sin metáforas confusas.
 - Debe decir EXACTAMENTE de qué trata el video.
-- Ejemplo BUENO: "El secreto del manicomio abandonado en Hidalgo"
-- Ejemplo MALO: "El guardián del pabellón" (demasiado vago)
 - Entre 40 y 60 caracteres exactos.
 
 REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
-- La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE (máx 15 palabras).
-- Ejemplo: "Esa noche en el manicomio abandonado, supe que no estaba solo."
-- Debe resumir el misterio y enganchar al espectador en los primeros 5 segundos.
+- La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
+- Ejemplo: "Esa noche no estaba solo."
+- Ejemplo: "El manicomio guardaba un secreto."
 
 REGLAS DE CONTENIDO:
 - Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
 - Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
-- Mitad: un giro o revelación (CLIFFHANGER) para la Parte 1.
-- Final: resolución o nuevo giro en la Parte 2.
+- Parte 1: presentación y primera tensión.
+- Parte 2: desarrollo y segundo cliffhanger.
+- Parte 3: resolución final.
 - ANTI-REPETICIÓN: NO repitas frases.
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-- CTA OBLIGATORIO al final de la Parte 2: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
+- CTA OBLIGATORIO al final de la Parte 3: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
 
 ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de las etiquetas debe superar los 200 caracteres.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
   "titulo": "Título descriptivo y directo de 40-60 caracteres",
-  "texto_completo": "Historia completa de 250-300 palabras... (con la primera frase como gancho)",
+  "texto_completo": "Historia completa de 300-360 palabras... (con la primera frase como gancho)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -380,7 +379,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.85,
-        "max_tokens": 650,
+        "max_tokens": 700,
         "response_format": {"type": "json_object"}
     }
     respuesta = ""
@@ -392,7 +391,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             json_str = limpiar_respuesta_json(respuesta)
             data = json.loads(json_str, strict=False)
-            if "texto_completo" not in data or len(data["texto_completo"]) < 50:
+            if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto")
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
@@ -414,7 +413,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             if intento < 4:
                 time.sleep(10 + intento * 5)
     print("⚠️ Creando fallback manual...")
-    texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne."
+    texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne."
     return {
         "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS}",
         "texto_completo": texto_fallback,
@@ -423,39 +422,24 @@ Devuelve ESTRICTAMENTE este JSON válido:
     }
 
 # ================================================================
-# DIVIDIR TEXTO EN DOS PARTES
+# DIVIDIR TEXTO EN 3 PARTES (~100-120 palabras cada una)
 # ================================================================
-def dividir_texto(texto):
-    palabras = texto.split()
-    if len(palabras) < 10:
-        mitad = len(texto) // 2
-        return texto[:mitad].strip(), texto[mitad:].strip()
-    mitad = len(palabras) // 2
-    for i in range(mitad, min(mitad + 30, len(palabras))):
-        if palabras[i].endswith('.') or palabras[i].endswith('?') or palabras[i].endswith('!'):
-            break
-    parte1 = ' '.join(palabras[:i+1])
-    parte2 = ' '.join(palabras[i+1:])
-    if len(parte2) < 30 and i < len(palabras) - 10:
-        parte2 = ' '.join(palabras[i+1:])
-    return parte1.strip(), parte2.strip()
-
-# ================================================================
-# DIVIDIR TEXTO EN N FRAGMENTOS PARA ESCENAS VISUALES
-# ================================================================
-def dividir_en_segmentos(texto, n_segmentos=3):
+def dividir_texto(texto, n_partes=3):
     palabras = texto.split()
     total = len(palabras)
-    tam = max(1, total // n_segmentos)
-    segmentos = []
-    for i in range(n_segmentos):
+    if total < n_partes * 10:
+        return [texto]
+    tam = total // n_partes
+    partes = []
+    for i in range(n_partes):
         inicio = i * tam
-        fin = (i + 1) * tam if i < n_segmentos - 1 else total
-        segmentos.append(" ".join(palabras[inicio:fin]))
-    return segmentos
+        fin = (i + 1) * tam if i < n_partes - 1 else total
+        parte = " ".join(palabras[inicio:fin])
+        partes.append(parte.strip())
+    return partes
 
 # ================================================================
-# GENERAR IMÁGENES VERTICALES (con texto del segmento)
+# GENERAR IMÁGENES VERTICALES (1 imagen por parte)
 # ================================================================
 def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, estilo_visual=None, paleta_color=None, texto_segmento="", intentos=3):
     perfil = perfil_personaje or PERFIL_PERSONAJE_SHORTS
@@ -485,7 +469,7 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
     return None
 
 # ================================================================
-# GENERAR AUDIO CON FALLBACK Y ASYNC RUN
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -566,17 +550,29 @@ def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
 # ================================================================
 # SUBIR A YOUTUBE
 # ================================================================
-def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
+def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte, cta):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
+    
+    # 🔥 CTA personalizado por parte
+    if parte == 1:
+        cta_texto = "📌 Parte 2 disponible en unas horas. Sígueme para no perdértela."
+    elif parte == 2:
+        cta_texto = "📌 Parte 3 disponible en unas horas. Sígueme para no perdértela."
+    else:
+        cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror."
+    
     descripcion = f"""📌 {texto_corto[:150]}...
 
-🔴 SUSCRÍBETE para más historias: {CANAL_LINK}
+{cta_texto}
+
+🔴 SUSCRÍBETE: {CANAL_LINK}
 📱 Facebook: {FACEBOOK_LINK}
 
 #Shorts #Terror #LeyendasMexicanas {' '.join(['#'+t for t in etiquetas])} #RelatosDeTerror #Paranormal"""
+    
     body = {
         "snippet": {
             "title": f"{titulo} - Parte {parte}" if parte else titulo,
@@ -616,10 +612,10 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN (FLUJO COMPLETO DE PARTE 1 Y PARTE 2)
+# MAIN (3 PARTES)
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Parte 1 y Parte 2 automático)")
+    print("🎬 Iniciando Bot de SHORTS (Parte 1, 2 y 3 automático)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     estado = cargar_estado()
@@ -628,8 +624,9 @@ def main():
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
+    # Si es Parte 1: generar nueva historia
     if parte_actual == 1:
-        print("🆕 Generando nueva historia completa...")
+        print("🆕 Generando nueva historia completa (3 partes)...")
         historia = generar_historia_completa()
         if not historia:
             print("❌ No se pudo generar la historia")
@@ -637,22 +634,26 @@ def main():
             
         texto_completo = historia.get("texto_completo", "")
         palabras = len(texto_completo.split())
-        if palabras < 200:
+        if palabras < 250:
             print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
             texto_completo = expandir_texto_corto(texto_completo, ESTADO_HISTORIA_SHORTS, PERSONAJE_SHORTS)
-        elif palabras > 350:
+        elif palabras > 400:
             print(f"⚠️ Texto largo ({palabras} palabras). Truncando...")
-            texto_completo = truncar_texto_largo(texto_completo, 280)
+            texto_completo = truncar_texto_largo(texto_completo, 340)
         else:
             print(f"✅ Texto con longitud ideal ({palabras} palabras)")
 
-        parte1_texto, parte2_texto = dividir_texto(texto_completo)
-
+        # Dividir en 3 partes
+        partes = dividir_texto(texto_completo, 3)
+        if len(partes) < 3:
+            print("⚠️ No se pudieron generar 3 partes. Añadiendo relleno...")
+            while len(partes) < 3:
+                partes.append("El misterio continuaba. La noche guardaba más secretos.")
+        
+        # Guardar en estado
         historia_guardada = {
             "titulo": historia.get("titulo", f"Misterio en {ESTADO_HISTORIA_SHORTS}"),
-            "texto_completo": texto_completo,
-            "parte1_texto": parte1_texto,
-            "parte2_texto": parte2_texto,
+            "partes": partes,
             "palabras_portada": historia.get("palabras_portada", "TERROR"),
             "tags": historia.get("tags", ""),
             "perfil_personaje": PERFIL_PERSONAJE_SHORTS,
@@ -661,79 +662,92 @@ def main():
             "estilo_visual": ESTILO_VISUAL_ACTUAL
         }
         estado["historia"] = historia_guardada
-        texto_script = parte1_texto
-        perfil = PERFIL_PERSONAJE_SHORTS
-        ubicacion = ESTADO_HISTORIA_SHORTS
-        paleta = PALETA_COLOR_ACTUAL
-        estilo = ESTILO_VISUAL_ACTUAL
+        estado["parte"] = 2
+        guardar_estado(estado)
+        texto_publicar = partes[0]
+        parte_num = 1
     else:
-        print("🔁 Cargando Parte 2 de la historia previa...")
+        # Parte 2 o 3: recuperar del estado
         historia_guardada = estado.get("historia")
-        if not historia_guardada:
-            print("⚠️ No hay historia guardada para Parte 2. Reiniciando a Parte 1...")
+        if not historia_guardada or not historia_guardada.get("partes"):
+            print("⚠️ No hay historia guardada. Reiniciando a Parte 1...")
+            estado["parte"] = 1
+            guardar_estado(estado)
+            return main()
+        
+        partes = historia_guardada.get("partes", [])
+        if parte_actual == 2 and len(partes) >= 2:
+            texto_publicar = partes[1]
+            parte_num = 2
+        elif parte_actual == 3 and len(partes) >= 3:
+            texto_publicar = partes[2]
+            parte_num = 3
+        else:
+            print("⚠️ No hay más partes disponibles. Reiniciando...")
             estado["parte"] = 1
             guardar_estado(estado)
             return main()
 
-        texto_script = historia_guardada.get("parte2_texto", "")
-        perfil = historia_guardada.get("perfil_personaje", PERFIL_PERSONAJE_SHORTS)
-        ubicacion = historia_guardada.get("estado_mexico", ESTADO_HISTORIA_SHORTS)
-        paleta = historia_guardada.get("paleta_color", PALETA_COLOR_ACTUAL)
-        estilo = historia_guardada.get("estilo_visual", ESTILO_VISUAL_ACTUAL)
+    # Recuperar metadatos
+    historia_guardada = estado.get("historia", {})
+    titulo = historia_guardada.get("titulo", "Relato de Terror")
+    tags = historia_guardada.get("tags", "terror, shorts, mexico")
+    perfil = historia_guardada.get("perfil_personaje", PERFIL_PERSONAJE_SHORTS)
+    ubicacion = historia_guardada.get("estado_mexico", ESTADO_HISTORIA_SHORTS)
+    paleta = historia_guardada.get("paleta_color", PALETA_COLOR_ACTUAL)
+    estilo = historia_guardada.get("estilo_visual", ESTILO_VISUAL_ACTUAL)
 
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (1.05x)")
     print(f"📍 Ubicación: {ubicacion}")
     print(f"🎨 Paleta: {paleta[:50]}...")
+    print(f"📝 Publicando Parte {parte_num} ({len(texto_publicar)} caracteres, {len(texto_publicar.split())} palabras)")
 
-    # Dividir el guion en 3 segmentos para generar 3 imágenes por Short
-    segmentos_texto = dividir_en_segmentos(texto_script, n_segmentos=3)
-    elementos = []
+    # Generar imagen
+    print("🎨 Generando imagen vertical...")
+    prompt_imagen = f"scene in {ubicacion}, looking scared"
+    img_url = generar_imagen_vertical(
+        prompt_imagen,
+        perfil_personaje=perfil,
+        estado_mexico=ubicacion,
+        estilo_visual=estilo,
+        paleta_color=paleta,
+        texto_segmento=texto_publicar
+    )
+    if not img_url:
+        print("⚠️ Falló imagen, usando placeholder")
+        img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
 
-    for idx, seg in enumerate(segmentos_texto):
-        print(f"🖼️ Generando imagen y audio para segmento {idx+1}/3...")
-        # 🔥 PASAR EL TEXTO DEL SEGMENTO A LA GENERACIÓN DE IMAGEN
-        prompt_imagen = f"scene in {ubicacion}, looking scared"
-        img_url = generar_imagen_vertical(
-            prompt_imagen,
-            perfil_personaje=perfil,
-            estado_mexico=ubicacion,
-            estilo_visual=estilo,
-            paleta_color=paleta,
-            texto_segmento=seg
-        )
-        audio_file = generar_audio(seg, index=f"p{parte_actual}_seg{idx}")
-        
-        if img_url and audio_file:
-            elementos.append({"imagen_url": img_url, "audio_path": audio_file})
-        time.sleep(2)
+    print("⏳ Esperando 4 segundos antes del audio...")
+    time.sleep(4)
 
-    if not elementos:
-        print("❌ No se pudieron generar elementos de audio/imagen para el Short.")
+    print("🎙️ Generando audio...")
+    audio_path = generar_audio(texto_publicar, parte_num)
+    if not audio_path:
+        print("❌ Falló audio")
         return
 
-    # Montar y Subir
-    video_final = montar_video_shorts(elementos, fondo_path, salida="short_final.mp4")
-    
-    subir_a_youtube(
-        video_path=video_final,
-        titulo=historia_guardada["titulo"],
-        texto_corto=texto_script,
-        etiquetas=historia_guardada.get("tags", ""),
-        parte=parte_actual
-    )
+    elementos = [{"imagen_url": img_url, "audio_path": audio_path}]
+    print("🎬 Montando Short vertical...")
+    video_path = montar_video_shorts(elementos, fondo_path, "short_final.mp4")
 
-    # Actualizar estado de ciclo
+    print("⬆️ Subiendo Short...")
+    subir_a_youtube(video_path, titulo, texto_publicar, tags, parte_num, None)
+
+    # Actualizar estado para la siguiente parte
     if parte_actual == 1:
         estado["parte"] = 2
-        guardar_estado(estado)
-        print("⏩ Parte 1 completada y subida. Estado actualizado a Parte 2.")
+        print("⏩ Parte 1 publicada. Siguiente: Parte 2")
+    elif parte_actual == 2:
+        estado["parte"] = 3
+        print("⏩ Parte 2 publicada. Siguiente: Parte 3")
     else:
         estado["parte"] = 1
         estado["historia"] = None
-        guardar_estado(estado)
-        print("🎉 Parte 2 completada y subida. Ciclo finalizado. Estado reiniciado a Parte 1.")
-
+        print("🎉 Parte 3 publicada. Ciclo completado. Reiniciando a Parte 1")
+    
+    guardar_estado(estado)
     limpiar_temporales_shorts()
+    print("🎉 Proceso de Shorts completado")
 
 if __name__ == "__main__":
     try:
