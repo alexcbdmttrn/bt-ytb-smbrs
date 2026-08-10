@@ -58,7 +58,6 @@ CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 # 🎨 PALETAS REORDENADAS (60% FRÍAS / 40% CÁLIDAS)
 # ================================================================
 PALETAS_COLOR = [
-    # ❄️ FRÍAS (10 paletas - más probables)
     "Cold cyan blue fog, navy blue shadows, pale white moonlight",
     "Emerald green twilight, dark forest haze, muted sage green lighting",
     "Deep violet haze, electric purple ambient light, dark magenta shadows",
@@ -69,7 +68,6 @@ PALETAS_COLOR = [
     "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
     "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
     "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
-    # 🔥 CÁLIDAS (6 paletas - menos probables)
     "Deep crimson red, pitch black shadow, intense orange emergency light accents",
     "Blood red and burnt orange, dark charcoal shadows, hellish glow",
     "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
@@ -124,7 +122,6 @@ def generar_perfil_personaje_shorts():
         "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
-    # 🔥 SOLO RASGOS DE PIEL CLARA
     rasgos = [
         "with mestizo features and light olive skin",
         "with light brown skin and freckles",
@@ -285,19 +282,14 @@ def guardar_estado(estado):
 # 🧹 LIMPIAR TEXTO PARA AUDIO (MANTIENE EÑES Y ACENTOS)
 # ================================================================
 def limpiar_texto_para_audio(texto):
-    """Elimina emojis y caracteres de control, pero MANTIENE eñes, acentos y letras latinas."""
-    # Eliminar emojis (Unicode Emoji)
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
-    # Eliminar caracteres de control (excepto saltos de línea y tabs)
     texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
-    # NO eliminar ñ, á, é, í, ó, ú, ü, etc.
     return texto.strip()
 
 # ================================================================
-# EXPANDIR TEXTO CORTO (SI TIENE MENOS DE 450 PALABRAS)
+# EXPANDIR TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
-    """Expande un texto corto con DeepSeek."""
     print("🔄 Expandiendo texto corto...")
     prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 500 y 600 palabras.
     Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
@@ -324,17 +316,15 @@ def expandir_texto_corto(texto_corto, ubicacion, personaje):
         if len(texto_expandido.split()) > 400:
             return texto_expandido
         else:
-            # Si falla, usar el texto original con relleno manual
             return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor, roto solo por el latido de su corazón. Sabía que algo lo observaba desde las sombras."
     except Exception as e:
         print(f"❌ Error expandiendo: {e}")
         return texto_corto
 
 # ================================================================
-# TRUNCAR TEXTO LARGO (SI TIENE MÁS DE 700 PALABRAS)
+# TRUNCAR TEXTO LARGO
 # ================================================================
 def truncar_texto_largo(texto, max_palabras=600):
-    """Trunca el texto a un máximo de palabras sin cortar oraciones."""
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -344,7 +334,7 @@ def truncar_texto_largo(texto, max_palabras=600):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA CON DEEPSEEK (500-600 PALABRAS)
+# GENERAR HISTORIA COMPLETA (CON TÍTULOS DIRECTOS Y GANCHO)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
@@ -355,9 +345,20 @@ Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
 "{PERFIL_PERSONAJE_SHORTS}"
 
-REGLAS:
+REGLAS DE TÍTULO (IMPORTANTE PARA CTR):
+- Debe ser DESCRIPTIVO y DIRECTO. Sin metáforas confusas.
+- Debe decir EXACTAMENTE de qué trata el video.
+- Ejemplo BUENO: "El secreto del manicomio abandonado en Hidalgo"
+- Ejemplo MALO: "El guardián del pabellón" (demasiado vago)
+- Entre 40 y 60 caracteres exactos.
+
+REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
+- La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE (máx 15 palabras).
+- Ejemplo: "Esa noche en el manicomio abandonado, supe que no estaba solo."
+- Debe resumir el misterio y enganchar al espectador en los primeros 5 segundos.
+
+REGLAS DE CONTENIDO:
 - Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
-- Inicio: presenta al personaje y la situación en {ESTADO_HISTORIA_SHORTS}.
 - Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
 - Mitad: un giro o revelación (CLIFFHANGER) para la Parte 1.
 - Final: resolución o nuevo giro en la Parte 2.
@@ -365,14 +366,12 @@ REGLAS:
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
 - CTA OBLIGATORIO al final de la Parte 2: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
 
-TÍTULO: Debe tener entre 40 y 60 caracteres exactos. Debe ser una frase completa y atractiva.
-
 ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de las etiquetas debe superar los 200 caracteres.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título atractivo de 40-60 caracteres",
-  "texto_completo": "Historia completa de 500-600 palabras... (con acentos y eñes correctamente)",
+  "titulo": "Título descriptivo y directo de 40-60 caracteres",
+  "texto_completo": "Historia completa de 500-600 palabras... (con la primera frase como gancho)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -445,10 +444,10 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 time.sleep(10 + intento * 5)
     
     print("⚠️ Creando fallback manual...")
-    texto_fallback = f"Era una noche oscura cuando {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien en {ESTADO_HISTORIA_SHORTS}. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él. El pueblo de {ESTADO_HISTORIA_SHORTS} guarda muchos secretos, y esa noche él descubriría uno de los más oscuros. El aire se volvía más denso. Sus piernas temblaban. Sabía que no podía huir, solo enfrentar lo que venía."
+    texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él. El pueblo de {ESTADO_HISTORIA_SHORTS} guarda muchos secretos, y esa noche él descubriría uno de los más oscuros."
     
     return {
-        "titulo": "Relato de Terror Nocturno en México",
+        "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS}",
         "texto_completo": texto_fallback,
         "palabras_portada": "TERROR",
         "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
@@ -477,7 +476,8 @@ def dividir_texto(texto):
 # GENERAR IMAGEN VERTICAL CON NEGATIVE PROMPT
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
-    prompt_completo = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, {prompt}, bright lighting, clear visibility"
+    # 🔥 MEJORA: Imagen más llamativa con expresión intensa y colores vibrantes
+    prompt_completo = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, {prompt}, bright cinematic lighting, intense facial expression of fear or surprise, high contrast colors, vibrant highlights, sharp focus, dramatic shadows"
     prompt_limpio = limpiar_prompt(prompt_completo)
     
     url = "https://apihub.agnes-ai.com/v1/images/generations"
