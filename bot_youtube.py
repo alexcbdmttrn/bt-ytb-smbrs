@@ -309,7 +309,7 @@ def agregar_texto_miniatura(img_path, texto_portada):
         print(f"⚠️ Error en miniatura: {e}")
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON
+# LIMPIAR RESPUESTA JSON (CORREGIDO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
@@ -320,6 +320,7 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
+        json_str = re.sub(r'(?<!\\)\r?\n', r'\\n', json_str)
         return json_str
     return respuesta
 
@@ -411,14 +412,14 @@ Responde con este JSON estructurado:
         "max_tokens": 5000,
         "response_format": {"type": "json_object"}
     }
-    respuesta = ""  # <--- INICIALIZACIÓN DE SEGURIDAD
+    respuesta = ""
     for intento in range(3):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=150)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             json_str = limpiar_respuesta_json(respuesta)
-            data = json.loads(json_str)
+            data = json.loads(json_str, strict=False)
             if "segmentos" not in data or len(data["segmentos"]) == 0:
                 raise ValueError("Sin segmentos válidos")
             for seg in data["segmentos"]:
@@ -431,9 +432,12 @@ Responde con este JSON estructurado:
     return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN CON NEGATIVE PROMPT
+# GENERAR IMAGEN CON NEGATIVE PROMPT (Y TEXTO DEL SEGMENTO)
 # ================================================================
-def generar_imagen(prompt, width=2048, height=1152, intentos=3):
+def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
+    # 🔥 INCLUIR EL TEXTO DEL SEGMENTO EN EL PROMPT
+    if texto_segmento:
+        prompt = f"{prompt}, scene depicting: {texto_segmento[:200]}"
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -523,7 +527,6 @@ def montar_video(elementos, salida="video_final.mp4"):
         audio_final = audio_narracion
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
-    # Cierre explícito de recursos
     video.close()
     audio_final.close()
     for c in clips_video:
@@ -617,7 +620,8 @@ def main():
         textos_registrados.add(texto_limpio)
         if i > 0:
             time.sleep(4)
-        url_img = generar_imagen(seg["imagen_prompt"], width=2048, height=1152)
+        # 🔥 PASAR EL TEXTO DEL SEGMENTO A LA GENERACIÓN DE IMAGEN
+        url_img = generar_imagen(seg["imagen_prompt"], texto_segmento=seg["texto"], width=2048, height=1152)
         if url_img:
             imagen_ultimo_recurso = url_img
         elif imagen_ultimo_recurso:
