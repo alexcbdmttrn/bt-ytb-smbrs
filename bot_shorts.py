@@ -39,18 +39,18 @@ ESTADO_FILE = "estado_shorts.json"
 # 🎤 BANCO DE 12 VOCES
 # ================================================================
 VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+14%", "tono": "-2Hz"},
-    {"voz": "es-MX-DaliaNeural", "velocidad": "+12%", "tono": "+0Hz"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+15%", "tono": "-3Hz"},
-    {"voz": "es-ES-ElviraNeural", "velocidad": "+13%", "tono": "+1Hz"},
-    {"voz": "es-CO-SalomeNeural", "velocidad": "+11%", "tono": "-1Hz"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+14%", "tono": "+2Hz"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+15%", "tono": "-2Hz"},
-    {"voz": "es-PE-CamilaNeural", "velocidad": "+12%", "tono": "+0Hz"},
-    {"voz": "es-US-PalomaNeural", "velocidad": "+13%", "tono": "-1Hz"},
-    {"voz": "es-ES-XimenaNeural", "velocidad": "+14%", "tono": "+1Hz"},
-    {"voz": "es-MX-CandelaNeural", "velocidad": "+10%", "tono": "-3Hz"},
-    {"voz": "es-ES-AbrilNeural", "velocidad": "+15%", "tono": "-2Hz"},
+    {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-2Hz"},
+    {"voz": "es-MX-DaliaNeural", "velocidad": "+5%", "tono": "+0Hz"},
+    {"voz": "es-ES-AlvaroNeural", "velocidad": "+5%", "tono": "-3Hz"},
+    {"voz": "es-ES-ElviraNeural", "velocidad": "+5%", "tono": "+1Hz"},
+    {"voz": "es-CO-SalomeNeural", "velocidad": "+5%", "tono": "-1Hz"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+5%", "tono": "+2Hz"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+5%", "tono": "-2Hz"},
+    {"voz": "es-PE-CamilaNeural", "velocidad": "+5%", "tono": "+0Hz"},
+    {"voz": "es-US-PalomaNeural", "velocidad": "+5%", "tono": "-1Hz"},
+    {"voz": "es-ES-XimenaNeural", "velocidad": "+5%", "tono": "+1Hz"},
+    {"voz": "es-MX-CandelaNeural", "velocidad": "+5%", "tono": "-3Hz"},
+    {"voz": "es-ES-AbrilNeural", "velocidad": "+5%", "tono": "-2Hz"},
 ]
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
@@ -93,7 +93,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (PIEL CLARA / BLANCA)
+# 🧑 GENERADOR DE PERSONAJES (CON GÉNERO PARA ARTÍCULOS)
 # ================================================================
 def generar_perfil_personaje_shorts():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -124,7 +124,7 @@ def generar_perfil_personaje_shorts():
         "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
-    # 🔥 SOLO RASGOS DE PIEL CLARA (sin indígenas ni morenos)
+    # 🔥 SOLO RASGOS DE PIEL CLARA
     rasgos = [
         "with mestizo features and light olive skin",
         "with light brown skin and freckles",
@@ -134,29 +134,48 @@ def generar_perfil_personaje_shorts():
         "with tan skin and a warm smile",
         "with light beige skin and a serious expression",
     ]
-    profesiones = [
+    profesiones_masculinas = [
         "trailero de 45 años en carretera nocturna",
-        "estudiante de medicina de 22 años en un hospital antiguo",
         "policía de 38 años en su turno nocturno",
         "agricultor de 50 años en una hacienda del siglo XIX",
         "fotógrafo urbano de 28 años en edificios abandonados",
         "taxista nocturno de 55 años en zonas peligrosas",
         "velador de 60 años en un panteón viejo",
         "arqueólogo de 40 años excavando en la selva",
-        "periodista de investigación de 35 años en un pueblo fantasma",
         "enfermero de 30 años en un psiquiátrico abandonado",
         "minero de 48 años en una mina clausurada",
+    ]
+    profesiones_femeninas = [
+        "estudiante de medicina de 22 años en un hospital antiguo",
+        "periodista de investigación de 35 años en un pueblo fantasma",
         "bailarina de 25 años en un teatro embrujado",
     ]
-    personaje = random.choice(profesiones)
+    profesiones_neutras = [
+        "agricultor de 50 años en una hacienda del siglo XIX",
+        "fotógrafo urbano de 28 años en edificios abandonados",
+        "taxista nocturno de 55 años en zonas peligrosas",
+        "arqueólogo de 40 años excavando en la selva",
+        "enfermero de 30 años en un psiquiátrico abandonado",
+        "minero de 48 años en una mina clausurada",
+    ]
+    
+    genero = random.choice(generos)
+    
+    if genero == "man":
+        profesion = random.choice(profesiones_masculinas + profesiones_neutras)
+        articulo = "un"
+    else:
+        profesion = random.choice(profesiones_femeninas + profesiones_neutras)
+        articulo = "una"
+    
     perfil_fisico = (
-        f"a {random.choice(edades)} Mexican {random.choice(generos)}, "
+        f"a {random.choice(edades)} Mexican {genero}, "
         f"{random.choice(rasgos)}, "
         f"with {random.choice(cabellos)}, {random.choice(vestimentas)}"
     )
-    return perfil_fisico, personaje
+    return perfil_fisico, profesion, articulo, genero
 
-PERFIL_PERSONAJE_SHORTS, PERSONAJE_SHORTS = generar_perfil_personaje_shorts()
+PERFIL_PERSONAJE_SHORTS, PERSONAJE_SHORTS, ARTICULO_SHORTS, GENERO_SHORTS = generar_perfil_personaje_shorts()
 ESTADO_HISTORIA_SHORTS = random.choice([
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
     "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México",
@@ -202,7 +221,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS CON ILUMINACIÓN CLARA
+# 🧼 LIMPIADOR DE PROMPTS
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -223,7 +242,6 @@ def limpiar_prompt(prompt):
 
     prompt = re.sub(r"\s+", " ", prompt).strip()
 
-    # 🔥 FORZAR ILUMINACIÓN CLARA Y PIEL CLARA
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "vertical 9:16 portrait format for mobile, single solitary person, exactly one person, "
@@ -276,12 +294,62 @@ def limpiar_texto_para_audio(texto):
     return texto.strip()
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA CON DEEPSEEK
+# EXPANDIR TEXTO CORTO (SI TIENE MENOS DE 450 PALABRAS)
+# ================================================================
+def expandir_texto_corto(texto_corto, ubicacion, personaje):
+    """Expande un texto corto con DeepSeek."""
+    print("🔄 Expandiendo texto corto...")
+    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 500 y 600 palabras.
+    Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
+    y más detalles del entorno en {ubicacion}.
+    Mantén la trama exactamente igual, solo añade contenido donde sea natural.
+
+    RELATO ORIGINAL (debe expandirse):
+    {texto_corto}
+
+    Devuelve SOLO el relato expandido (500-600 palabras), sin títulos ni comentarios adicionales.
+    """
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.8,
+        "max_tokens": 900,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        texto_expandido = r.json()["choices"][0]["message"]["content"].strip()
+        if len(texto_expandido.split()) > 400:
+            return texto_expandido
+        else:
+            # Si falla, usar el texto original con relleno manual
+            return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor, roto solo por el latido de su corazón. Sabía que algo lo observaba desde las sombras."
+    except Exception as e:
+        print(f"❌ Error expandiendo: {e}")
+        return texto_corto
+
+# ================================================================
+# TRUNCAR TEXTO LARGO (SI TIENE MÁS DE 700 PALABRAS)
+# ================================================================
+def truncar_texto_largo(texto, max_palabras=600):
+    """Trunca el texto a un máximo de palabras sin cortar oraciones."""
+    palabras = texto.split()
+    if len(palabras) <= max_palabras:
+        return texto
+    for i in range(max_palabras, max_palabras - 30, -1):
+        if i < len(palabras) and palabras[i-1].endswith(('.', '!', '?')):
+            return ' '.join(palabras[:i])
+    return ' '.join(palabras[:max_palabras])
+
+# ================================================================
+# GENERAR HISTORIA COMPLETA CON DEEPSEEK (500-600 PALABRAS)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
-Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por un {PERSONAJE_SHORTS}.
-La historia debe tener entre 700 y 800 palabras, y estar dividida en DOS PARTES claras con un CLIFFHANGER en el punto medio.
+Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
+La historia debe tener EXACTAMENTE entre 500 y 600 palabras (NO más de 600, NO menos de 500), y estar dividida en DOS PARTES claras con un CLIFFHANGER en el punto medio.
 Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
@@ -304,7 +372,7 @@ ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de la
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
   "titulo": "Título atractivo de 40-60 caracteres",
-  "texto_completo": "Historia completa de 700-800 palabras... (con acentos y eñes correctamente)",
+  "texto_completo": "Historia completa de 500-600 palabras... (con acentos y eñes correctamente)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -377,9 +445,11 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 time.sleep(10 + intento * 5)
     
     print("⚠️ Creando fallback manual...")
+    texto_fallback = f"Era una noche oscura cuando {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien en {ESTADO_HISTORIA_SHORTS}. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él. El pueblo de {ESTADO_HISTORIA_SHORTS} guarda muchos secretos, y esa noche él descubriría uno de los más oscuros. El aire se volvía más denso. Sus piernas temblaban. Sabía que no podía huir, solo enfrentar lo que venía."
+    
     return {
         "titulo": "Relato de Terror Nocturno en México",
-        "texto_completo": f"""Era una noche oscura cuando {PERSONAJE_SHORTS} sintió que algo no andaba bien en {ESTADO_HISTORIA_SHORTS}. El silencio era pesado, como si el aire mismo contuviera la respiración. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza mientras intentaba descubrir qué era. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne. Y esa noche, el miedo lo encontró a él. El pueblo de {ESTADO_HISTORIA_SHORTS} guarda muchos secretos, y esa noche él descubriría uno de los más oscuros.""",
+        "texto_completo": texto_fallback,
         "palabras_portada": "TERROR",
         "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
     }
@@ -404,10 +474,9 @@ def dividir_texto(texto):
     return parte1.strip(), parte2.strip()
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL CON NEGATIVE PROMPT Y PERSONAJE
+# GENERAR IMAGEN VERTICAL CON NEGATIVE PROMPT
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
-    # 🔥 INCLUIR AL PERSONAJE EN EL PROMPT
     prompt_completo = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, {prompt}, bright lighting, clear visibility"
     prompt_limpio = limpiar_prompt(prompt_completo)
     
@@ -416,7 +485,6 @@ def generar_imagen_vertical(prompt, intentos=3):
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        # 🔥 NEGATIVE PROMPT PARA EVITAR DEFECTOS
         "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, piel oscura, moreno, indígena, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado",
         "width": 1080,
         "height": 1920,
@@ -434,7 +502,7 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO (MANTIENE EÑES Y ACENTOS)
+# GENERAR AUDIO (VELOCIDAD 1.05X)
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -444,7 +512,7 @@ def generar_audio(texto, index):
 
     filename = f"audio_short_{index}.mp3"
     voz = CONFIG_VOZ_ACTUAL["voz"]
-    rate = CONFIG_VOZ_ACTUAL["velocidad"]
+    rate = CONFIG_VOZ_ACTUAL["velocidad"]  # +5%
     pitch = CONFIG_VOZ_ACTUAL["tono"]
 
     async def _generar():
@@ -456,7 +524,7 @@ def generar_audio(texto, index):
         asyncio.set_event_loop(loop)
         loop.run_until_complete(_generar())
         loop.close()
-        print(f"✅ Audio Short generado con {voz}")
+        print(f"✅ Audio Short generado con {voz} (1.05x)")
         return filename
     except Exception as e:
         print(f"❌ Error audio: {e}")
@@ -563,8 +631,8 @@ def subir_a_youtube(video_path, miniatura_path, titulo, texto_corto, etiquetas, 
 def main():
     print("🎬 Iniciando Bot de SHORTS (Parte 1 y Parte 2 automático)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']}")
-    print(f"🎭 Personaje: {PERSONAJE_SHORTS}")
+    print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (1.05x)")
+    print(f"🎭 Personaje: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}")
     print(f"📍 Ubicación: {ESTADO_HISTORIA_SHORTS}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:60]}...")
 
@@ -585,16 +653,31 @@ def main():
             print("❌ No se pudo generar la historia")
             return
         
+        texto_completo = historia.get("texto_completo", "")
+        
+        # 🔥 CONTROL DE LONGITUD
+        palabras = len(texto_completo.split())
+        if palabras < 450:
+            print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
+            texto_completo = expandir_texto_corto(texto_completo, ESTADO_HISTORIA_SHORTS, PERSONAJE_SHORTS)
+        elif palabras > 700:
+            print(f"⚠️ Texto largo ({palabras} palabras). Truncando...")
+            texto_completo = truncar_texto_largo(texto_completo, 600)
+        else:
+            print(f"✅ Texto con longitud ideal ({palabras} palabras)")
+        
+        historia["texto_completo"] = texto_completo
+        
         estado["historia"] = {
             "titulo": historia.get("titulo", "Relato de Terror Nocturno"),
-            "texto_completo": historia.get("texto_completo", ""),
+            "texto_completo": texto_completo,
             "palabras_portada": historia.get("palabras_portada", "TERROR"),
             "tags": historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
         }
         estado["parte"] = 2
         guardar_estado(estado)
 
-        parte1, parte2 = dividir_texto(historia["texto_completo"])
+        parte1, parte2 = dividir_texto(texto_completo)
         estado["historia"]["parte2"] = parte2
         guardar_estado(estado)
 
@@ -602,7 +685,7 @@ def main():
         cta = "\n\nParte 2 mañana a la misma hora. No te la pierdas."
         texto_publicar += cta
         parte_num = 1
-        print(f"📝 Publicando Parte 1 ({len(texto_publicar)} caracteres)")
+        print(f"📝 Publicando Parte 1 ({len(texto_publicar)} caracteres, {len(parte1.split())} palabras)")
     else:
         historia = estado.get("historia")
         if not historia or not historia.get("parte2"):
@@ -618,13 +701,13 @@ def main():
         palabras_portada = historia.get("palabras_portada", "TERROR")
         tags = historia.get("tags", "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias")
         parte_num = 2
-        print(f"📝 Publicando Parte 2 ({len(texto_publicar)} caracteres)")
+        print(f"📝 Publicando Parte 2 ({len(texto_publicar)} caracteres, {len(historia.get('parte2', '').split())} palabras)")
 
         estado["parte"] = 1
         estado["historia"] = None
         guardar_estado(estado)
 
-    # Generar imagen vertical CON EL PERSONAJE
+    # Generar imagen vertical
     print("🎨 Generando imagen vertical con personaje y negative prompt...")
     prompt_img = f"escena de terror en {ESTADO_HISTORIA_SHORTS}, vertical 9:16"
     imagen_url = generar_imagen_vertical(prompt_img)
@@ -635,7 +718,7 @@ def main():
     print("⏳ Esperando 6 segundos antes del audio...")
     time.sleep(6)
 
-    print("🎙️ Generando audio...")
+    print("🎙️ Generando audio (1.05x)...")
     audio_path = generar_audio(texto_publicar, 0)
     if not audio_path:
         print("❌ Falló audio")
