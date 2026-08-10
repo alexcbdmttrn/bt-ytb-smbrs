@@ -53,7 +53,7 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 BANCO DE 16 PALETAS DE COLOR (MEZCLA DE FRÍAS Y CÁLIDAS)
+# 🎨 BANCO DE 16 PALETAS DE COLOR (MEZCLA TOTAL)
 # ================================================================
 PALETAS_COLOR = [
     # 🔥 Cálidas (rojo/naranja/sangre)
@@ -80,7 +80,7 @@ PALETAS_COLOR = [
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES (limpios, sin manchas)
+# 📷 ESTILOS VISUALES (limpios)
 # ================================================================
 ESTILOS_VISUALES = [
     "Clean 35mm film photograph, sharp focus, cinematic lighting",
@@ -93,7 +93,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🗺️ GENERADOR DE PERSONAJES CON UBICACIÓN GEOGRÁFICA (MÉXICO)
+# 🗺️ ESTADOS DE MÉXICO (para ambientación de historias)
 # ================================================================
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -103,8 +103,11 @@ ESTADOS_MEXICO = [
     "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"
 ]
 
+# ================================================================
+# 🧑 GENERADOR DE PERSONAJES (SOLO MEXICANO, SIN ESTADO FIJO)
+# ================================================================
 def generar_perfil_personaje():
-    """Genera un perfil único con edad, género, vestimenta, cabello y estado."""
+    """Genera un perfil mexicano sin estado fijo (diversidad real)."""
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
     generos = ["man", "woman"]
     vestimentas = [
@@ -118,6 +121,8 @@ def generar_perfil_personaje():
         "wearing a traditional embroidered blouse (huipil) and long skirt",
         "wearing a white guayabera shirt and dark pants",
         "wearing a charro suit with silver buttons",
+        "wearing a simple cotton dress and sandals",
+        "wearing a baseball cap and hoodie",
     ]
     cabellos = [
         "short curly dark hair",
@@ -128,16 +133,28 @@ def generar_perfil_personaje():
         "long grey braided hair",
         "short spiky black hair",
         "chestnut brown curly hair",
+        "long wavy dark hair with grey streaks",
+        "short salt-and-pepper hair",
     ]
-    estado = random.choice(ESTADOS_MEXICO)
+    # Rasgos físicos adicionales para más diversidad
+    rasgos = [
+        "with indigenous facial features",
+        "with mestizo features",
+        "with light brown skin and freckles",
+        "with dark brown skin and kind eyes",
+        "with olive skin and a strong jaw",
+        "with pale skin and green eyes",
+    ]
     
     perfil = (
-        f"a {random.choice(edades)} Mexican {random.choice(generos)} from {estado}, "
+        f"a {random.choice(edades)} Mexican {random.choice(generos)}, "
+        f"{random.choice(rasgos)}, "
         f"with {random.choice(cabellos)}, {random.choice(vestimentas)}"
     )
-    return perfil, estado
+    return perfil
 
-PERFIL_PERSONAJE, UBICACION_PERSONAJE = generar_perfil_personaje()
+PERFIL_PERSONAJE = generar_perfil_personaje()
+UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)  # Estado para la ambientación de la historia
 
 # ================================================================
 # 🖼️ BANCO DE 12 DEGRADADOS PARA MINIATURA
@@ -329,12 +346,12 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (CON PERSONAJE Y UBICACIÓN)
+# GENERAR GUION CON DEEPSEEK (PERSONAJE MEXICANO + UBICACIÓN ALEATORIA)
 # ================================================================
 def generar_guion():
     prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
 
-Escribe un relato de eventos paranormales o misterio real en primera persona (~9000 caracteres), ambientado en el estado de {UBICACION_PERSONAJE}, México.
+Escribe un relato de eventos paranormales o misterio real en primera persona (~9000 caracteres), ambientado en el estado de {UBICACION_HISTORIA}, México.
 Divide la historia en 20 a 24 segmentos cortos.
 
 PERSONAJE PRINCIPAL (ÚNICO PARA ESTE VIDEO):
@@ -345,7 +362,7 @@ REGLAS DE GENERACIÓN VISUAL Y PERSONAJES:
 2. CERO PERSONAJES CLONADOS: Escribe los prompts pidiendo SIEMPRE "single person" o "one solitary character".
 3. PALETA DE COLOR DE ESTE VIDEO: {PALETA_COLOR_ACTUAL}. NO uses luces naranjas ni rojas a menos que sea una llama directa.
 4. TEXTO ÚNICO: Prohibido repetir frases, moralejas o reflexiones de cierre. Cada segmento debe aportar trama nueva.
-5. AMBIENTACIÓN LOCAL: La historia debe incluir referencias a lugares, costumbres o tradiciones del estado de {UBICACION_PERSONAJE}.
+5. AMBIENTACIÓN LOCAL: La historia debe incluir referencias a lugares, costumbres o tradiciones del estado de {UBICACION_HISTORIA}. Puedes mencionar pueblos, calles, comidas, leyendas locales.
 
 Responde con este JSON estructurado:
 {{
@@ -353,7 +370,7 @@ Responde con este JSON estructurado:
   "palabras_portada": "PALABRA IMPACTO",
   "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio #mexico",
   "tags": "tag1, tag2, tag3, ..., tag25",
-  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_PERSONAJE}, {PALETA_COLOR_ACTUAL}",
+  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_HISTORIA}, {PALETA_COLOR_ACTUAL}",
   "segmentos": [
     {{
       "texto": "Texto narrativo único en español...",
@@ -541,8 +558,8 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # ================================================================
 def main():
     print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
-    print(f"🎭 Personaje: {PERFIL_PERSONAJE}")
-    print(f"📍 Ubicación: {UBICACION_PERSONAJE}")
+    print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
+    print(f"📍 Historia ambientada en: {UBICACION_HISTORIA}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
