@@ -42,9 +42,21 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git pull origin main --rebase   # <--- 🔥 ESTO ARREGLA EL ERROR
+          
+          # 1️⃣ Añadir cambios del estado
           git add estado_shorts.json
-          git diff-index --quiet HEAD || git commit -m "Actualizar estado shorts [skip ci]"
-          git push
+          
+          # 2️⃣ Si hay cambios, commitear
+          if git diff-index --quiet HEAD; then
+            echo "✅ No hay cambios en estado_shorts.json"
+          else
+            git commit -m "Actualizar estado shorts [skip ci]"
+            
+            # 3️⃣ Traer cambios remotos (rebase para evitar conflictos)
+            git pull origin main --rebase
+            
+            # 4️⃣ Subir los cambios
+            git push
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
