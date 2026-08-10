@@ -48,3 +48,14 @@ jobs:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           YOUTUBE_USER_TOKEN: ${{ secrets.YOUTUBE_USER_TOKEN }}
         run: python bot_youtube.py
+
+      - name: Commit y push del estado de música
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git pull origin main --rebase
+          git add estado_musica.json
+          git diff-index --quiet HEAD || git commit -m "Actualizar estado música [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
