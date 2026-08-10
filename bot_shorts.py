@@ -36,7 +36,7 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
 
 # ================================================================
-# 🎤 BANCO DE 12 VOCES
+# 🎤 BANCO DE 12 VOCES (1.05x)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-2Hz"},
@@ -91,7 +91,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (CON GÉNERO PARA ARTÍCULOS)
+# 🧑 GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje_shorts():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -279,11 +279,20 @@ def guardar_estado(estado):
     print(f"✅ Estado de Shorts guardado")
 
 # ================================================================
-# 🧹 LIMPIAR TEXTO PARA AUDIO (MANTIENE EÑES Y ACENTOS)
+# 🧹 LIMPIAR TEXTO PARA AUDIO (MEJORADA)
 # ================================================================
 def limpiar_texto_para_audio(texto):
+    """Limpia emojis, caracteres de control, comillas y saltos de línea. MANTIENE eñes y acentos."""
+    # Eliminar emojis (Unicode Emoji)
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
+    # Eliminar caracteres de control
     texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
+    # Reemplazar comillas dobles por simples
+    texto = texto.replace('"', "'")
+    # Reemplazar saltos de línea por espacios
+    texto = texto.replace('\n', ' ')
+    # Eliminar espacios dobles
+    texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
 
 # ================================================================
@@ -291,7 +300,7 @@ def limpiar_texto_para_audio(texto):
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 500 y 600 palabras.
+    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 300 y 400 palabras.
     Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
     y más detalles del entorno en {ubicacion}.
     Mantén la trama exactamente igual, solo añade contenido donde sea natural.
@@ -299,7 +308,7 @@ def expandir_texto_corto(texto_corto, ubicacion, personaje):
     RELATO ORIGINAL (debe expandirse):
     {texto_corto}
 
-    Devuelve SOLO el relato expandido (500-600 palabras), sin títulos ni comentarios adicionales.
+    Devuelve SOLO el relato expandido (300-400 palabras), sin títulos ni comentarios adicionales.
     """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -313,7 +322,7 @@ def expandir_texto_corto(texto_corto, ubicacion, personaje):
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         texto_expandido = r.json()["choices"][0]["message"]["content"].strip()
-        if len(texto_expandido.split()) > 400:
+        if len(texto_expandido.split()) > 200:
             return texto_expandido
         else:
             return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor, roto solo por el latido de su corazón. Sabía que algo lo observaba desde las sombras."
@@ -324,7 +333,7 @@ def expandir_texto_corto(texto_corto, ubicacion, personaje):
 # ================================================================
 # TRUNCAR TEXTO LARGO
 # ================================================================
-def truncar_texto_largo(texto, max_palabras=600):
+def truncar_texto_largo(texto, max_palabras=350):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -334,12 +343,12 @@ def truncar_texto_largo(texto, max_palabras=600):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA (CON TÍTULOS DIRECTOS Y GANCHO)
+# GENERAR HISTORIA COMPLETA (300-400 PALABRAS, TÍTULO DIRECTO, GANCHO)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-La historia debe tener EXACTAMENTE entre 500 y 600 palabras (NO más de 600, NO menos de 500), y estar dividida en DOS PARTES claras con un CLIFFHANGER en el punto medio.
+La historia debe tener EXACTAMENTE entre 300 y 400 palabras (NO más de 400, NO menos de 300), y estar dividida en DOS PARTES claras con un CLIFFHANGER en el punto medio.
 Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
@@ -371,7 +380,7 @@ ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de la
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
   "titulo": "Título descriptivo y directo de 40-60 caracteres",
-  "texto_completo": "Historia completa de 500-600 palabras... (con la primera frase como gancho)",
+  "texto_completo": "Historia completa de 300-400 palabras... (con la primera frase como gancho)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -382,7 +391,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.85,
-        "max_tokens": 1200,
+        "max_tokens": 800,
         "response_format": {"type": "json_object"}
     }
 
@@ -413,7 +422,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 else:
                     raise e
             
-            if "texto_completo" not in data or len(data["texto_completo"]) < 100:
+            if "texto_completo" not in data or len(data["texto_completo"]) < 50:
                 raise ValueError("Texto demasiado corto")
             
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
@@ -458,17 +467,17 @@ Devuelve ESTRICTAMENTE este JSON válido:
 # ================================================================
 def dividir_texto(texto):
     palabras = texto.split()
-    if len(palabras) < 20:
+    if len(palabras) < 10:
         mitad = len(texto) // 2
         return texto[:mitad].strip(), texto[mitad:].strip()
     
     mitad = len(palabras) // 2
-    for i in range(mitad, min(mitad + 50, len(palabras))):
+    for i in range(mitad, min(mitad + 30, len(palabras))):
         if palabras[i].endswith('.') or palabras[i].endswith('?') or palabras[i].endswith('!'):
             break
     parte1 = ' '.join(palabras[:i+1])
     parte2 = ' '.join(palabras[i+1:])
-    if len(parte2) < 50 and i < len(palabras) - 10:
+    if len(parte2) < 30 and i < len(palabras) - 10:
         parte2 = ' '.join(palabras[i+1:])
     return parte1.strip(), parte2.strip()
 
@@ -476,7 +485,6 @@ def dividir_texto(texto):
 # GENERAR IMAGEN VERTICAL CON NEGATIVE PROMPT
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
-    # 🔥 MEJORA: Imagen más llamativa con expresión intensa y colores vibrantes
     prompt_completo = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, {prompt}, bright cinematic lighting, intense facial expression of fear or surprise, high contrast colors, vibrant highlights, sharp focus, dramatic shadows"
     prompt_limpio = limpiar_prompt(prompt_completo)
     
@@ -502,11 +510,20 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO (VELOCIDAD 1.05X)
+# GENERAR AUDIO CON VALIDACIÓN DE LONGITUD Y FALLBACK
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
+    
+    # 🔥 VALIDAR LONGITUD CON FALLBACK
+    if len(texto_limpio) < 100:
+        print(f"⚠️ Texto demasiado corto ({len(texto_limpio)} caracteres). Rellenando...")
+        texto_limpio = texto_limpio + " El miedo crecía con cada paso. El silencio era ensordecedor. Sabía que algo lo observaba desde las sombras."
+        if len(texto_limpio) < 100:
+            print("⚠️ Texto sigue corto. Usando fallback genérico...")
+            texto_limpio = "Esa noche en la carretera, el trailero sintió que algo no andaba bien. El silencio era pesado. El miedo lo envolvía todo. No podía escapar."
+    
     if not texto_limpio:
         return None
 
@@ -655,14 +672,14 @@ def main():
         
         texto_completo = historia.get("texto_completo", "")
         
-        # 🔥 CONTROL DE LONGITUD
+        # 🔥 CONTROL DE LONGITUD (300-400 palabras)
         palabras = len(texto_completo.split())
-        if palabras < 450:
+        if palabras < 250:
             print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
             texto_completo = expandir_texto_corto(texto_completo, ESTADO_HISTORIA_SHORTS, PERSONAJE_SHORTS)
-        elif palabras > 700:
+        elif palabras > 450:
             print(f"⚠️ Texto largo ({palabras} palabras). Truncando...")
-            texto_completo = truncar_texto_largo(texto_completo, 600)
+            texto_completo = truncar_texto_largo(texto_completo, 350)
         else:
             print(f"✅ Texto con longitud ideal ({palabras} palabras)")
         
