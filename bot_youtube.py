@@ -55,14 +55,10 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 BANCO DE 16 PALETAS DE COLOR
+# 🎨 PALETAS REORDENADAS (60% FRÍAS / 40% CÁLIDAS)
 # ================================================================
 PALETAS_COLOR = [
-    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
-    "Blood red and burnt orange, dark charcoal shadows, hellish glow",
-    "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
-    "Fiery sunset orange, deep purple shadows, intense red highlights",
-    "Rusty red and dark brown, sepia undertones, warm vintage look",
+    # ❄️ FRÍAS (10 paletas - más probables)
     "Cold cyan blue fog, navy blue shadows, pale white moonlight",
     "Emerald green twilight, dark forest haze, muted sage green lighting",
     "Deep violet haze, electric purple ambient light, dark magenta shadows",
@@ -73,20 +69,26 @@ PALETAS_COLOR = [
     "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
     "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
     "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
+    # 🔥 CÁLIDAS (6 paletas - menos probables)
+    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
+    "Blood red and burnt orange, dark charcoal shadows, hellish glow",
+    "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
+    "Fiery sunset orange, deep purple shadows, intense red highlights",
+    "Rusty red and dark brown, sepia undertones, warm vintage look",
     "Toxic lime green and pitch black, eerie chemical glow, radioactive haze",
 ]
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES
+# 📷 ESTILOS VISUALES CON ILUMINACIÓN CLARA
 # ================================================================
 ESTILOS_VISUALES = [
-    "Clean 35mm film photograph, sharp focus, cinematic lighting",
-    "Modern cinematic thriller photography, soft ambient diffusion, clean details",
-    "Documentary realistic photo, natural crisp skin texture, soft shadows",
-    "8k resolution cinematic movie frame, ultra clear facial details",
-    "High-end fashion photography style, dramatic lighting, clean skin",
-    "Cinematic noir style, high contrast, sharp shadows, clean aesthetic",
+    "Clean 35mm film photograph, bright cinematic lighting, well-lit scene, sharp focus",
+    "Modern cinematic thriller photography, soft ambient diffusion, bright highlights",
+    "Documentary realistic photo, natural crisp skin texture, bright daylight ambient",
+    "8k resolution cinematic movie frame, ultra clear facial details, bright exposure",
+    "High-end fashion photography style, dramatic but well-lit lighting, clean skin",
+    "Cinematic noir style, high contrast but well-exposed, bright highlights",
 ]
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
@@ -102,7 +104,7 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES
+# 🧑 GENERADOR DE PERSONAJES (PIEL CLARA / BLANCA)
 # ================================================================
 def generar_perfil_personaje():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -133,13 +135,15 @@ def generar_perfil_personaje():
         "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
+    # 🔥 SOLO RASGOS DE PIEL CLARA (sin indígenas ni morenos)
     rasgos = [
-        "with indigenous facial features",
-        "with mestizo features",
+        "with mestizo features and light olive skin",
         "with light brown skin and freckles",
-        "with dark brown skin and kind eyes",
         "with olive skin and a strong jaw",
         "with pale skin and green eyes",
+        "with fair skin and blue eyes",
+        "with tan skin and a warm smile",
+        "with light beige skin and a serious expression",
     ]
     
     perfil = (
@@ -218,11 +222,11 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
+# 🧼 LIMPIADOR DE PROMPTS CON ILUMINACIÓN CLARA
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        prompt = "A quiet night scene, moody lighting"
+        prompt = "A quiet night scene, bright lighting"
 
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
@@ -239,11 +243,12 @@ def limpiar_prompt(prompt):
 
     prompt = re.sub(r"\s+", " ", prompt).strip()
 
+    # 🔥 FORZAR ILUMINACIÓN CLARA Y PIEL CLARA
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "16:9 widescreen format, single solitary person in frame, exactly one person, "
-        "clean smooth skin, natural facial complexion, no face blemishes, no skin spots, "
-        "no cloned faces, no duplicate people, sharp focus, clean anatomical features, "
+        "clean smooth skin, natural facial complexion with light skin tone, no face blemishes, "
+        "no cloned faces, no duplicate people, sharp focus, bright well-lit scene, no dark underexposed areas, "
         "no text, no watermark"
     )
     return (prompt + modificadores_calidad)[:500]
@@ -404,11 +409,11 @@ Responde con este JSON estructurado:
   "palabras_portada": "PALABRA IMPACTO",
   "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio #mexico",
   "tags": "tag1, tag2, tag3, ..., tag25",
-  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_HISTORIA}, {PALETA_COLOR_ACTUAL}",
+  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_HISTORIA}, bright well-lit scene, {PALETA_COLOR_ACTUAL}",
   "segmentos": [
     {{
       "texto": "Texto narrativo único en español...",
-      "imagen_prompt": "Detailed cinematic prompt in English with {PERFIL_PERSONAJE} if present, single subject, clean smooth face, 16:9, no text"
+      "imagen_prompt": "Detailed cinematic prompt in English with {PERFIL_PERSONAJE} if present, single subject, clean smooth face, bright well-lit, 16:9, no text"
     }}
   ]
 }}
@@ -445,7 +450,7 @@ Responde con este JSON estructurado:
     return generar_fallback(respuesta)
 
 # ================================================================
-# GENERAR IMAGEN
+# GENERAR IMAGEN CON NEGATIVE PROMPT
 # ================================================================
 def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
@@ -454,6 +459,7 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
+        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, piel oscura, moreno, indígena, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado",
         "width": width,
         "height": height,
         "num_images": 1
