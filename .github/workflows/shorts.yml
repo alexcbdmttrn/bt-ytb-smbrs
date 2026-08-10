@@ -1,9 +1,10 @@
-name: Bot YouTube - Shorts (Parte 1 y 2)
+name: Bot YouTube - Shorts (3 al día)
 
 on:
   schedule:
-    - cron: '0 13 * * *'   # 7:00 AM CDMX (13:00 UTC)
-    - cron: '0 1 * * *'    # 7:00 PM CDMX (01:00 UTC)
+    - cron: '0 14 * * *'   # 8:00 AM CDMX (14:00 UTC)
+    - cron: '0 20 * * *'   # 2:00 PM CDMX (20:00 UTC)
+    - cron: '0 2 * * *'    # 8:00 PM CDMX (02:00 UTC)
   workflow_dispatch:
 
 permissions:
