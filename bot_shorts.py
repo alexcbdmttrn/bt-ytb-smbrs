@@ -55,14 +55,10 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 BANCO DE 16 PALETAS DE COLOR
+# 🎨 PALETAS REORDENADAS (60% FRÍAS / 40% CÁLIDAS)
 # ================================================================
 PALETAS_COLOR = [
-    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
-    "Blood red and burnt orange, dark charcoal shadows, hellish glow",
-    "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
-    "Fiery sunset orange, deep purple shadows, intense red highlights",
-    "Rusty red and dark brown, sepia undertones, warm vintage look",
+    # ❄️ FRÍAS (10 paletas - más probables)
     "Cold cyan blue fog, navy blue shadows, pale white moonlight",
     "Emerald green twilight, dark forest haze, muted sage green lighting",
     "Deep violet haze, electric purple ambient light, dark magenta shadows",
@@ -73,25 +69,31 @@ PALETAS_COLOR = [
     "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
     "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
     "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
+    # 🔥 CÁLIDAS (6 paletas - menos probables)
+    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
+    "Blood red and burnt orange, dark charcoal shadows, hellish glow",
+    "Warm amber and dark mahogany, golden candlelight, deep brown shadows",
+    "Fiery sunset orange, deep purple shadows, intense red highlights",
+    "Rusty red and dark brown, sepia undertones, warm vintage look",
     "Toxic lime green and pitch black, eerie chemical glow, radioactive haze",
 ]
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES
+# 📷 ESTILOS VISUALES CON ILUMINACIÓN CLARA
 # ================================================================
 ESTILOS_VISUALES = [
-    "Clean 35mm film photograph, sharp focus, cinematic lighting",
-    "Modern cinematic thriller photography, soft ambient diffusion, clean details",
-    "Documentary realistic photo, natural crisp skin texture, soft shadows",
-    "8k resolution cinematic movie frame, ultra clear facial details",
-    "High-end fashion photography style, dramatic lighting, clean skin",
-    "Cinematic noir style, high contrast, sharp shadows, clean aesthetic",
+    "Clean 35mm film photograph, bright cinematic lighting, well-lit scene, sharp focus",
+    "Modern cinematic thriller photography, soft ambient diffusion, bright highlights",
+    "Documentary realistic photo, natural crisp skin texture, bright daylight ambient",
+    "8k resolution cinematic movie frame, ultra clear facial details, bright exposure",
+    "High-end fashion photography style, dramatic but well-lit lighting, clean skin",
+    "Cinematic noir style, high contrast but well-exposed, bright highlights",
 ]
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES
+# 🧑 GENERADOR DE PERSONAJES (PIEL CLARA / BLANCA)
 # ================================================================
 def generar_perfil_personaje_shorts():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -122,13 +124,15 @@ def generar_perfil_personaje_shorts():
         "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
+    # 🔥 SOLO RASGOS DE PIEL CLARA (sin indígenas ni morenos)
     rasgos = [
-        "with indigenous facial features",
-        "with mestizo features",
+        "with mestizo features and light olive skin",
         "with light brown skin and freckles",
-        "with dark brown skin and kind eyes",
         "with olive skin and a strong jaw",
         "with pale skin and green eyes",
+        "with fair skin and blue eyes",
+        "with tan skin and a warm smile",
+        "with light beige skin and a serious expression",
     ]
     profesiones = [
         "trailero de 45 años en carretera nocturna",
@@ -162,7 +166,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (CON PERSISTENCIA PARA EVITAR REPETICIÓN)
+# 🎵 AUDIO DE FONDO CON PERSISTENCIA
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -170,19 +174,12 @@ FONDOS_DISPONIBLES = [
 ]
 
 def seleccionar_fondo_disponible(estado):
-    """Selecciona un fondo evitando repetir el último usado (persistido en estado)."""
     fondos = FONDOS_DISPONIBLES.copy()
     ultimo_fondo = estado.get("ultimo_fondo")
-    
-    # Evitar el último fondo usado
     if ultimo_fondo and ultimo_fondo in fondos:
         fondos.remove(ultimo_fondo)
         print(f"🎵 Evitando repetir fondo: {ultimo_fondo}")
-    
-    # Shuffle para aleatoriedad
     random.shuffle(fondos)
-    
-    # Buscar en el repositorio
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
             continue
@@ -190,12 +187,9 @@ def seleccionar_fondo_disponible(estado):
             for fondo in fondos:
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
-                    # Actualizar estado con el nuevo fondo
                     estado["ultimo_fondo"] = fondo
                     print(f"✅ Audio de fondo seleccionado: {full_path}")
                     return full_path
-    
-    # Si no hay más opciones, usar el primero disponible
     for root, dirs, files in os.walk("."):
         for file in files:
             for fondo in FONDOS_DISPONIBLES:
@@ -204,16 +198,15 @@ def seleccionar_fondo_disponible(estado):
                     estado["ultimo_fondo"] = fondo
                     print(f"✅ Audio de fondo (única opción): {full_path}")
                     return full_path
-    
     print("⚠️ No se encontró ningún archivo de fondo disponible.")
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
+# 🧼 LIMPIADOR DE PROMPTS CON ILUMINACIÓN CLARA
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        prompt = "Mexican street at night, dark ambiance"
+        prompt = "Mexican street at night, bright lighting"
 
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
@@ -230,11 +223,13 @@ def limpiar_prompt(prompt):
 
     prompt = re.sub(r"\s+", " ", prompt).strip()
 
+    # 🔥 FORZAR ILUMINACIÓN CLARA Y PIEL CLARA
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "vertical 9:16 portrait format for mobile, single solitary person, exactly one person, "
-        "clean smooth skin, natural facial complexion, no face blemishes, no skin spots, "
-        "no cloned faces, sharp focus, no text, no watermark"
+        "clean smooth skin, natural facial complexion with light skin tone, no face blemishes, "
+        "no cloned faces, sharp focus, bright well-lit scene, no dark underexposed areas, "
+        "no text, no watermark"
     )
     return (prompt + modificadores_calidad)[:500]
 
@@ -269,14 +264,15 @@ def guardar_estado(estado):
     print(f"✅ Estado de Shorts guardado")
 
 # ================================================================
-# 🧹 LIMPIAR TEXTO PARA AUDIO (eliminar emojis y caracteres especiales)
+# 🧹 LIMPIAR TEXTO PARA AUDIO (MANTIENE EÑES Y ACENTOS)
 # ================================================================
 def limpiar_texto_para_audio(texto):
-    """Elimina emojis, caracteres especiales y referencias a 'fantasma' del CTA."""
+    """Elimina emojis y caracteres de control, pero MANTIENE eñes, acentos y letras latinas."""
     # Eliminar emojis (Unicode Emoji)
-    texto = re.sub(r'[^\x00-\x7F]+', '', texto)  # Elimina todo lo que no sea ASCII
-    # Eliminar palabras no deseadas en el CTA
-    texto = re.sub(r'\b(fantasma|espectro|aparecido)\b', 'terror', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
+    # Eliminar caracteres de control (excepto saltos de línea y tabs)
+    texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
+    # NO eliminar ñ, á, é, í, ó, ú, ü, etc.
     return texto.strip()
 
 # ================================================================
@@ -292,13 +288,14 @@ DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
 "{PERFIL_PERSONAJE_SHORTS}"
 
 REGLAS:
+- Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
 - Inicio: presenta al personaje y la situación en {ESTADO_HISTORIA_SHORTS}.
 - Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
 - Mitad: un giro o revelación (CLIFFHANGER) para la Parte 1.
 - Final: resolución o nuevo giro en la Parte 2.
 - ANTI-REPETICIÓN: NO repitas frases.
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-- CTA OBLIGATORIO al final de la Parte 2: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror." (NO uses la palabra "fantasma" ni emojis).
+- CTA OBLIGATORIO al final de la Parte 2: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
 
 TÍTULO: Debe tener entre 40 y 60 caracteres exactos. Debe ser una frase completa y atractiva.
 
@@ -307,7 +304,7 @@ ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de la
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
   "titulo": "Título atractivo de 40-60 caracteres",
-  "texto_completo": "Historia completa de 700-800 palabras... (sin comillas internas sin escapar)",
+  "texto_completo": "Historia completa de 700-800 palabras... (con acentos y eñes correctamente)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -352,7 +349,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto")
             
-            data["texto_completo"] = re.sub(r'[\x00-\x1f\x7f]', '', data["texto_completo"])
+            data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
             
             # Validar título
@@ -407,15 +404,20 @@ def dividir_texto(texto):
     return parte1.strip(), parte2.strip()
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL
+# GENERAR IMAGEN VERTICAL CON NEGATIVE PROMPT Y PERSONAJE
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
-    prompt_limpio = limpiar_prompt(prompt)
+    # 🔥 INCLUIR AL PERSONAJE EN EL PROMPT
+    prompt_completo = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, {prompt}, bright lighting, clear visibility"
+    prompt_limpio = limpiar_prompt(prompt_completo)
+    
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
+        # 🔥 NEGATIVE PROMPT PARA EVITAR DEFECTOS
+        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, piel oscura, moreno, indígena, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado",
         "width": 1080,
         "height": 1920,
         "num_images": 1
@@ -432,11 +434,10 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO (CON LIMPIEZA DE EMOJIS Y CARACTERES ESPECIALES)
+# GENERAR AUDIO (MANTIENE EÑES Y ACENTOS)
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
-    # LIMPIAR EMOJIS Y CARACTERES ESPECIALES
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
     if not texto_limpio:
         return None
@@ -571,7 +572,6 @@ def main():
     parte_actual = estado.get("parte", 1)
     print(f"📌 Estado actual: Parte {parte_actual}")
 
-    # Seleccionar fondo musical (evitando repetición)
     fondo_path = seleccionar_fondo_disponible(estado)
     if fondo_path:
         print(f"🎵 Fondo seleccionado: {fondo_path}")
@@ -599,7 +599,6 @@ def main():
         guardar_estado(estado)
 
         texto_publicar = parte1
-        # CTA sin emojis ni caracteres especiales
         cta = "\n\nParte 2 mañana a la misma hora. No te la pierdas."
         texto_publicar += cta
         parte_num = 1
@@ -613,7 +612,6 @@ def main():
             return
 
         texto_publicar = historia.get("parte2", "")
-        # CTA sin emojis ni la palabra "fantasma"
         cta = "\n\n¿Te gustó este relato? Suscríbete para más historias de terror."
         texto_publicar += cta
         titulo = historia.get("titulo", "Relato de Terror Nocturno")
@@ -626,9 +624,9 @@ def main():
         estado["historia"] = None
         guardar_estado(estado)
 
-    # Generar imagen vertical
-    print("🎨 Generando imagen vertical...")
-    prompt_img = f"{PERFIL_PERSONAJE_SHORTS} en {ESTADO_HISTORIA_SHORTS}, escena de terror, vertical 9:16"
+    # Generar imagen vertical CON EL PERSONAJE
+    print("🎨 Generando imagen vertical con personaje y negative prompt...")
+    prompt_img = f"escena de terror en {ESTADO_HISTORIA_SHORTS}, vertical 9:16"
     imagen_url = generar_imagen_vertical(prompt_img)
     if not imagen_url:
         print("⚠️ Falló imagen, usando placeholder")
