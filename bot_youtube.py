@@ -33,14 +33,105 @@ YOUTUBE_USER_TOKEN = (
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 
 # ================================================================
-# CONFIGURACIÓN DE EDGE-TTS (1.15x de velocidad)
+# 🎤 BANCO DE 12 VOCES (Dobles variaciones)
 # ================================================================
-VOZ_EDGE = "es-MX-JorgeNeural"
-VELOCIDAD_EDGE = "+15%"
-TONO_EDGE = "-2Hz"
+VOCES_DISPONIBLES = [
+    {"voz": "es-MX-JorgeNeural", "velocidad": "+14%", "tono": "-2Hz"},
+    {"voz": "es-MX-DaliaNeural", "velocidad": "+12%", "tono": "+0Hz"},
+    {"voz": "es-ES-AlvaroNeural", "velocidad": "+15%", "tono": "-3Hz"},
+    {"voz": "es-ES-ElviraNeural", "velocidad": "+13%", "tono": "+1Hz"},
+    {"voz": "es-CO-SalomeNeural", "velocidad": "+11%", "tono": "-1Hz"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+14%", "tono": "+2Hz"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+15%", "tono": "-2Hz"},
+    {"voz": "es-PE-CamilaNeural", "velocidad": "+12%", "tono": "+0Hz"},
+    {"voz": "es-US-PalomaNeural", "velocidad": "+13%", "tono": "-1Hz"},
+    {"voz": "es-ES-XimenaNeural", "velocidad": "+14%", "tono": "+1Hz"},
+    {"voz": "es-MX-CandelaNeural", "velocidad": "+10%", "tono": "-3Hz"},
+    {"voz": "es-ES-AbrilNeural", "velocidad": "+15%", "tono": "-2Hz"},
+]
+
+CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# LISTA DE ARCHIVOS DE FONDO
+# 🎨 BANCO DE 12 ESTILOS VISUALES
+# ================================================================
+ESTILOS_VISUALES = [
+    "35mm grainy vintage film photograph, vhs tape aesthetic from 1990s",
+    "Dark chiaroscuro oil painting style, dramatic deep shadows, gothic atmosphere",
+    "Modern cinematic thriller photography, volumetric foggy light, sharp focus",
+    "Documentary realistic flash photography, dark night ambient, raw camera look",
+    "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic photo",
+    "Vaporwave neon noir style, intense magenta and cyan highlights, retro 80s glow",
+    "Watercolor gothic ink illustration, dark wet textures, blurred eerie edges",
+    "Retro 80s horror VHS screengrab, scanlines, grainy texture, analog decay",
+    "Hyperrealistic night vision photography, grainy green-tinted surveillance look",
+    "Analog horror found footage style, distorted lens, high contrast shadows",
+    "Soviet brutalist architectural photography, cold concrete, harsh stark lighting",
+    "Expressionist german silent film style, high contrast black and white, dramatic angles",
+]
+
+ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
+
+# ================================================================
+# 🎨 BANCO DE 10 PALETAS DE COLOR
+# ================================================================
+PALETAS_COLOR = [
+    "Deep crimson red, pitch black shadow, intense orange emergency light accents",
+    "Cold cyan blue fog, navy blue shadows, pale white moonlight",
+    "Muted sepia tones, dark brown amber glow, high contrast shadow",
+    "Emerald green twilight haze, dark moss green hues, striking highlights",
+    "Neon purple and electric pink, deep violet shadows, cyberpunk glitch lights",
+    "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
+    "Dark teal and gold amber, vintage brass tones, warm dim candlelight",
+    "Monochrome high contrast, pure white highlights, deep obsidian black shadows",
+    "Blood orange and deep navy, fiery sunset remnants, dark stormy sky",
+    "Toxic lime green and pitch black, eerie chemical glow, radioactive haze",
+]
+
+PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
+
+# ================================================================
+# 🌟 BANCO DE 12 PROTAGONISTAS
+# ================================================================
+PROTAGONISTAS = [
+    "un trailero de 45 años que viaja por carreteras nocturnas de México",
+    "una joven estudiante de medicina de 22 años en un hospital antiguo",
+    "un oficial de policía de 38 años en su turno nocturno de patrulla",
+    "un agricultor de 50 años en una hacienda del siglo XIX en el campo",
+    "un fotógrafo urbano de 28 años explorando edificios abandonados",
+    "un taxista nocturno de 55 años que recoge pasajeros en zonas peligrosas",
+    "un velador de 60 años en un panteón viejo durante la noche de muertos",
+    "un arqueólogo de 40 años excavando una zona prehispánica en la selva",
+    "una periodista de investigación de 35 años tras una pista en un pueblo fantasma",
+    "un enfermero de 30 años en un psiquiátrico abandonado en las afueras",
+    "un minero de 48 años en una mina clausurada en el norte de México",
+    "una bailarina de 25 años en un teatro viejo y embrujado del centro histórico",
+]
+
+PROTAGONISTA_SELECCIONADO = random.choice(PROTAGONISTAS)
+
+# ================================================================
+# 🖼️ BANCO DE 12 DEGRADADOS PARA MINIATURA
+# ================================================================
+DEGRADADOS_MINIATURA = [
+    {"top": (255, 30, 0), "bottom": (255, 140, 0)},
+    {"top": (0, 255, 200), "bottom": (0, 100, 255)},
+    {"top": (255, 215, 0), "bottom": (200, 50, 0)},
+    {"top": (200, 0, 255), "bottom": (80, 0, 150)},
+    {"top": (255, 255, 255), "bottom": (120, 120, 120)},
+    {"top": (255, 0, 150), "bottom": (0, 200, 255)},
+    {"top": (255, 200, 0), "bottom": (0, 0, 0)},
+    {"top": (0, 200, 100), "bottom": (0, 50, 150)},
+    {"top": (255, 100, 0), "bottom": (150, 0, 200)},
+    {"top": (200, 0, 0), "bottom": (80, 0, 0)},
+    {"top": (150, 200, 255), "bottom": (50, 50, 100)},
+    {"top": (255, 255, 100), "bottom": (200, 100, 0)},
+]
+
+DEGRADADO_ACTUAL = random.choice(DEGRADADOS_MINIATURA)
+
+# ================================================================
+# LISTA DE AUDIO DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3",
@@ -74,14 +165,16 @@ else:
     print("⚠️ No se usará audio de fondo.")
 
 # ================================================================
-# LIMPIAR PROMPTS DE IMAGEN
+# LIMPIAR PROMPTS DE IMAGEN (inyección dinámica de estilo y paleta)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        prompt = "Cinematic 35mm photograph of an old Mexican street at night, foggy lights, historic architecture"
+        prompt = "Mexican street at night, dark ambiance"
+
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
+
     palabras_prohibidas = [
         r"\bterror\b", r"\bhorror\b", r"\bsangre\b", r"\bblood\b", r"\bgore\b",
         r"\bdemacrad[oa]s?\b", r"\bzombies?\b", r"\bmuert[oa]s?\b", r"\bmatanza\b",
@@ -89,25 +182,21 @@ def limpiar_prompt(prompt):
     ]
     for pattern in palabras_prohibidas:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
+
     prompt = re.sub(r"\s+", " ", prompt).strip()
-    estilo_limpio = (
-        ", 35mm film photograph, 16:9 horizontal widescreen format, cinematic"
-        " lighting, authentic Mexican people with diverse Hispanic features,"
-        " varied skin tones from fair white Mexican to light tan, distinct unique"
-        " characters, sharp natural eyes, realistic photography, 2k resolution,"
-        " hyperrealistic, sharp focus, clean anatomical proportions, no asian"
-        " features, no korean features, no chinese features, no clone identical"
-        " faces, no distorted hands, no floating extra limbs, no overlapping"
-        " warped objects, no text, no letters, no words, no signs, no blood, no"
-        " gore, no demaciated faces."
+
+    estilo_dinamico = (
+        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
+        "16:9 widescreen format, realistic Mexican human features, unique face, "
+        "sharp details, clean anatomical proportions, no text, no letters, no logo"
     )
-    return (prompt + estilo_limpio)[:500]
+    return (prompt + estilo_dinamico)[:500]
 
 # ================================================================
-# AGREGAR TEXTO A LA MINIATURA CON DEGRADADO ESTILO TERROR
+# AGREGAR TEXTO A LA MINIATURA CON DEGRADADO DINÁMICO
 # ================================================================
 def agregar_texto_miniatura(img_path, texto_portada):
-    """Añade texto con degradado rojo/naranja y fondo oscuro, estilo terror."""
+    """Añade texto con degradado dinámico (rojo/naranja u otro) y fondo oscuro."""
     if not texto_portada:
         texto_portada = "CASO REAL"
     texto_portada = texto_portada.upper().strip()
@@ -125,7 +214,6 @@ def agregar_texto_miniatura(img_path, texto_portada):
             except:
                 font = ImageFont.load_default()
 
-            # Calcular dimensiones del texto
             dummy_draw = ImageDraw.Draw(img)
             bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
             text_w = bbox[2] - bbox[0]
@@ -137,10 +225,10 @@ def agregar_texto_miniatura(img_path, texto_portada):
             # 1. Fondo oscuro de contraste
             overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             draw_overlay = ImageDraw.Draw(overlay)
-            pad_x, pad_y = 30, 15
+            pad_x, pad_y = 35, 20
             draw_overlay.rectangle(
                 [x - pad_x, y - pad_y, x + text_w + pad_x, y + text_h + pad_y * 2],
-                fill=(0, 0, 0, 170),
+                fill=(0, 0, 0, 180),
             )
             img = Image.alpha_composite(img, overlay)
 
@@ -149,18 +237,23 @@ def agregar_texto_miniatura(img_path, texto_portada):
             draw_mask = ImageDraw.Draw(mask)
             draw_mask.text((x, y), texto_portada, font=font, fill=255)
 
-            # 3. Crear degradado vertical (rojo carmesí -> naranja fuego)
+            # 3. Crear degradado dinámico (seleccionado aleatoriamente)
             gradient = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             draw_grad = ImageDraw.Draw(gradient)
+            
+            c_top = DEGRADADO_ACTUAL["top"]
+            c_bot = DEGRADADO_ACTUAL["bottom"]
+            
             for i in range(h):
-                r = 255
-                g = int(30 + (i / h) * 120)  # 30 -> 150 (rojo intenso a naranja)
-                b = 0
-                draw_grad.line([(0, i), (w, i)], fill=(r, max(0, min(255, g)), b, 255))
+                factor = i / h
+                r = int(c_top[0] + factor * (c_bot[0] - c_top[0]))
+                g = int(c_top[1] + factor * (c_bot[1] - c_top[1]))
+                b = int(c_top[2] + factor * (c_bot[2] - c_top[2]))
+                draw_grad.line([(0, i), (w, i)], fill=(r, g, b, 255))
 
             # 4. Trazo negro grueso (borde)
             draw_final = ImageDraw.Draw(img)
-            stroke_w = 7
+            stroke_w = 8
             for ox in range(-stroke_w, stroke_w + 1):
                 for oy in range(-stroke_w, stroke_w + 1):
                     draw_final.text(
@@ -170,9 +263,8 @@ def agregar_texto_miniatura(img_path, texto_portada):
             # 5. Aplicar degradado usando la máscara
             img.paste(gradient, (0, 0), mask)
 
-            # Guardar como RGB
             img.convert("RGB").save(img_path)
-            print(f"✅ Texto estilo terror con degradado '{texto_portada}' en miniatura.")
+            print(f"✅ Texto estilo terror con degradado dinámico '{texto_portada}' en miniatura.")
     except Exception as e:
         print(f"⚠️ Error agregando texto a miniatura: {e}")
 
@@ -320,7 +412,6 @@ Responde estrictamente en formato JSON válido:
                     seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
                 if "texto" in seg:
                     seg["texto"] = seg["texto"].replace('"', "'")
-                    # Eliminar posibles restos de "imagen_prompt" dentro del texto
                     seg["texto"] = re.sub(
                         r"imagen_prompt.*", "", seg["texto"], flags=re.IGNORECASE
                     )
@@ -361,25 +452,29 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     return None
 
 # ================================================================
-# GENERAR AUDIO CON EDGE-TTS
+# GENERAR AUDIO CON EDGE-TTS (voz aleatoria dinámica)
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
     texto_limpio = texto_limpio.strip()
     if not texto_limpio:
         return None
+
     filename = f"audio_{index}.mp3"
+    voz = CONFIG_VOZ_ACTUAL["voz"]
+    rate = CONFIG_VOZ_ACTUAL["velocidad"]
+    pitch = CONFIG_VOZ_ACTUAL["tono"]
+
     async def _generar():
-        communicate = edge_tts.Communicate(
-            texto_limpio, VOZ_EDGE, rate=VELOCIDAD_EDGE, pitch=TONO_EDGE
-        )
+        communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
         await communicate.save(filename)
+
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(_generar())
         loop.close()
-        print(f"✅ Audio {index} generado con edge-tts (1.15x)")
+        print(f"✅ Audio {index} generado con {voz} ({rate}, {pitch})")
         return filename
     except Exception as e:
         print(f"❌ Error generando audio {index}: {e}")
@@ -427,7 +522,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
 
-    # 🎵 Mezclar audio de fondo al 8% (cambio de 0.10 a 0.08)
+    # 🎵 Mezclar audio de fondo al 8%
     fondo_path = FONDO_AUDIO_FILE
     if fondo_path and os.path.exists(fondo_path):
         try:
@@ -436,7 +531,7 @@ def montar_video(elementos, salida="video_final.mp4"):
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total)
-            fondo_clip = fondo_clip.volumex(0.08)   # <--- 8% de volumen
+            fondo_clip = fondo_clip.volumex(0.08)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
             print(f"🎵 Audio de fondo mezclado al 8%: {fondo_path}")
         except Exception as e:
@@ -509,7 +604,9 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de YouTube (Voz 1.15x, Fondo 8%, Degradado Terror, Consistencia)")
+    print(f"🎬 Iniciando Bot de YouTube con Voz: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎨 Estilo visual: {ESTILO_VISUAL_ACTUAL[:60]}...")
+    print(f"🎭 Protagonista: {PROTAGONISTA_SELECCIONADO}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if FONDO_AUDIO_FILE:
@@ -539,14 +636,13 @@ def main():
 
     elementos_validos = []
     imagen_ultimo_recurso = None
-    textos_vistos = set()   # <--- Filtro anti‑repetición local
+    textos_vistos = set()
 
-    print("\n🎨 y 🎙️ Generando imágenes (2K 16:9) y audios (edge-tts 1.15x)...")
+    print(f"\n🎨 y 🎙️ Generando {len(segmentos)} segmentos con voz {CONFIG_VOZ_ACTUAL['voz']}...")
 
     for i, seg in enumerate(segmentos):
         print(f"\n--- Procesando segmento {i+1}/{len(segmentos)} ---")
 
-        # 📌 Filtro para saltar segmentos con texto duplicado
         texto_normalizado = seg["texto"].strip().lower()
         if texto_normalizado in textos_vistos:
             print(f"⚠️ Segmento {i+1} duplicado (texto repetido). Omitiendo.")
