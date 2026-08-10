@@ -237,7 +237,7 @@ def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     modificadores_calidad = (
         f", {estilo}, color palette of {paleta}, "
         "vertical 9:16 portrait format for mobile, single solitary person, exactly one person, "
-        "clean smooth skin, natural facial complexion with light skin tone, no face blemishes, "
+        "clean smooth skin, natural facial complexion with light skin tone, no freckles, no blemishes, no spots, "
         "sharp focus, bright well-lit scene, no dark underexposed areas, no text, no watermark"
     )
     return prompt_base + modificadores_calidad
@@ -439,7 +439,45 @@ def dividir_texto(texto, n_partes=3):
     return partes
 
 # ================================================================
-# GENERAR IMÁGENES VERTICALES (1 imagen por parte)
+# DIVIDIR TEXTO EN SEGMENTOS DE ~50 PALABRAS (~10 SEGUNDOS)
+# ================================================================
+def dividir_en_segmentos(texto, palabras_por_segmento=55):
+    palabras = texto.split()
+    total = len(palabras)
+    if total <= palabras_por_segmento:
+        return [texto]
+    segmentos = []
+    for i in range(0, total, palabras_por_segmento):
+        segmento = " ".join(palabras[i:i+palabras_por_segmento])
+        segmentos.append(segmento.strip())
+    return segmentos
+
+# ================================================================
+# GENERAR IMÁGENES PARA CADA SEGMENTO (con texto específico)
+# ================================================================
+def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
+    imagenes = []
+    for idx, seg in enumerate(segmentos):
+        print(f"  🖼️ Generando imagen para segmento {idx+1}/{len(segmentos)}...")
+        prompt_imagen = f"scene in {ubicacion}, showing the described moment"
+        img_url = generar_imagen_vertical(
+            prompt_imagen,
+            perfil_personaje=perfil,
+            estado_mexico=ubicacion,
+            estilo_visual=estilo,
+            paleta_color=paleta,
+            texto_segmento=seg,
+            intentos=intentos_por_imagen
+        )
+        if not img_url:
+            print(f"⚠️ Falló imagen para segmento {idx+1}, usando placeholder")
+            img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+        imagenes.append(img_url)
+        time.sleep(2)  # Pequeña pausa entre imágenes
+    return imagenes
+
+# ================================================================
+# GENERAR IMAGEN VERTICAL INDIVIDUAL
 # ================================================================
 def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, estilo_visual=None, paleta_color=None, texto_segmento="", intentos=3):
     perfil = perfil_personaje or PERFIL_PERSONAJE_SHORTS
@@ -453,7 +491,7 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, piel oscura, moreno, indígena, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado",
+        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, piel oscura, moreno, indígena, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections",
         "width": 1080,
         "height": 1920,
         "num_images": 1
@@ -469,7 +507,7 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
     return None
 
 # ================================================================
-# GENERAR AUDIO
+# GENERAR AUDIO PARA UNA PARTE
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -495,16 +533,25 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO VERTICAL CON CIERRE DE RECURSOS
+# MONTAR VIDEO CON MÚLTIPLES IMÁGENES Y UN SOLO AUDIO
 # ================================================================
-def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
+def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_final.mp4"):
+    if not imagenes_urls or not audio_path:
+        raise ValueError("No hay imágenes o audio para montar")
+    
+    # Cargar audio
+    audio_clip = AudioFileClip(audio_path)
+    duracion_total = audio_clip.duration
+    
+    # Crear clips de video para cada imagen
     clips_video = []
-    clips_audio = []
-    for i, elem in enumerate(elementos):
+    # Duración por imagen: proporcional al número de caracteres aproximado? 
+    # Como no tenemos el texto original aquí, repartimos el tiempo equitativamente
+    duracion_por_imagen = duracion_total / len(imagenes_urls)
+    
+    for i, img_url in enumerate(imagenes_urls):
         try:
-            audio_clip = AudioFileClip(elem["audio_path"])
-            duracion = audio_clip.duration
-            r = requests.get(elem["imagen_url"], timeout=30)
+            r = requests.get(img_url, timeout=30)
             r.raise_for_status()
             img_path = f"temp_short_{i}.jpg"
             with open(img_path, "wb") as f:
@@ -512,51 +559,55 @@ def montar_video_shorts(elementos, fondo_path, salida="short_final.mp4"):
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
-            video_clip = ImageClip(img_path).set_duration(duracion)
+            video_clip = ImageClip(img_path).set_duration(duracion_por_imagen)
             clips_video.append(video_clip)
-            clips_audio.append(audio_clip)
         except Exception as e:
-            print(f"⚠️ Error segmento {i}: {e}")
+            print(f"⚠️ Error procesando imagen {i}: {e}")
+            # Usar una imagen de placeholder si falla
             continue
-    if not clips_video or not clips_audio:
-        raise ValueError("No hay clips válidos para montar")
+    
+    if not clips_video:
+        raise ValueError("No se pudieron crear clips de video")
+    
     video = concatenate_videoclips(clips_video, method="compose")
-    audio_narracion = concatenate_audioclips(clips_audio)
+    
+    # Mezclar audio de fondo
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
-            duracion_total = audio_narracion.duration
             if fondo_clip.duration < duracion_total:
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
-            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
+            audio_final = CompositeAudioClip([audio_clip, fondo_clip])
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
-            audio_final = audio_narracion
+            audio_final = audio_clip
     else:
-        audio_final = audio_narracion
+        audio_final = audio_clip
+    
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
+    
+    # Limpiar recursos
     video.close()
     audio_final.close()
+    audio_clip.close()
     for c in clips_video:
         c.close()
-    for a in clips_audio:
-        a.close()
+    
     print(f"✅ Short vertical creado: {salida}")
     return salida
 
 # ================================================================
 # SUBIR A YOUTUBE
 # ================================================================
-def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte, cta):
+def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
-    # 🔥 CTA personalizado por parte
     if parte == 1:
         cta_texto = "📌 Parte 2 disponible en unas horas. Sígueme para no perdértela."
     elif parte == 2:
@@ -612,10 +663,10 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN (3 PARTES)
+# MAIN (3 PARTES, MÚLTIPLES IMÁGENES POR PARTE)
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Parte 1, 2 y 3 automático)")
+    print("🎬 Iniciando Bot de SHORTS (3 partes, imágenes cada ~10s)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     estado = cargar_estado()
@@ -702,20 +753,24 @@ def main():
     print(f"🎨 Paleta: {paleta[:50]}...")
     print(f"📝 Publicando Parte {parte_num} ({len(texto_publicar)} caracteres, {len(texto_publicar.split())} palabras)")
 
-    # Generar imagen
-    print("🎨 Generando imagen vertical...")
-    prompt_imagen = f"scene in {ubicacion}, looking scared"
-    img_url = generar_imagen_vertical(
-        prompt_imagen,
-        perfil_personaje=perfil,
-        estado_mexico=ubicacion,
-        estilo_visual=estilo,
-        paleta_color=paleta,
-        texto_segmento=texto_publicar
+    # Dividir el texto de esta parte en segmentos de ~55 palabras (~10 segundos)
+    segmentos = dividir_en_segmentos(texto_publicar, palabras_por_segmento=55)
+    print(f"📌 Texto dividido en {len(segmentos)} segmentos (aproximadamente {len(segmentos)*10} segundos)")
+
+    # Generar imágenes para cada segmento
+    print("🎨 Generando imágenes para cada segmento...")
+    imagenes_urls = generar_imagenes_para_segmentos(
+        segmentos,
+        perfil=perfil,
+        ubicacion=ubicacion,
+        estilo=estilo,
+        paleta=paleta,
+        intentos_por_imagen=3
     )
-    if not img_url:
-        print("⚠️ Falló imagen, usando placeholder")
-        img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+    
+    if not imagenes_urls:
+        print("❌ No se generaron imágenes. Abortando.")
+        return
 
     print("⏳ Esperando 4 segundos antes del audio...")
     time.sleep(4)
@@ -726,12 +781,11 @@ def main():
         print("❌ Falló audio")
         return
 
-    elementos = [{"imagen_url": img_url, "audio_path": audio_path}]
-    print("🎬 Montando Short vertical...")
-    video_path = montar_video_shorts(elementos, fondo_path, "short_final.mp4")
+    print("🎬 Montando Short vertical con múltiples imágenes...")
+    video_path = montar_video_shorts(imagenes_urls, audio_path, fondo_path, "short_final.mp4")
 
     print("⬆️ Subiendo Short...")
-    subir_a_youtube(video_path, titulo, texto_publicar, tags, parte_num, None)
+    subir_a_youtube(video_path, titulo, texto_publicar, tags, parte_num)
 
     # Actualizar estado para la siguiente parte
     if parte_actual == 1:
