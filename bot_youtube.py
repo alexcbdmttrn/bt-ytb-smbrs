@@ -36,21 +36,21 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 MUSICA_ESTADO_FILE = "estado_musica.json"
 
 # ================================================================
-# 🎤 BANCO DE 12 VOCES
+# 🎤 BANCO DE 12 VOCES (velocidad estandarizada a +12%)
 # ================================================================
 VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+14%", "tono": "-2Hz"},
+    {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
     {"voz": "es-MX-DaliaNeural", "velocidad": "+12%", "tono": "+0Hz"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+15%", "tono": "-3Hz"},
-    {"voz": "es-ES-ElviraNeural", "velocidad": "+13%", "tono": "+1Hz"},
-    {"voz": "es-CO-SalomeNeural", "velocidad": "+11%", "tono": "-1Hz"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+14%", "tono": "+2Hz"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+15%", "tono": "-2Hz"},
+    {"voz": "es-ES-AlvaroNeural", "velocidad": "+12%", "tono": "-3Hz"},
+    {"voz": "es-ES-ElviraNeural", "velocidad": "+12%", "tono": "+1Hz"},
+    {"voz": "es-CO-SalomeNeural", "velocidad": "+12%", "tono": "-1Hz"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+12%", "tono": "+2Hz"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+12%", "tono": "-2Hz"},
     {"voz": "es-PE-CamilaNeural", "velocidad": "+12%", "tono": "+0Hz"},
-    {"voz": "es-US-PalomaNeural", "velocidad": "+13%", "tono": "-1Hz"},
-    {"voz": "es-ES-XimenaNeural", "velocidad": "+14%", "tono": "+1Hz"},
-    {"voz": "es-MX-CandelaNeural", "velocidad": "+10%", "tono": "-3Hz"},
-    {"voz": "es-ES-AbrilNeural", "velocidad": "+15%", "tono": "-2Hz"},
+    {"voz": "es-US-PalomaNeural", "velocidad": "+12%", "tono": "-1Hz"},
+    {"voz": "es-ES-XimenaNeural", "velocidad": "+12%", "tono": "+1Hz"},
+    {"voz": "es-MX-CandelaNeural", "velocidad": "+12%", "tono": "-3Hz"},
+    {"voz": "es-ES-AbrilNeural", "velocidad": "+12%", "tono": "-2Hz"},
 ]
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
@@ -385,7 +385,7 @@ def generar_fallback(respuesta):
     }
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK
+# GENERAR GUION CON DEEPSEEK (CON TÍTULO DIRECTO Y GANCHO)
 # ================================================================
 def generar_guion():
     prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -396,6 +396,18 @@ Divide la historia en 20 a 24 segmentos cortos.
 PERSONAJE PRINCIPAL (ÚNICO PARA ESTE VIDEO):
 "{PERFIL_PERSONAJE}"
 
+REGLAS DE TÍTULO (IMPORTANTE PARA CTR):
+- Debe ser DESCRIPTIVO y DIRECTO. Sin metáforas confusas.
+- Debe decir EXACTAMENTE de qué trata el video.
+- Ejemplo BUENO: "El misterio del manicomio abandonado en Hidalgo"
+- Ejemplo MALO: "El guardián del pabellón" (demasiado vago)
+- Entre 50 y 80 caracteres exactos.
+
+REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
+- La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE.
+- Ejemplo: "Esa noche en el manicomio abandonado, supe que no estaba solo."
+- Debe resumir el misterio y enganchar al espectador en los primeros 5 segundos.
+
 REGLAS DE GENERACIÓN VISUAL Y PERSONAJES:
 1. PERSONAJE PRINCIPAL FIJO: En todos los segmentos donde aparezca el protagonista, USA EXACTAMENTE ESTA DESCRIPCIÓN EN INGLÉS: "{PERFIL_PERSONAJE}".
 2. CERO PERSONAJES CLONADOS: Escribe los prompts pidiendo SIEMPRE "single person" o "one solitary character".
@@ -405,14 +417,14 @@ REGLAS DE GENERACIÓN VISUAL Y PERSONAJES:
 
 Responde con este JSON estructurado:
 {{
-  "titulo": "Título de misterio impactante (50-80 caracteres)",
+  "titulo": "Título descriptivo y directo (50-80 caracteres)",
   "palabras_portada": "PALABRA IMPACTO",
   "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio #mexico",
   "tags": "tag1, tag2, tag3, ..., tag25",
-  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_HISTORIA}, bright well-lit scene, {PALETA_COLOR_ACTUAL}",
+  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in a mysterious location in {UBICACION_HISTORIA}, intense facial expression, high contrast, bright well-lit scene, {PALETA_COLOR_ACTUAL}",
   "segmentos": [
     {{
-      "texto": "Texto narrativo único en español...",
+      "texto": "Texto narrativo único en español... (primera frase como gancho)",
       "imagen_prompt": "Detailed cinematic prompt in English with {PERFIL_PERSONAJE} if present, single subject, clean smooth face, bright well-lit, 16:9, no text"
     }}
   ]
@@ -600,7 +612,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # MAIN
 # ================================================================
 def main():
-    print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Historia ambientada en: {UBICACION_HISTORIA}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
