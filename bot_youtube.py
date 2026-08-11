@@ -272,7 +272,6 @@ def agregar_texto_miniatura(img_path, texto_portada):
                     font = ImageFont.truetype("arial.ttf", font_size)
                 except Exception:
                     font = ImageFont.load_default()
-                    # Pillow <10 no acepta size en load_default
             dummy_draw = ImageDraw.Draw(img)
             bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
             text_w = bbox[2] - bbox[0]
@@ -334,7 +333,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (VERSIÓN PARA VIDEO LARGO ~10 MIN)
+# GENERAR GUION CON DEEPSEEK (VERSIÓN PARA VIDEO LARGO ~10 MIN) - CORREGIDO
 # ================================================================
 def generar_guion(contexto_extra=""):
     prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -385,7 +384,8 @@ Responde únicamente en formato JSON con esta estructura exacta:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt_base}],
         "temperature": 0.7,
-        "max_tokens": 7000,   # Aumentado para permitir 30+ segmentos con sus prompts
+        "max_tokens": 7000,
+        "response_format": {"type": "json_object"}   # <--- CORREGIDO: se agregó esta línea
     }
 
     for intento in range(3):
@@ -416,7 +416,7 @@ Responde únicamente en formato JSON con esta estructura exacta:
     sys.exit(1)
 
 # ================================================================
-# EXPANSIÓN DE GUION (para alcanzar duración mínima)
+# EXPANSIÓN DE GUION (para alcanzar duración mínima) - CORREGIDO
 # ================================================================
 def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
     """
@@ -432,8 +432,6 @@ Los últimos segmentos generados son (texto únicamente):
 Continúa la historia de forma coherente a partir de ese punto. Genera aproximadamente 10 segmentos adicionales (cada uno de 45-55 palabras) que sigan el mismo estilo y temática. Incluye en cada segmento el campo "imagen_prompt" siguiendo las mismas reglas visuales (personaje máximo 25% del encuadre, apariencia natural, etc.).
 Devuelve únicamente un array JSON llamado "segmentos_extra" con la misma estructura de objetos que en el guion original.
 """
-    # Usamos la misma función generar_guion pero con este contexto extra
-    # Para simplificar, hacemos una llamada directa con un prompt específico.
     prompt = f"""Eres el mismo guionista. {contexto}
 
 Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un array de objetos con "texto" e "imagen_prompt".
@@ -445,6 +443,7 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
         "max_tokens": 3000,
+        "response_format": {"type": "json_object"}   # <--- CORREGIDO: se agregó esta línea
     }
 
     for intento in range(2):
