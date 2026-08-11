@@ -251,7 +251,6 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
     """Elimina caracteres especiales que edge-tts leería en voz alta (ej: *, -, _, [, ], etc.)."""
-    # Mantener letras, números, puntuación básica, acentos, eñes, comillas y espacio
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
     texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
@@ -370,7 +369,7 @@ def truncar_texto_largo(texto, max_palabras=340):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA
+# GENERAR HISTORIA COMPLETA (con título mínimo 50 caracteres)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
@@ -384,7 +383,7 @@ DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
 REGLAS DE TÍTULO (IMPORTANTE PARA CTR):
 - Debe ser DESCRIPTIVO y DIRECTO. Sin metáforas confusas.
 - Debe decir EXACTAMENTE de qué trata el video.
-- Entre 40 y 60 caracteres exactos.
+- Entre 50 y 70 caracteres exactos. (MÍNIMO 50 CARACTERES)
 
 REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
 - La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
@@ -405,7 +404,7 @@ ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de la
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título descriptivo y directo de 40-60 caracteres",
+  "titulo": "Título descriptivo y directo de 50-70 caracteres",
   "texto_completo": "Historia completa de 300-360 palabras... (con la primera frase como gancho)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
@@ -432,11 +431,14 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 raise ValueError("Texto demasiado corto")
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
+            
+            # 🔥 TÍTULO MÍNIMO 50 CARACTERES (CORREGIDO)
             titulo = data.get("titulo", "").strip()
-            if len(titulo) < 40:
-                data["titulo"] = f"{titulo} | Relato de Terror"[:60]
-            elif len(titulo) > 60:
-                data["titulo"] = titulo[:57] + "..."
+            if len(titulo) < 50:
+                data["titulo"] = f"{titulo} | Relato de Terror en México"[:70]
+            elif len(titulo) > 70:
+                data["titulo"] = titulo[:67] + "..."
+            
             tags = data.get("tags", "")
             tags_list = [t.strip() for t in tags.split(",") if t.strip()]
             if len(tags_list) < 20:
@@ -452,7 +454,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     print("⚠️ Creando fallback manual...")
     texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne."
     return {
-        "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS}",
+        "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS} | Relato de Terror",
         "texto_completo": texto_fallback,
         "palabras_portada": "TERROR",
         "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
@@ -643,7 +645,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
-    texto_limpio = limpiar_caracteres_para_tts(texto_limpio)  # <--- NUEVO: elimina caracteres especiales
+    texto_limpio = limpiar_caracteres_para_tts(texto_limpio)
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
     
     if len(texto_limpio) < 30:
@@ -708,7 +710,6 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         audio_path = recurso["audio_path"]
         duracion = recurso["duracion"]
         
-        # Cargar audio para concatenar después
         try:
             audio_clip = AudioFileClip(audio_path)
             clips_audio.append(audio_clip)
@@ -716,7 +717,6 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             print(f"⚠️ Error cargando audio segmento {i}: {e}")
             raise ValueError(f"Fallo al cargar audio del segmento {i}")
         
-        # Crear clip de video con la duración exacta del audio
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -735,7 +735,6 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             clips_video.append(video_clip)
         except Exception as e:
             print(f"⚠️ Error procesando imagen {i}: {e}")
-            # Usar placeholder local como último recurso
             placeholder = generar_placeholder_local(f"Img {i+1}")
             if placeholder:
                 with Image.open(placeholder) as img:
