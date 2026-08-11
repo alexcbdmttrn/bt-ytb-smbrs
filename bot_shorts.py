@@ -265,7 +265,7 @@ def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return {"parte": 1, "ultimo_fondo": None, "historia": None}
 
 def guardar_estado(estado):
@@ -290,15 +290,15 @@ def limpiar_texto_para_audio(texto):
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
     prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 300 y 360 palabras.
-    Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
-    y más detalles del entorno en {ubicacion}.
-    Mantén la trama exactamente igual, solo añade contenido donde sea natural.
+Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
+y más detalles del entorno en {ubicacion}.
+Mantén la trama exactamente igual, solo añade contenido donde sea natural.
 
-    RELATO ORIGINAL (debe expandirse):
-    {texto_corto}
+RELATO ORIGINAL (debe expandirse):
+{texto_corto}
 
-    Devuelve SOLO el relato expandido (300-360 palabras), sin títulos ni comentarios adicionales.
-    """
+Devuelve SOLO el relato expandido (300-360 palabras), sin títulos ni comentarios adicionales.
+"""
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
@@ -382,7 +382,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "max_tokens": 700,
         "response_format": {"type": "json_object"}
     }
-    respuesta = ""
     for intento in range(5):
         try:
             print(f"🔄 Intento {intento+1}/5 generando historia...")
@@ -473,7 +472,7 @@ def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta
             print(f"⚠️ Falló imagen para segmento {idx+1}, usando placeholder")
             img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
         imagenes.append(img_url)
-        time.sleep(2)  # Pequeña pausa entre imágenes
+        time.sleep(2)
     return imagenes
 
 # ================================================================
@@ -539,16 +538,11 @@ def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_fin
     if not imagenes_urls or not audio_path:
         raise ValueError("No hay imágenes o audio para montar")
     
-    # Cargar audio
     audio_clip = AudioFileClip(audio_path)
     duracion_total = audio_clip.duration
-    
-    # Crear clips de video para cada imagen
-    clips_video = []
-    # Duración por imagen: proporcional al número de caracteres aproximado? 
-    # Como no tenemos el texto original aquí, repartimos el tiempo equitativamente
     duracion_por_imagen = duracion_total / len(imagenes_urls)
     
+    clips_video = []
     for i, img_url in enumerate(imagenes_urls):
         try:
             r = requests.get(img_url, timeout=30)
@@ -563,7 +557,6 @@ def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_fin
             clips_video.append(video_clip)
         except Exception as e:
             print(f"⚠️ Error procesando imagen {i}: {e}")
-            # Usar una imagen de placeholder si falla
             continue
     
     if not clips_video:
@@ -571,7 +564,6 @@ def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_fin
     
     video = concatenate_videoclips(clips_video, method="compose")
     
-    # Mezclar audio de fondo
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -589,7 +581,6 @@ def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_fin
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     
-    # Limpiar recursos
     video.close()
     audio_final.close()
     audio_clip.close()
@@ -675,133 +666,119 @@ def main():
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    # Si es Parte 1: generar nueva historia
-    if parte_actual == 1:
+    # Si es Parte 1 o no hay historia guardada, generar nueva historia
+    if parte_actual == 1 or not estado.get("historia"):
         print("🆕 Generando nueva historia completa (3 partes)...")
-        historia = generar_historia_completa()
-        if not historia:
+        historia_raw = generar_historia_completa()
+        if not historia_raw:
             print("❌ No se pudo generar la historia")
             return
             
-        texto_completo = historia.get("texto_completo", "")
+        texto_completo = historia_raw.get("texto_completo", "")
         palabras = len(texto_completo.split())
+        
         if palabras < 250:
             print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
-            texto_completo = expandir_texto_corto(texto_completo, ESTADO_HISTORIA_SHORTS, PERSONAJE_SHORTS)
-        elif palabras > 400:
-            print(f"⚠️ Texto largo ({palabras} palabras). Truncando...")
-            texto_completo = truncar_texto_largo(texto_completo, 340)
-        else:
-            print(f"✅ Texto con longitud ideal ({palabras} palabras)")
+            texto_completo = expandir_texto_corto(
+                texto_completo, 
+                ESTADO_HISTORIA_SHORTS, 
+                PERSONAJE_SHORTS
+            )
+        elif palabras > 360:
+            print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
+            texto_completo = truncar_texto_largo(texto_completo, max_palabras=340)
 
-        # Dividir en 3 partes
-        partes = dividir_texto(texto_completo, 3)
-        if len(partes) < 3:
-            print("⚠️ No se pudieron generar 3 partes. Añadiendo relleno...")
-            while len(partes) < 3:
-                partes.append("El misterio continuaba. La noche guardaba más secretos.")
+        # Dividir el relato en 3 partes
+        partes = dividir_texto(texto_completo, n_partes=3)
         
-        # Guardar en estado
-        historia_guardada = {
-            "titulo": historia.get("titulo", f"Misterio en {ESTADO_HISTORIA_SHORTS}"),
+        # Construir objeto de historia con metadatos visuales persistentes
+        historia = {
+            "titulo": historia_raw.get("titulo", f"El misterio de {ESTADO_HISTORIA_SHORTS}"),
             "partes": partes,
-            "palabras_portada": historia.get("palabras_portada", "TERROR"),
-            "tags": historia.get("tags", ""),
+            "palabras_portada": historia_raw.get("palabras_portada", "TERROR"),
+            "tags": historia_raw.get("tags", "terror, shorts, mexico, paranormal"),
             "perfil_personaje": PERFIL_PERSONAJE_SHORTS,
             "estado_mexico": ESTADO_HISTORIA_SHORTS,
             "paleta_color": PALETA_COLOR_ACTUAL,
             "estilo_visual": ESTILO_VISUAL_ACTUAL
         }
-        estado["historia"] = historia_guardada
-        estado["parte"] = 2
+
+        estado["historia"] = historia
+        estado["parte"] = 1
+        parte_actual = 1
         guardar_estado(estado)
-        texto_publicar = partes[0]
-        parte_num = 1
-    else:
-        # Parte 2 o 3: recuperar del estado
-        historia_guardada = estado.get("historia")
-        if not historia_guardada or not historia_guardada.get("partes"):
-            print("⚠️ No hay historia guardada. Reiniciando a Parte 1...")
-            estado["parte"] = 1
-            guardar_estado(estado)
-            return main()
-        
-        partes = historia_guardada.get("partes", [])
-        if parte_actual == 2 and len(partes) >= 2:
-            texto_publicar = partes[1]
-            parte_num = 2
-        elif parte_actual == 3 and len(partes) >= 3:
-            texto_publicar = partes[2]
-            parte_num = 3
-        else:
-            print("⚠️ No hay más partes disponibles. Reiniciando...")
-            estado["parte"] = 1
-            guardar_estado(estado)
-            return main()
 
-    # Recuperar metadatos
-    historia_guardada = estado.get("historia", {})
-    titulo = historia_guardada.get("titulo", "Relato de Terror")
-    tags = historia_guardada.get("tags", "terror, shorts, mexico")
-    perfil = historia_guardada.get("perfil_personaje", PERFIL_PERSONAJE_SHORTS)
-    ubicacion = historia_guardada.get("estado_mexico", ESTADO_HISTORIA_SHORTS)
-    paleta = historia_guardada.get("paleta_color", PALETA_COLOR_ACTUAL)
-    estilo = historia_guardada.get("estilo_visual", ESTILO_VISUAL_ACTUAL)
+    # Recuperar la historia y metadatos visuales
+    historia = estado["historia"]
+    partes = historia.get("partes", [])
+    
+    if parte_actual > len(partes):
+        print(f"⚠️ La parte {parte_actual} no existe. Reiniciando...")
+        estado["parte"] = 1
+        estado["historia"] = None
+        guardar_estado(estado)
+        return main()
 
-    print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (1.05x)")
-    print(f"📍 Ubicación: {ubicacion}")
-    print(f"🎨 Paleta: {paleta[:50]}...")
-    print(f"📝 Publicando Parte {parte_num} ({len(texto_publicar)} caracteres, {len(texto_publicar.split())} palabras)")
+    perfil = historia.get("perfil_personaje", PERFIL_PERSONAJE_SHORTS)
+    ubicacion = historia.get("estado_mexico", ESTADO_HISTORIA_SHORTS)
+    paleta = historia.get("paleta_color", PALETA_COLOR_ACTUAL)
+    estilo = historia.get("estilo_visual", ESTILO_VISUAL_ACTUAL)
 
-    # Dividir el texto de esta parte en segmentos de ~55 palabras (~10 segundos)
-    segmentos = dividir_en_segmentos(texto_publicar, palabras_por_segmento=55)
-    print(f"📌 Texto dividido en {len(segmentos)} segmentos (aproximadamente {len(segmentos)*10} segundos)")
+    texto_parte = partes[parte_actual - 1]
+    print(f"📖 Procesando Parte {parte_actual}/{len(partes)} ({len(texto_parte.split())} palabras)...")
 
-    # Generar imágenes para cada segmento
-    print("🎨 Generando imágenes para cada segmento...")
+    # Dividir el texto en segmentos (~55 palabras) para generar imágenes
+    segmentos = dividir_en_segmentos(texto_parte, palabras_por_segmento=55)
+    print(f"🖼️ Generando {len(segmentos)} imágenes para esta parte...")
+
     imagenes_urls = generar_imagenes_para_segmentos(
-        segmentos,
+        segmentos=segmentos,
         perfil=perfil,
         ubicacion=ubicacion,
         estilo=estilo,
-        paleta=paleta,
-        intentos_por_imagen=3
+        paleta=paleta
     )
-    
-    if not imagenes_urls:
-        print("❌ No se generaron imágenes. Abortando.")
-        return
 
-    print("⏳ Esperando 4 segundos antes del audio...")
-    time.sleep(4)
-
-    print("🎙️ Generando audio...")
-    audio_path = generar_audio(texto_publicar, parte_num)
+    # Generar el audio de la narración
+    audio_path = generar_audio(texto_parte, parte_actual)
     if not audio_path:
-        print("❌ Falló audio")
+        print("❌ Error generando audio TTS. Abortando.")
         return
 
-    print("🎬 Montando Short vertical con múltiples imágenes...")
-    video_path = montar_video_shorts(imagenes_urls, audio_path, fondo_path, "short_final.mp4")
+    # Montar el video
+    try:
+        video_final = montar_video_shorts(
+            imagenes_urls=imagenes_urls,
+            audio_path=audio_path,
+            fondo_path=fondo_path,
+            salida="short_final.mp4"
+        )
+    except Exception as e:
+        print(f"❌ Error montando video: {e}")
+        return
 
-    print("⬆️ Subiendo Short...")
-    subir_a_youtube(video_path, titulo, texto_publicar, tags, parte_num)
+    # Publicar en YouTube
+    print(f"🚀 Subiendo Parte {parte_actual} a YouTube...")
+    subir_a_youtube(
+        video_path=video_final,
+        titulo=historia["titulo"],
+        texto_corto=texto_parte,
+        etiquetas=historia["tags"],
+        parte=parte_actual
+    )
 
     # Actualizar estado para la siguiente parte
-    if parte_actual == 1:
-        estado["parte"] = 2
-        print("⏩ Parte 1 publicada. Siguiente: Parte 2")
-    elif parte_actual == 2:
-        estado["parte"] = 3
-        print("⏩ Parte 2 publicada. Siguiente: Parte 3")
+    if parte_actual < 3:
+        estado["parte"] = parte_actual + 1
+        print(f"⏩ Siguiente ejecución: Parte {parte_actual + 1}")
     else:
+        print("🎉 Historia de 3 partes completada. Reiniciando ciclo para mañana.")
         estado["parte"] = 1
         estado["historia"] = None
-        print("🎉 Parte 3 publicada. Ciclo completado. Reiniciando a Parte 1")
-    
+
     guardar_estado(estado)
     limpiar_temporales_shorts()
-    print("🎉 Proceso de Shorts completado")
+    print("✨ Ejecución del Bot finalizada con éxito.")
 
 if __name__ == "__main__":
     try:
