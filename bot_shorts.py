@@ -19,7 +19,7 @@ from moviepy.editor import (
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
-import gtts  # <--- Fallback de Google TTS
+import gtts
 
 # ================================================================
 # CONFIGURACIÓN
@@ -217,9 +217,9 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (planos amplios)
+# 🧼 LIMPIADOR DE PROMPTS (PLANOS AMPLIOS) - Se usa solo como base
 # ================================================================
-def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
+def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
     paleta = paleta_color or PALETA_COLOR_ACTUAL
     if not prompt:
@@ -480,29 +480,73 @@ def dividir_en_segmentos(texto, palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL (PLANOS AMPLIOS)
+# 🔥 NUEVA FUNCIÓN: GENERAR PROMPT DE IMAGEN POR SEGMENTO (DeepSeek)
 # ================================================================
-def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, estilo_visual=None, paleta_color=None, texto_segmento="", intentos=3):
-    perfil = perfil_personaje or PERFIL_PERSONAJE_SHORTS
-    ubicacion = estado_mexico or ESTADO_HISTORIA_SHORTS
-    
-    escena_desc = texto_segmento[:150] if texto_segmento else "a mysterious moment"
-    
-    prompt_completo = (
-        f"Cinematic wide establishing shot, environmental scene in {ubicacion}, "
-        f"depicting: {escena_desc}. "
-        f"{perfil}, shown at a distance or from behind, small within the frame, "
-        f"NOT a close-up portrait, environment and location are the main focus, "
-        f"architecture, textures and atmosphere of the setting clearly visible, "
-        f"bright cinematic lighting, high contrast colors, sharp focus, dramatic shadows"
-    )
-    prompt_limpio = limpiar_prompt(prompt_completo, estilo_visual, paleta_color)
+def generar_prompt_imagen_segmento(segmento_texto, perfil, ubicacion, estilo_visual, paleta_color):
+    """Usa DeepSeek para interpretar el segmento y generar un prompt específico."""
+    prompt = f"""Eres un director de fotografía experto en composición cinematográfica.
+Interpreta el siguiente fragmento de un relato de terror y genera un PROMPT DE IMAGEN EN INGLÉS para una foto vertical (9:16) que represente la escena exacta.
+
+Fragmento del relato:
+\"\"\"
+{segmento_texto}
+\"\"\"
+
+Reglas estrictas de composición:
+- PLANO: Wide shot o extreme wide shot. PROHIBIDO close-up, portrait, headshot, medium shot ajustado.
+- Enfoque principal: el ENTORNO, la ARQUITECTURA, los OBJETOS o la ATMÓSFERA mencionados en el fragmento.
+- Si el fragmento menciona al personaje actuando o reaccionando, inclúyelo pero SIEMPRE:
+  - Ocupando como MÁXIMO el 20% del área total de la imagen.
+  - A distancia, de espaldas, de perfil lejano o silueteado.
+  - NUNCA mirando directo a cámara, NUNCA cerca del lente.
+- Si el fragmento describe solo ambiente (sonidos, olores, objetos), NO incluyas personas en la imagen.
+- Estilo: professional hyperrealistic photography, 4k, ultra-detailed, natural/ambient lighting, sharp focus on textures.
+- Paleta de color: {paleta_color}
+- Personaje (si aparece): apariencia normal y agradable, piel sana, expresión neutra o de leve tensión, bien cuidado.
+- Restricciones explícitas al final: "no close-up face, no portrait, no headshot, no face filling frame, person occupies max 20% of frame, environment and scene as main focus, no gore, no blood, no disfigurement, no gaunt or emaciated features, pleasant natural human appearance".
+
+Devuelve SOLO el prompt en inglés, sin explicaciones ni introducciones.
+"""
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.6,
+        "max_tokens": 300,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        prompt_imagen = r.json()["choices"][0]["message"]["content"].strip()
+        # Añadir instrucciones de estilo y restricciones por si DeepSeek se las salta
+        prompt_imagen += f", {estilo_visual}, vertical 9:16, wide establishing shot, person occupies max 20% of frame, environment as main subject, no close-up face, no portrait, no blood, no gore"
+        return prompt_imagen
+    except Exception as e:
+        print(f"⚠️ Error generando prompt de imagen para segmento: {e}")
+        # Fallback: usar un prompt genérico basado en el segmento
+        return f"Wide establishing shot of {ubicacion}, depicting: {segmento_texto[:100]}, {estilo_visual}, vertical 9:16, no close-up face, environment as main subject"
+
+# ================================================================
+# GENERAR IMAGEN VERTICAL (con negative_prompt mejorado)
+# ================================================================
+def generar_imagen_vertical(prompt, intentos=3):
+    prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        "negative_prompt": "manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections, close-up face, portrait, headshot",
+        # 🔥 NEGATIVE PROMPT MEJORADO (sin términos discriminatorios)
+        "negative_prompt": (
+            "close-up face, portrait, headshot, person filling frame, face occupying more than 20% of image, "
+            "centered subject, camera pointed directly at face, deformed face, disfigured, mutated, bad anatomy, "
+            "extra limbs, missing limbs, extra fingers, fused fingers, asymmetrical eyes, cross-eyed, malformed features, "
+            "uncanny valley, plastic skin, waxy skin, gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, "
+            "sickly, decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, unattractive, monstrous features, "
+            "cloned faces, duplicate people, multiple subjects, over-saturated, oversharpened, low quality, blurry, "
+            "grainy, vhs, chiaroscuro, dirt, grime, blemishes, spots, text, watermark, logo"
+        ),
         "width": 1080,
         "height": 1920,
         "num_images": 1
@@ -520,35 +564,53 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
     return placeholder_path if placeholder_path else None
 
 # ================================================================
-# GENERAR IMÁGENES PARA CADA SEGMENTO
+# GENERAR IMÁGENES Y AUDIOS POR SEGMENTO (CON SINCRONÍA REAL)
 # ================================================================
-def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
-    imagenes = []
+def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
+    """Genera una imagen y un audio para cada segmento, devuelve lista de (imagen_url, duracion_audio)."""
+    resultados = []
     for idx, seg in enumerate(segmentos):
-        print(f"  🖼️ Generando imagen para segmento {idx+1}/{len(segmentos)}...")
-        prompt_imagen = f"scene in {ubicacion}, showing the described moment"
-        img_url_or_path = generar_imagen_vertical(
-            prompt_imagen,
-            perfil_personaje=perfil,
-            estado_mexico=ubicacion,
-            estilo_visual=estilo,
-            paleta_color=paleta,
-            texto_segmento=seg,
-            intentos=intentos_por_imagen
-        )
-        if not img_url_or_path:
-            img_url_or_path = generar_placeholder_local("Terror", (1080, 1920))
-            if not img_url_or_path:
-                img_url_or_path = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-        imagenes.append(img_url_or_path)
-        time.sleep(2)
-    return imagenes
+        print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)}...")
+        
+        # 1. Generar prompt específico para este segmento
+        prompt_imagen = generar_prompt_imagen_segmento(seg, perfil, ubicacion, estilo, paleta)
+        print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
+        
+        # 2. Generar imagen
+        img_url = generar_imagen_vertical(prompt_imagen, intentos=intentos_por_imagen)
+        if not img_url:
+            img_url = generar_placeholder_local("Terror", (1080, 1920))
+            if not img_url:
+                img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+        
+        # 3. Generar audio para este segmento (usa la función existente con reintentos)
+        audio_path = generar_audio(seg, f"seg_{idx}")
+        if not audio_path:
+            print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
+            return None
+        
+        # 4. Medir duración real del audio
+        try:
+            audio_clip = AudioFileClip(audio_path)
+            duracion = audio_clip.duration
+            audio_clip.close()
+        except Exception as e:
+            print(f"    ⚠️ Error midiendo duración: {e}. Usando estimación de 10s.")
+            duracion = 10.0
+        
+        resultados.append({
+            "imagen_url": img_url,
+            "audio_path": audio_path,
+            "duracion": duracion
+        })
+        time.sleep(1)  # Pausa entre segmentos para no saturar APIs
+    
+    return resultados
 
 # ================================================================
-# GENERAR AUDIO CON REINTENTOS, BACKOFF Y FALLBACK gTTS
+# GENERAR AUDIO CON REINTENTOS, BACKOFF Y FALLBACK gTTS (sin cambios)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
-    # 1. Limpieza agresiva del texto
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
     
@@ -564,7 +626,7 @@ def generar_audio(texto, index, intentos=4):
         v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]
     ]
 
-    print(f"🔊 Generando audio (Parte {index})...")
+    print(f"🔊 Generando audio para segmento {index}...")
 
     for intento, config_voz in enumerate(voces_a_probar[:intentos]):
         voz = config_voz["voz"]
@@ -579,7 +641,7 @@ def generar_audio(texto, index, intentos=4):
         try:
             asyncio.run(_generar())
             if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                print(f"✅ Audio Short generado ({index}) con {voz}")
+                print(f"✅ Audio segmento {index} generado con {voz}")
                 return filename
         except Exception as e:
             print(f"❌ Falló con {voz}: {e}")
@@ -588,53 +650,70 @@ def generar_audio(texto, index, intentos=4):
                 print(f"⏳ Esperando {espera}s antes de reintentar...")
                 time.sleep(espera)
 
-    # 2. Fallback final: gTTS (Google TTS)
     print("⚠️ Todos los intentos con edge-tts fallaron. Usando gTTS como fallback...")
     try:
         from gtts import gTTS
         tts = gTTS(texto_limpio, lang="es")
         tts.save(filename)
-        print(f"✅ Audio generado con gTTS (fallback) para Parte {index}")
+        print(f"✅ Audio generado con gTTS (fallback) para segmento {index}")
         return filename
     except Exception as e:
         print(f"❌ Fallback gTTS también falló: {e}")
         return None
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO CON SINCRONÍA REAL (usando duraciones exactas)
 # ================================================================
-def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="short_final.mp4"):
-    if not imagenes_urls_or_paths or not audio_path:
-        raise ValueError("No hay imágenes o audio para montar")
-    
-    audio_clip = AudioFileClip(audio_path)
-    duracion_total = audio_clip.duration
-    duracion_por_imagen = duracion_total / len(imagenes_urls_or_paths)
+def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
+    """Recibe lista de dicts con imagen_url, audio_path, duracion. Crea clips con duraciones exactas."""
+    if not recursos_por_segmento:
+        raise ValueError("No hay recursos para montar el video")
     
     clips_video = []
-    for i, img_ref in enumerate(imagenes_urls_or_paths):
+    clips_audio = []
+    audio_paths = []
+    
+    for i, recurso in enumerate(recursos_por_segmento):
+        img_url = recurso["imagen_url"]
+        audio_path = recurso["audio_path"]
+        duracion = recurso["duracion"]
+        
+        # Cargar audio para concatenar después
         try:
-            if img_ref.startswith("http"):
-                r = requests.get(img_ref, timeout=30)
+            audio_clip = AudioFileClip(audio_path)
+            clips_audio.append(audio_clip)
+            audio_paths.append(audio_path)
+        except Exception as e:
+            print(f"⚠️ Error cargando audio segmento {i}: {e}")
+            # Si falla, usar un audio de silencio? Mejor abortar.
+            raise ValueError(f"Fallo al cargar audio del segmento {i}")
+        
+        # Crear clip de video con la duración exacta del audio
+        try:
+            if img_url.startswith("http"):
+                r = requests.get(img_url, timeout=30)
                 r.raise_for_status()
                 img_path = f"temp_short_{i}.jpg"
                 with open(img_path, "wb") as f:
                     f.write(r.content)
             else:
-                img_path = img_ref
+                img_path = img_url  # ruta local
+            
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
-            video_clip = ImageClip(img_path).set_duration(duracion_por_imagen)
+            
+            video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
         except Exception as e:
             print(f"⚠️ Error procesando imagen {i}: {e}")
+            # Usar placeholder local
             placeholder = generar_placeholder_local(f"Img {i+1}")
             if placeholder:
                 with Image.open(placeholder) as img:
                     img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                     img_fitted.save(placeholder)
-                video_clip = ImageClip(placeholder).set_duration(duracion_por_imagen)
+                video_clip = ImageClip(placeholder).set_duration(duracion)
                 clips_video.append(video_clip)
             else:
                 continue
@@ -642,8 +721,12 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
     
+    # Concatenar video y audio
     video = concatenate_videoclips(clips_video, method="compose")
+    audio_narracion = concatenate_audioclips(clips_audio)
+    duracion_total = audio_narracion.duration
     
+    # Mezclar audio de fondo
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -651,21 +734,25 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
-            audio_final = CompositeAudioClip([audio_clip, fondo_clip])
+            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
-            audio_final = audio_clip
+            audio_final = audio_narracion
     else:
-        audio_final = audio_clip
+        audio_final = audio_narracion
     
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     
     video.close()
     audio_final.close()
-    audio_clip.close()
+    audio_narracion.close()
     for c in clips_video:
         c.close()
+    for a in clips_audio:
+        a.close()
+    if 'fondo_clip' in locals():
+        fondo_clip.close()
     
     print(f"✅ Short vertical creado: {salida}")
     return salida
@@ -749,7 +836,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (3 partes, imágenes cada ~10s)")
+    print("🎬 Iniciando Bot de SHORTS (sincronía real por segmento)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     if not YOUTUBE_USER_TOKEN:
@@ -820,26 +907,28 @@ def main():
     texto_parte = partes[parte_actual - 1]
     print(f"📖 Procesando Parte {parte_actual}/{len(partes)} ({len(texto_parte.split())} palabras)...")
 
+    # Dividir en segmentos (~55 palabras)
     segmentos = dividir_en_segmentos(texto_parte, palabras_por_segmento=55)
-    print(f"🖼️ Generando {len(segmentos)} imágenes para esta parte...")
+    print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
 
-    imagenes_urls_or_paths = generar_imagenes_para_segmentos(
+    # Generar recursos por segmento (imagen + audio con duración real)
+    recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
         perfil=perfil,
         ubicacion=ubicacion,
         estilo=estilo,
-        paleta=paleta
+        paleta=paleta,
+        intentos_por_imagen=3
     )
-
-    audio_path = generar_audio(texto_parte, parte_actual)
-    if not audio_path:
-        print("❌ Error generando audio TTS. Abortando.")
+    
+    if not recursos:
+        print("❌ Error generando recursos para los segmentos. Abortando.")
         sys.exit(1)
-
+    
+    # Montar video con sincronía exacta
     try:
         video_final = montar_video_shorts(
-            imagenes_urls_or_paths=imagenes_urls_or_paths,
-            audio_path=audio_path,
+            recursos_por_segmento=recursos,
             fondo_path=fondo_path,
             salida="short_final.mp4"
         )
