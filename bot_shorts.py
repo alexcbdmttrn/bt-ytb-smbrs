@@ -272,19 +272,21 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🗂️ ESTADO DE SHORTS (3 partes)
+# 🗂️ ESTADO DE SHORTS (SOLO "ultimo_fondo")
 # ================================================================
 def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # Soporte para estado antiguo: extraer solo ultimo_fondo si existe
+            return {"ultimo_fondo": data.get("ultimo_fondo")}
     except Exception:
-        return {"parte": 1, "ultimo_fondo": None, "historia": None}
+        return {"ultimo_fondo": None}
 
 def guardar_estado(estado):
     with open(ESTADO_FILE, "w", encoding="utf-8") as f:
-        json.dump(estado, f, indent=2, ensure_ascii=False)
-    print("✅ Estado de Shorts guardado")
+        json.dump({"ultimo_fondo": estado.get("ultimo_fondo")}, f, indent=2, ensure_ascii=False)
+    print("✅ Estado de Shorts guardado (solo música)")
 
 # ================================================================
 # 🧹 LIMPIAR TEXTO PARA AUDIO (base)
@@ -322,7 +324,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# EXPANDIR TEXTO CORTO
+# EXPANDIR TEXTO CORTO (fallback si DeepSeek da menos de 300 palabras)
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
@@ -369,12 +371,16 @@ def truncar_texto_largo(texto, max_palabras=340):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA (con título mínimo 50 caracteres)
+# GENERAR HISTORIA STANDALONE COMPLETA (300-360 palabras, sin cliffhanger)
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-La historia debe tener EXACTAMENTE entre 300 y 360 palabras (NO más de 360, NO menos de 300), y estar dividida en TRES PARTES claras con un CLIFFHANGER en cada punto de división.
+La historia debe tener EXACTAMENTE entre 300 y 360 palabras (NO más de 360, NO menos de 300) y debe ser UNA HISTORIA COMPLETA Y AUTOCONCLUSIVA:
+- Tiene INICIO (presenta al personaje y la situación).
+- Tiene DESARROLLO (construye tensión, describe sonidos, olores, sensaciones).
+- Tiene RESOLUCIÓN FINAL (cierra la historia completamente, sin cliffhanger ni cabos sueltos).
+- NO debe terminar en suspenso ni dejar nada sin resolver.
 Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
@@ -393,19 +399,17 @@ REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
 REGLAS DE CONTENIDO:
 - Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
 - Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
-- Parte 1: presentación y primera tensión.
-- Parte 2: desarrollo y segundo cliffhanger.
-- Parte 3: resolución final.
+- Resolución: el final debe ser claro, cerrando la historia sin dejar preguntas abiertas.
 - ANTI-REPETICIÓN: NO repitas frases.
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-- CTA OBLIGATORIO al final de la Parte 3: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
+- CTA OBLIGATORIO al final: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
 
 ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de las etiquetas debe superar los 200 caracteres.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
   "titulo": "Título descriptivo y directo de 50-70 caracteres",
-  "texto_completo": "Historia completa de 300-360 palabras... (con la primera frase como gancho)",
+  "texto_completo": "Historia completa de 300-360 palabras... (con la primera frase como gancho y resolución final)",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -459,23 +463,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "palabras_portada": "TERROR",
         "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
     }
-
-# ================================================================
-# DIVIDIR TEXTO EN 3 PARTES
-# ================================================================
-def dividir_texto(texto, n_partes=3):
-    palabras = texto.split()
-    total = len(palabras)
-    if total < n_partes * 10:
-        return [texto]
-    tam = total // n_partes
-    partes = []
-    for i in range(n_partes):
-        inicio = i * tam
-        fin = (i + 1) * tam if i < n_partes - 1 else total
-        parte = " ".join(palabras[inicio:fin])
-        partes.append(parte.strip())
-    return partes
 
 # ================================================================
 # DIVIDIR TEXTO EN SEGMENTOS DE ~50 PALABRAS
@@ -811,9 +798,9 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON CTAS PERSONALIZADOS POR PARTE)
+# SUBIR A YOUTUBE (CTA FIJO DE SUSCRIPCIÓN)
 # ================================================================
-def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
+def subir_a_youtube(video_path, titulo, texto_corto, etiquetas):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -826,12 +813,8 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
-    if parte == 1:
-        cta_texto = "📌 Parte 2 disponible en unas horas. Sígueme para no perdértela."
-    elif parte == 2:
-        cta_texto = "📌 Parte 3 disponible en unas horas. Sígueme para no perdértela."
-    else:
-        cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror."
+    # CTA FIJO (sin condicional de parte)
+    cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror."
     
     descripcion = f"""📌 {texto_corto[:150]}...
 
@@ -844,7 +827,7 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
     
     body = {
         "snippet": {
-            "title": f"{titulo} - Parte {parte}" if parte else titulo,
+            "title": titulo,
             "description": descripcion[:5000],
             "tags": etiquetas[:30],
             "categoryId": "24",
@@ -885,81 +868,52 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN
+# MAIN (FLUJO SIMPLIFICADO: historia standalone por ejecución)
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (sincronía real por segmento)")
+    print("🎬 Iniciando Bot de SHORTS (standalone - historias independientes)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
         sys.exit(1)
     
+    # Cargar estado (solo ultimo_fondo)
     estado = cargar_estado()
-    parte_actual = estado.get("parte", 1)
-    print(f"📌 Estado actual: Parte {parte_actual}")
+    print(f"📌 Estado cargado (música): {estado}")
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    if parte_actual == 1 or not estado.get("historia"):
-        print("🆕 Generando nueva historia completa (3 partes)...")
-        historia_raw = generar_historia_completa()
-        if not historia_raw:
-            print("❌ No se pudo generar la historia. Abortando.")
-            sys.exit(1)
-            
-        texto_completo = historia_raw.get("texto_completo", "")
-        palabras = len(texto_completo.split())
+    # Generar nueva historia standalone (siempre)
+    print("🆕 Generando nueva historia completa (standalone)...")
+    historia_raw = generar_historia_completa()
+    if not historia_raw:
+        print("❌ No se pudo generar la historia. Abortando.")
+        sys.exit(1)
         
-        if palabras < 250:
-            print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
-            texto_completo = expandir_texto_corto(
-                texto_completo, 
-                ESTADO_HISTORIA_SHORTS, 
-                PERSONAJE_SHORTS
-            )
-        elif palabras > 360:
-            print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
-            texto_completo = truncar_texto_largo(texto_completo, max_palabras=340)
-
-        partes = dividir_texto(texto_completo, n_partes=3)
-        
-        historia = {
-            "titulo": historia_raw.get("titulo", f"El misterio de {ESTADO_HISTORIA_SHORTS}"),
-            "partes": partes,
-            "palabras_portada": historia_raw.get("palabras_portada", "TERROR"),
-            "tags": historia_raw.get("tags", "terror, shorts, mexico, paranormal"),
-            "perfil_personaje": PERFIL_PERSONAJE_SHORTS,
-            "estado_mexico": ESTADO_HISTORIA_SHORTS,
-            "paleta_color": PALETA_COLOR_ACTUAL,
-            "estilo_visual": ESTILO_VISUAL_ACTUAL
-        }
-
-        estado["historia"] = historia
-        estado["parte"] = 1
-        parte_actual = 1
-        guardar_estado(estado)
-
-    historia = estado["historia"]
-    partes = historia.get("partes", [])
+    texto_completo = historia_raw.get("texto_completo", "")
+    palabras = len(texto_completo.split())
     
-    if parte_actual > len(partes):
-        print(f"⚠️ La parte {parte_actual} no existe. Reiniciando estado...")
-        estado["parte"] = 1
-        estado["historia"] = None
-        guardar_estado(estado)
-        print("⏳ Reintenta en la próxima ejecución programada.")
-        return
+    if palabras < 250:
+        print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
+        texto_completo = expandir_texto_corto(
+            texto_completo, 
+            ESTADO_HISTORIA_SHORTS, 
+            PERSONAJE_SHORTS
+        )
+    elif palabras > 360:
+        print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
+        texto_completo = truncar_texto_largo(texto_completo, max_palabras=340)
 
-    perfil = historia.get("perfil_personaje", PERFIL_PERSONAJE_SHORTS)
-    ubicacion = historia.get("estado_mexico", ESTADO_HISTORIA_SHORTS)
-    paleta = historia.get("paleta_color", PALETA_COLOR_ACTUAL)
-    estilo = historia.get("estilo_visual", ESTILO_VISUAL_ACTUAL)
+    perfil = PERFIL_PERSONAJE_SHORTS
+    ubicacion = ESTADO_HISTORIA_SHORTS
+    paleta = PALETA_COLOR_ACTUAL
+    estilo = ESTILO_VISUAL_ACTUAL
 
-    texto_parte = partes[parte_actual - 1]
-    print(f"📖 Procesando Parte {parte_actual}/{len(partes)} ({len(texto_parte.split())} palabras)...")
+    print(f"📖 Procesando historia ({len(texto_completo.split())} palabras)...")
 
-    segmentos = dividir_en_segmentos(texto_parte, palabras_por_segmento=55)
+    # Dividir en segmentos (~55 palabras)
+    segmentos = dividir_en_segmentos(texto_completo, palabras_por_segmento=55)
     print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
 
     recursos = generar_recursos_por_segmento(
@@ -985,23 +939,15 @@ def main():
         print(f"❌ Error montando video: {e}")
         sys.exit(1)
 
-    print(f"🚀 Subiendo Parte {parte_actual} a YouTube...")
+    print(f"🚀 Subiendo Short a YouTube...")
     subir_a_youtube(
         video_path=video_final,
-        titulo=historia["titulo"],
-        texto_corto=texto_parte,
-        etiquetas=historia["tags"],
-        parte=parte_actual
+        titulo=historia_raw["titulo"],
+        texto_corto=texto_completo,
+        etiquetas=historia_raw["tags"]
     )
 
-    if parte_actual < 3:
-        estado["parte"] = parte_actual + 1
-        print(f"⏩ Siguiente ejecución: Parte {parte_actual + 1}")
-    else:
-        print("🎉 Historia de 3 partes completada. Reiniciando ciclo para mañana.")
-        estado["parte"] = 1
-        estado["historia"] = None
-
+    # Guardar solo ultimo_fondo
     guardar_estado(estado)
     limpiar_temporales_shorts()
     print("✨ Ejecución del Bot finalizada con éxito.")
