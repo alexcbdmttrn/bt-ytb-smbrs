@@ -1,18 +1,5 @@
 {
-  "parte": 3,
-  "ultimo_fondo": "Hollow Marrow.mp3",
-  "historia": {
-    "titulo": "El misterio de Colima",
-    "partes": [
-      "Esa noche en Colima, el aire olía a tierra húmeda y a óxido, un perfume rancio que se filtraba entre los escombros del antiguo cine abandonado. Yo, fotógrafo urbano de 28 años, ajustaba el trípode con dedos temblorosos mientras el silencio se espesaba como una manta de plomo. No era un silencio normal; era un vacío que zumbaba en los oídos, un zumbido agudo que parecía provenir del interior de mi propio cráneo. Cada paso que daba levantaba una nube de polvo que crujía bajo mis botas, y el eco de mis pisadas rebotaba en las paredes descascaradas como un latido ajeno. Algo no andaba bien. Lo sentía en la piel, en el vello erizado de",
-      "mis brazos, en el sabor metálico que se acumulaba en mi lengua. Detuve la respiración, esperando que el vacío me devolviera algo, pero solo recibí el golpe sordo de mi corazón contra las costillas. Entonces llegó: un ruido extraño, un chirrido seco, como si alguien arrastrara una cadena sobre cemento roto, seguido de un suspiro que no era humano. No era el viento que se colaba por las ventanas rotas; no era un perro callejero buscando refugio. Era algo más, algo que nacía de las sombras mismas, que se alimentaba de la penumbra y de mi miedo. El corazón me golpeaba tan fuerte que pensé que iba a estallar. Mis ojos escudriñaban la oscuridad, buscando una",
-      "salida, pero las sombras se retorcían como si tuvieran vida propia. Entonces, una figura emergió lentamente, despegándose de la pared como si hubiera sido parte de ella. No tenía rostro: solo una superficie lisa, pálida, que absorbía la tenue luz de mi linterna. Sin embargo, sentí que me miraba directamente, que sus ojos invisibles perforaban mi piel y leían mis pensamientos más oscuros. No tuve tiempo de gritar, de huir. Un frío helado, denso como gelatina, trepó por mi espalda, clavándose en mis vértebras y apretando mi pecho. Era el miedo hecho carne, tangible, respirándome en el cuello. Supe que no estaba solo, que nunca lo había estado. Y que aquella noche, Colima me había tragado para siempre."
-    ],
-    "palabras_portada": "TERROR",
-    "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda",
-    "perfil_personaje": "a 35-year-old Mexican woman, with olive skin and a strong jaw, with wavy brown shoulder-length hair, wearing an old blue mechanic uniform",
-    "estado_mexico": "Colima",
-    "paleta_color": "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
-    "estilo_visual": "Clean 35mm film photograph, bright cinematic lighting, well-lit scene, sharp focus"
-  }
+  "parte": 1,
+  "ultimo_fondo": "Sunless Vault.mp3",
+  "historia": null
 }
