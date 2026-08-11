@@ -4,6 +4,7 @@ import json
 import os
 import random
 import re
+import sys
 import time
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -34,6 +35,10 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 MUSICA_ESTADO_FILE = "estado_musica.json"
+
+# Duración mínima aceptable para el video (8 minutos)
+DURACION_MINIMA_SEGUNDOS = 480
+MAX_INTENTOS_EXPANSION = 2
 
 # ================================================================
 # 🎤 BANCO DE 12 VOCES
@@ -201,7 +206,7 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
+# 🧼 LIMPIADOR DE PROMPTS (MEJORADO)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -210,6 +215,7 @@ def limpiar_prompt(prompt):
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
 
+    # Eliminar palabras no deseadas (solo cuando sean términos aislados)
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -221,12 +227,15 @@ def limpiar_prompt(prompt):
 
     prompt_base = re.sub(r"\s+", " ", prompt).strip()[:220]
 
+    # Modificadores visuales mejorados: personaje ocupa 20-25%, apariencia natural
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "16:9 widescreen format, single solitary person in frame, exactly one person, "
-        "clean smooth skin, natural facial complexion with light skin tone, no face blemishes, "
-        "no cloned faces, no duplicate people, sharp focus, bright well-lit scene, "
-        "no dark underexposed areas, no text, no watermark"
+        "person occupies at most 20-25% of the frame (medium or wide shot), "
+        "clean smooth skin, natural facial complexion with light skin tone, "
+        "attractive features, no blemishes, no cloned faces, no duplicate people, "
+        "sharp focus, bright well-lit scene, no dark underexposed areas, "
+        "no text, no watermark"
     )
     return prompt_base + modificadores_calidad
 
@@ -262,7 +271,8 @@ def agregar_texto_miniatura(img_path, texto_portada):
                 try:
                     font = ImageFont.truetype("arial.ttf", font_size)
                 except Exception:
-                    font = ImageFont.load_default(size=font_size)
+                    font = ImageFont.load_default()
+                    # Pillow <10 no acepta size en load_default
             dummy_draw = ImageDraw.Draw(img)
             bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
             text_w = bbox[2] - bbox[0]
@@ -324,47 +334,13 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# FALLBACK SEGURO (NUNCA NARRA PROMPTS)
+# GENERAR GUION CON DEEPSEEK (VERSIÓN PARA VIDEO LARGO ~10 MIN)
 # ================================================================
-def generar_fallback():
-    print("⚠️ Usando fallback seguro con historia predeterminada.")
+def generar_guion(contexto_extra=""):
+    prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
 
-    relato = [
-        f"Esa noche en {UBICACION_HISTORIA}, supe de inmediato que algo no estaba bien.",
-        "Las luces de la calle comenzaron a parpadear y el silencio se volvió pesado.",
-        "El aire se sintió helado a pesar del calor de la noche mientras caminaba a casa.",
-        "Escuché pasos lentos que me seguían justo detrás, pero al voltear no había nadie.",
-        "Las sombras sobre las paredes de las casas parecían moverse solas.",
-        "Aceleré el paso mientras sentía una mirada fría fija en mi espalda.",
-        "Cuando llegué a mi puerta, la cerré con seguro, pero desde la ventana vi algo.",
-        "Una figura oscura susurró mi nombre desde la calle vacía.",
-        "Es un evento que hasta el día de hoy me pone la piel de gallina."
-    ]
-
-    segmentos = []
-    for frase in relato:
-        segmentos.append({
-            "texto": frase,
-            "imagen_prompt": f"Cinematic photo of {PERFIL_PERSONAJE} on a quiet eerie street in {UBICACION_HISTORIA} at night, 16:9, hyperrealistic"
-        })
-
-    return {
-        "titulo": f"El Misterio Nocturno de {UBICACION_HISTORIA} | Relato Real",
-        "palabras_portada": "CASO REAL",
-        "descripcion": f"Un aterrador relato paranormal ocurrido en {UBICACION_HISTORIA}.\n\nSíguenos en Facebook: {FACEBOOK_LINK}\n\n#leyendasurbanas #Paranormal #Misterio #Mexico",
-        "tags": f"relatos paranormales, leyendas urbanas, {UBICACION_HISTORIA}, misterio, suspenso, mexico",
-        "miniatura_prompt": f"Cinematic portrait of {PERFIL_PERSONAJE} at night looking scared, high contrast, 16:9",
-        "segmentos": segmentos,
-    }
-
-# ================================================================
-# GENERAR GUION CON DEEPSEEK (CON IMAGEN_PROMPT ESPECÍFICO)
-# ================================================================
-def generar_guion():
-    prompt = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
-
-Escribe un relato de eventos paranormales o misterio real en primera persona en español (~6000 caracteres), ambientado en {UBICACION_HISTORIA}, México.
-Divide la historia en 16 a 20 segmentos cortos.
+Escribe un relato de eventos paranormales o misterio real en primera persona en español de aproximadamente 9.500 a 11.000 caracteres (1.600-1.850 palabras), ambientado en {UBICACION_HISTORIA}, México.
+Divide la historia en 28 a 34 segmentos, CADA UNO de 45 a 55 palabras (esto asegura que cada segmento se narre en ~18-22 segundos a velocidad normal de TTS).
 
 PERSONAJE PRINCIPAL (ÚNICO PARA ESTE VIDEO):
 "{PERFIL_PERSONAJE}"
@@ -382,6 +358,11 @@ REGLAS DE GENERACIÓN VISUAL:
 3. PALETA DE COLOR: {PALETA_COLOR_ACTUAL}.
 4. TEXTO ÚNICO EN ESPAÑOL: En el campo "texto" solo escribe la narración del relato en español.
 5. IMAGEN_PROMPT: El campo 'imagen_prompt' debe ser un prompt fotográfico detallado EN INGLÉS que describa visualmente EXACTAMENTE lo que ocurre en el 'texto' de ese segmento. Incluye la ubicación, la hora, el personaje principal (si aparece), la acción y la atmósfera. Sé específico y evita descripciones genéricas.
+   - Además, la persona (si aparece) debe ocupar como máximo el 20-25% del encuadre (plano general o medio, nunca primer plano).
+   - La persona debe ser descrita como de apariencia natural y agradable, sana, sin rasgos de sufrimiento ni deformidades.
+6. ESTRUCTURA NARRATIVA: presentación, desarrollo con varios puntos de tensión, clímax, resolución — repartida en los segmentos.
+
+{contexto_extra}
 
 Responde únicamente en formato JSON con esta estructura exacta:
 {{
@@ -393,7 +374,7 @@ Responde únicamente en formato JSON con esta estructura exacta:
   "segmentos": [
     {{
       "texto": "Texto narrativo único en español para ser locutado por voz en off...",
-      "imagen_prompt": "Detailed cinematic prompt in English for this specific scene: [describe the scene based on the 'texto' field]. Include {PERFIL_PERSONAJE} if present. Single subject, bright well-lit, 16:9, no text, no gore"
+      "imagen_prompt": "Detailed cinematic prompt in English for this specific scene: [describe the scene based on the 'texto' field]. Include {PERFIL_PERSONAJE} if present. Single subject, medium shot, bright well-lit, 16:9, no text, no gore"
     }}
   ]
 }}
@@ -402,10 +383,9 @@ Responde únicamente en formato JSON con esta estructura exacta:
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": prompt_base}],
         "temperature": 0.7,
-        "max_tokens": 4000,
-        "response_format": {"type": "json_object"}
+        "max_tokens": 7000,   # Aumentado para permitir 30+ segmentos con sus prompts
     }
 
     for intento in range(3):
@@ -415,39 +395,106 @@ Responde únicamente en formato JSON con esta estructura exacta:
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             json_str = limpiar_respuesta_json(respuesta)
 
-            # Usar strict=False para tolerar saltos de línea internos
             data = json.loads(json_str, strict=False)
 
-            if "segmentos" in data and len(data["segmentos"]) > 0:
+            if "segmentos" in data and len(data["segmentos"]) >= 28:
                 for seg in data["segmentos"]:
                     if "imagen_prompt" in seg:
                         seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
-                print("✅ Guion generado exitosamente con DeepSeek.")
+                print(f"✅ Guion generado exitosamente con {len(data['segmentos'])} segmentos.")
                 return data
             else:
-                raise ValueError("Sin segmentos válidos en el JSON")
+                print(f"⚠️ Número insuficiente de segmentos ({len(data.get('segmentos', []))}). Reintentando...")
+                raise ValueError("Número insuficiente de segmentos")
 
         except Exception as e:
             print(f"❌ Intento {intento+1}/3 falló al procesar JSON de DeepSeek: {e}")
-            time.sleep(3)
+            time.sleep(5)
 
-    return generar_fallback()
+    # Si falla después de 3 intentos, abortamos (sin fallback corto)
+    print("❌ No se pudo generar un guion válido después de 3 intentos.")
+    sys.exit(1)
 
 # ================================================================
-# GENERAR IMAGEN CON TEXTO DEL SEGMENTO (300 caracteres)
+# EXPANSIÓN DE GUION (para alcanzar duración mínima)
+# ================================================================
+def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
+    """
+    Pide a DeepSeek que genere segmentos adicionales que continúen la historia,
+    basándose en el título y los últimos segmentos ya generados.
+    Devuelve una lista de nuevos segmentos (diccionarios con 'texto' e 'imagen_prompt').
+    """
+    contexto = f"""
+La historia ya tiene un título: "{titulo}".
+Los últimos segmentos generados son (texto únicamente):
+{" --- ".join(ultimos_segmentos_texto[-3:])}
+
+Continúa la historia de forma coherente a partir de ese punto. Genera aproximadamente 10 segmentos adicionales (cada uno de 45-55 palabras) que sigan el mismo estilo y temática. Incluye en cada segmento el campo "imagen_prompt" siguiendo las mismas reglas visuales (personaje máximo 25% del encuadre, apariencia natural, etc.).
+Devuelve únicamente un array JSON llamado "segmentos_extra" con la misma estructura de objetos que en el guion original.
+"""
+    # Usamos la misma función generar_guion pero con este contexto extra
+    # Para simplificar, hacemos una llamada directa con un prompt específico.
+    prompt = f"""Eres el mismo guionista. {contexto}
+
+Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un array de objetos con "texto" e "imagen_prompt".
+"""
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 3000,
+    }
+
+    for intento in range(2):
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=120)
+            r.raise_for_status()
+            respuesta = r.json()["choices"][0]["message"]["content"].strip()
+            json_str = limpiar_respuesta_json(respuesta)
+            data = json.loads(json_str, strict=False)
+            if "segmentos_extra" in data and len(data["segmentos_extra"]) > 0:
+                # Limpiar prompts de imagen
+                for seg in data["segmentos_extra"]:
+                    seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
+                print(f"✅ Expansión generada: {len(data['segmentos_extra'])} segmentos adicionales.")
+                return data["segmentos_extra"]
+            else:
+                print("⚠️ La expansión no devolvió segmentos válidos.")
+                raise ValueError("Expansión vacía")
+        except Exception as e:
+            print(f"❌ Intento de expansión {intento+1}/2 falló: {e}")
+            time.sleep(5)
+
+    print("❌ No se pudo generar expansión después de 2 intentos.")
+    return []  # Retorna lista vacía; luego se validará y se abortará si no alcanza duración
+
+# ================================================================
+# GENERAR IMAGEN CON TEXTO DEL SEGMENTO (MEJORADO NEGATIVE PROMPT)
 # ================================================================
 def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
-    # 🔥 AHORA 300 CARACTERES EN LUGAR DE 150
+    # Ahora usamos solo 150 caracteres del texto para no saturar el prompt
     if texto_segmento:
-        prompt = f"{prompt}, scene depicting: {texto_segmento[:300]}"
+        prompt = f"{prompt}, scene depicting: {texto_segmento[:150]}"
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+    # Negative prompt mejorado con énfasis en evitar deformidades y primer plano
+    negative = (
+        "oscuro, dark, underexposed, low light, heavy shadows, too dark, "
+        "over-saturated reds, over-saturated oranges, manchas, textura fea, "
+        "deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, "
+        "demacrado, freckles, blemishes, skin spots, imperfections, "
+        "close-up face, portrait, headshot, person filling frame, "
+        "deformed face, disfigured, mutated, bad anatomy, extra limbs, "
+        "extra fingers, asymmetrical eyes, malformed features, uncanny valley, "
+        "gaunt, emaciated, ugly, grotesque"
+    )
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        # 🔥 NEGATIVE PROMPT MEJORADO CON IMPERFECCIONES DE PIEL
-        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections",
+        "negative_prompt": negative,
         "width": width,
         "height": height,
         "num_images": 1
@@ -466,15 +513,15 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
 # GENERAR AUDIO (CON FILTRO DE PROMPTS)
 # ================================================================
 def generar_audio(texto, index):
-    # Filtrar residuos de prompts
+    # Limpiar cualquier residuo de prompt
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
     texto_limpio = re.sub(r"prompt.*", "", texto_limpio, flags=re.IGNORECASE)
     texto_limpio = re.sub(r'[\{\}\[\]"]', "", texto_limpio)
     texto_limpio = re.sub(r"\s+", " ", texto_limpio).strip()
 
-    # Si el texto es muy corto o contiene palabras de prompt, descartar
-    if len(texto_limpio) < 10 or "cinematic" in texto_limpio.lower() or "photograph" in texto_limpio.lower():
-        print(f"⚠️ Texto de audio {index} descartado por contener restos de prompt.")
+    # Ya no descartamos por contener palabras como "cinematic" porque la narración puede mencionarlas
+    if len(texto_limpio) < 10:
+        print(f"⚠️ Texto de audio {index} demasiado corto, se omite.")
         return None
 
     filename = f"audio_{index}.mp3"
@@ -496,26 +543,47 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO (CON CONTROL DE RITMO Y DURACIÓN)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
     clips_audio = []
+    duracion_total = 0.0
+
     for i, elem in enumerate(elementos):
         try:
             audio_clip = AudioFileClip(elem["audio_path"])
             duracion = audio_clip.duration
+            duracion_total += duracion
+
+            # Descargar imagen
             r = requests.get(elem["imagen_url"], timeout=30)
             r.raise_for_status()
             img_path = f"temp_img_{i}.jpg"
             with open(img_path, "wb") as f:
                 f.write(r.content)
             with Image.open(img_path) as img:
-                img_fitted = ImageOps.fit(img, (1920, 1080), Image.Resampling.LANCZOS)
+                # Redimensionar a 1920x1080 usando LANCZOS (compatible con Pillow<10)
+                img_fitted = ImageOps.fit(img, (1920, 1080), Image.LANCZOS)
                 img_fitted.save(img_path)
-            video_clip = ImageClip(img_path).set_duration(duracion)
-            clips_video.append(video_clip)
-            clips_audio.append(audio_clip)
+
+            # Si la duración del audio supera 35 segundos, dividir la imagen en dos partes iguales
+            if duracion > 35:
+                # Mostrar la misma imagen dos veces, cada una con duración = duracion/2
+                duracion_mitad = duracion / 2
+                clip1 = ImageClip(img_path, duration=duracion_mitad)
+                clip2 = ImageClip(img_path, duration=duracion_mitad)
+                clips_video.extend([clip1, clip2])
+                # Dividir el audio en dos partes iguales
+                audio_mitad = audio_clip.subclip(0, duracion_mitad)
+                audio_mitad2 = audio_clip.subclip(duracion_mitad, duracion)
+                clips_audio.extend([audio_mitad, audio_mitad2])
+                print(f"🔹 Segmento {i} de {duracion:.1f}s dividido en 2 partes.")
+            else:
+                video_clip = ImageClip(img_path, duration=duracion)
+                clips_video.append(video_clip)
+                clips_audio.append(audio_clip)
+
         except Exception as e:
             print(f"⚠️ Error en segmento {i}: {e}")
             continue
@@ -527,6 +595,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
 
+    # Fondo musical
     if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
         try:
             fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
@@ -534,6 +603,8 @@ def montar_video(elementos, salida="video_final.mp4"):
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
+            # Fade in/out suaves
+            fondo_clip = fondo_clip.audio_fadein(2).audio_fadeout(2)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
             print(f"🎵 Audio de fondo mezclado al 8%: {FONDO_AUDIO_FILE}")
         except Exception as e:
@@ -545,7 +616,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
 
-    # Cerrar handles explícitamente
+    # Cerrar handles
     video.close()
     audio_final.close()
     for c in clips_video:
@@ -554,7 +625,7 @@ def montar_video(elementos, salida="video_final.mp4"):
         a.close()
 
     print(f"✅ Video creado exitosamente: {salida}")
-    return salida
+    return salida, duracion_total
 
 # ================================================================
 # LIMPIEZA DE ARCHIVOS TEMPORALES
@@ -614,7 +685,15 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
 # ================================================================
 # MAIN
 # ================================================================
+def verificar_envs():
+    required = ["DEEPSEEK_API_KEY", "AGNES_API_KEY", "YOUTUBE_USER_TOKEN"]
+    missing = [var for var in required if not os.getenv(var)]
+    if missing:
+        print(f"❌ Faltan variables de entorno: {', '.join(missing)}")
+        sys.exit(1)
+
 def main():
+    verificar_envs()
     print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Historia ambientada en: {UBICACION_HISTORIA}")
@@ -622,23 +701,24 @@ def main():
     print(f"🎵 Fondo musical: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
+    # 1. Generar guion inicial
     guion_data = generar_guion()
-
     titulo_video = guion_data.get("titulo", "Relato Paranormal Real")
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
     descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}")
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
     segmentos = guion_data.get("segmentos", [])
 
+    # 2. Procesar segmentos (generar imágenes y audios)
     textos_registrados = set()
     elementos_validos = []
     imagen_ultimo_recurso = None
 
     for i, seg in enumerate(segmentos):
         texto_limpio = seg["texto"].strip().lower()
+        # Permitimos duplicados, pero si se repite exactamente, usamos la misma imagen/audio
         if texto_limpio in textos_registrados:
-            print(f"⚠️ Segmento {i} ignorado por repetición.")
-            continue
+            print(f"⚠️ Segmento {i} repetido, se genera de todas formas (puede afectar duración).")
         textos_registrados.add(texto_limpio)
 
         if i > 0:
@@ -660,8 +740,43 @@ def main():
 
     if not elementos_validos:
         print("❌ No hay elementos válidos para crear el video.")
-        return
+        sys.exit(1)
 
+    # 3. Validar duración total y expandir si es necesario
+    duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
+    print(f"⏱️ Duración estimada del video (solo narración): {duracion_actual/60:.1f} minutos")
+
+    intentos_expansion = 0
+    while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
+        print(f"⚠️ Duración {duracion_actual:.1f}s < {DURACION_MINIMA_SEGUNDOS}s. Intentando expansión {intentos_expansion+1}...")
+        # Obtener últimos segmentos de texto
+        ultimos_textos = [seg["texto"] for seg in segmentos[-3:]] if len(segmentos) >= 3 else [seg["texto"] for seg in segmentos]
+        nuevos_segmentos = expandir_guion(titulo_video, ultimos_textos, intentos_expansion+1)
+        if nuevos_segmentos:
+            # Procesar nuevos segmentos
+            for i, seg in enumerate(nuevos_segmentos):
+                # Generar imagen y audio para cada nuevo segmento
+                url_img = generar_imagen(seg.get("imagen_prompt", ""), texto_segmento=seg["texto"], width=2048, height=1152)
+                if url_img:
+                    audio_file = generar_audio(seg["texto"], len(elementos_validos) + i)
+                    if audio_file:
+                        elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
+                        segmentos.append(seg)  # guardar para futuras expansiones
+            # Recalcular duración
+            duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
+            print(f"⏱️ Duración después de expansión: {duracion_actual/60:.1f} minutos")
+            intentos_expansion += 1
+        else:
+            print("❌ No se pudo generar expansión. Abortando.")
+            sys.exit(1)
+
+    if duracion_actual < DURACION_MINIMA_SEGUNDOS:
+        print(f"❌ Duración final ({duracion_actual/60:.1f} min) insuficiente después de {MAX_INTENTOS_EXPANSION} expansiones. Abortando.")
+        sys.exit(1)
+
+    print(f"✅ Duración final aceptable: {duracion_actual/60:.1f} minutos.")
+
+    # 4. Generar miniatura
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_imagen(guion_data.get("miniatura_prompt", "Dark mysterious scene"), width=1280, height=720)
@@ -672,15 +787,18 @@ def main():
             with open(miniatura_path, "wb") as f:
                 f.write(r.content)
             with Image.open(miniatura_path) as img:
-                ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS).save(miniatura_path)
+                ImageOps.fit(img, (1280, 720), Image.LANCZOS).save(miniatura_path)
             agregar_texto_miniatura(miniatura_path, palabras_portada)
         except Exception as e:
             print(f"⚠️ Error en miniatura: {e}")
             miniatura_path = None
 
+    # 5. Montar video
     print("🎬 Montando video...")
-    video_path = montar_video(elementos_validos)
+    video_path, duracion_final = montar_video(elementos_validos)
+    print(f"⏱️ Duración final del video generado: {duracion_final/60:.1f} minutos")
 
+    # 6. Subir a YouTube
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
 
@@ -694,4 +812,4 @@ if __name__ == "__main__":
         print(f"❌ Error fatal: {e}")
         import traceback
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
