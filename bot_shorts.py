@@ -4,6 +4,7 @@ import json
 import os
 import random
 import re
+import sys
 import time
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -285,6 +286,32 @@ def limpiar_texto_para_audio(texto):
     return texto.strip()
 
 # ================================================================
+# GENERAR PLACEHOLDER LOCAL (evita dependencia de terceros)
+# ================================================================
+def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
+    """Genera una imagen placeholder local con PIL."""
+    try:
+        img = Image.new("RGB", size, (20, 20, 20))
+        draw = ImageDraw.Draw(img)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
+        except:
+            font = ImageFont.load_default()
+        # Centrar texto
+        bbox = draw.textbbox((0, 0), texto, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        x = (size[0] - text_w) // 2
+        y = (size[1] - text_h) // 2
+        draw.text((x, y), texto, fill="red", font=font)
+        path = f"placeholder_{random.randint(1000, 9999)}.jpg"
+        img.save(path)
+        return path
+    except Exception as e:
+        print(f"⚠️ Error generando placeholder local: {e}")
+        return None
+
+# ================================================================
 # EXPANDIR TEXTO CORTO (300-360 palabras)
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
@@ -452,31 +479,7 @@ def dividir_en_segmentos(texto, palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# GENERAR IMÁGENES PARA CADA SEGMENTO (con texto específico)
-# ================================================================
-def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
-    imagenes = []
-    for idx, seg in enumerate(segmentos):
-        print(f"  🖼️ Generando imagen para segmento {idx+1}/{len(segmentos)}...")
-        prompt_imagen = f"scene in {ubicacion}, showing the described moment"
-        img_url = generar_imagen_vertical(
-            prompt_imagen,
-            perfil_personaje=perfil,
-            estado_mexico=ubicacion,
-            estilo_visual=estilo,
-            paleta_color=paleta,
-            texto_segmento=seg,
-            intentos=intentos_por_imagen
-        )
-        if not img_url:
-            print(f"⚠️ Falló imagen para segmento {idx+1}, usando placeholder")
-            img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-        imagenes.append(img_url)
-        time.sleep(2)
-    return imagenes
-
-# ================================================================
-# GENERAR IMAGEN VERTICAL INDIVIDUAL
+# GENERAR IMAGEN VERTICAL INDIVIDUAL (con placeholder local)
 # ================================================================
 def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, estilo_visual=None, paleta_color=None, texto_segmento="", intentos=3):
     perfil = perfil_personaje or PERFIL_PERSONAJE_SHORTS
@@ -503,7 +506,37 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
             time.sleep(6)
         except Exception:
             time.sleep(6)
-    return None
+    # Si falla, usar placeholder local
+    print("⚠️ Falló generación de imagen, usando placeholder local...")
+    placeholder_path = generar_placeholder_local("Terror", (1080, 1920))
+    return placeholder_path if placeholder_path else None
+
+# ================================================================
+# GENERAR IMÁGENES PARA CADA SEGMENTO
+# ================================================================
+def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
+    imagenes = []
+    for idx, seg in enumerate(segmentos):
+        print(f"  🖼️ Generando imagen para segmento {idx+1}/{len(segmentos)}...")
+        prompt_imagen = f"scene in {ubicacion}, showing the described moment"
+        img_url_or_path = generar_imagen_vertical(
+            prompt_imagen,
+            perfil_personaje=perfil,
+            estado_mexico=ubicacion,
+            estilo_visual=estilo,
+            paleta_color=paleta,
+            texto_segmento=seg,
+            intentos=intentos_por_imagen
+        )
+        if not img_url_or_path:
+            # Si todo falla, generar placeholder local
+            img_url_or_path = generar_placeholder_local("Terror", (1080, 1920))
+            if not img_url_or_path:
+                # Fallback extremo: usar una URL de placeholder conocida pero con retry
+                img_url_or_path = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+        imagenes.append(img_url_or_path)
+        time.sleep(2)
+    return imagenes
 
 # ================================================================
 # GENERAR AUDIO PARA UNA PARTE
@@ -532,24 +565,29 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO CON MÚLTIPLES IMÁGENES Y UN SOLO AUDIO
+# MONTAR VIDEO CON MÚLTIPLES IMÁGENES Y UN SOLO AUDIO (acepta rutas locales)
 # ================================================================
-def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_final.mp4"):
-    if not imagenes_urls or not audio_path:
+def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="short_final.mp4"):
+    if not imagenes_urls_or_paths or not audio_path:
         raise ValueError("No hay imágenes o audio para montar")
     
     audio_clip = AudioFileClip(audio_path)
     duracion_total = audio_clip.duration
-    duracion_por_imagen = duracion_total / len(imagenes_urls)
+    duracion_por_imagen = duracion_total / len(imagenes_urls_or_paths)
     
     clips_video = []
-    for i, img_url in enumerate(imagenes_urls):
+    for i, img_ref in enumerate(imagenes_urls_or_paths):
         try:
-            r = requests.get(img_url, timeout=30)
-            r.raise_for_status()
-            img_path = f"temp_short_{i}.jpg"
-            with open(img_path, "wb") as f:
-                f.write(r.content)
+            # Si es una URL, descargar; si es ruta local, usarla directamente
+            if img_ref.startswith("http"):
+                r = requests.get(img_ref, timeout=30)
+                r.raise_for_status()
+                img_path = f"temp_short_{i}.jpg"
+                with open(img_path, "wb") as f:
+                    f.write(r.content)
+            else:
+                img_path = img_ref  # ruta local
+            # Ajustar tamaño
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
@@ -557,7 +595,16 @@ def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_fin
             clips_video.append(video_clip)
         except Exception as e:
             print(f"⚠️ Error procesando imagen {i}: {e}")
-            continue
+            # Intentar crear placeholder local
+            placeholder = generar_placeholder_local(f"Img {i+1}")
+            if placeholder:
+                with Image.open(placeholder) as img:
+                    img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
+                    img_fitted.save(placeholder)
+                video_clip = ImageClip(placeholder).set_duration(duracion_por_imagen)
+                clips_video.append(video_clip)
+            else:
+                continue
     
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
@@ -591,11 +638,19 @@ def montar_video_shorts(imagenes_urls, audio_path, fondo_path, salida="short_fin
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (con manejo de token expirado)
 # ================================================================
 def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
-    creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
-    youtube = build("youtube", "v3", credentials=creds)
+    try:
+        creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
+        youtube = build("youtube", "v3", credentials=creds)
+    except Exception as e:
+        print(f"❌ Error autenticando con YouTube: {e}")
+        if "invalid_grant" in str(e) or "expired" in str(e):
+            print("🔴 El token de YouTube ha expirado. Debes renovar YOUTUBE_USER_TOKEN.")
+            print("   Ve a Google Cloud Console, regenera el token y actualiza el Secret en GitHub.")
+        sys.exit(1)
+
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
@@ -631,17 +686,21 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
         },
     }
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
-    response = request.execute()
-    video_id = response["id"]
-    print(f"✅ Short subido: https://youtu.be/{video_id}")
+    try:
+        request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+        response = request.execute()
+        video_id = response["id"]
+        print(f"✅ Short subido: https://youtu.be/{video_id}")
+    except Exception as e:
+        print(f"❌ Error subiendo a YouTube: {e}")
+        sys.exit(1)
 
 # ================================================================
 # LIMPIEZA DE TEMPORALES DE SHORTS
 # ================================================================
 def limpiar_temporales_shorts():
     for f in os.listdir("."):
-        if (f.startswith("temp_short_") or f.startswith("audio_short_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
+        if (f.startswith("temp_short_") or f.startswith("audio_short_") or f.startswith("placeholder_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
             try:
                 os.remove(f)
             except Exception:
@@ -660,6 +719,11 @@ def main():
     print("🎬 Iniciando Bot de SHORTS (3 partes, imágenes cada ~10s)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
+    # Validar que existe el token de YouTube
+    if not YOUTUBE_USER_TOKEN:
+        print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
+        sys.exit(1)
+    
     estado = cargar_estado()
     parte_actual = estado.get("parte", 1)
     print(f"📌 Estado actual: Parte {parte_actual}")
@@ -671,8 +735,8 @@ def main():
         print("🆕 Generando nueva historia completa (3 partes)...")
         historia_raw = generar_historia_completa()
         if not historia_raw:
-            print("❌ No se pudo generar la historia")
-            return
+            print("❌ No se pudo generar la historia. Abortando.")
+            sys.exit(1)
             
         texto_completo = historia_raw.get("texto_completo", "")
         palabras = len(texto_completo.split())
@@ -688,10 +752,8 @@ def main():
             print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
             texto_completo = truncar_texto_largo(texto_completo, max_palabras=340)
 
-        # Dividir el relato en 3 partes
         partes = dividir_texto(texto_completo, n_partes=3)
         
-        # Construir objeto de historia con metadatos visuales persistentes
         historia = {
             "titulo": historia_raw.get("titulo", f"El misterio de {ESTADO_HISTORIA_SHORTS}"),
             "partes": partes,
@@ -713,11 +775,13 @@ def main():
     partes = historia.get("partes", [])
     
     if parte_actual > len(partes):
-        print(f"⚠️ La parte {parte_actual} no existe. Reiniciando...")
+        print(f"⚠️ La parte {parte_actual} no existe. Reiniciando estado...")
         estado["parte"] = 1
         estado["historia"] = None
         guardar_estado(estado)
-        return main()
+        # No recursión infinita, simplemente salimos y el próximo cron lo reintenta
+        print("⏳ Reintenta en la próxima ejecución programada.")
+        return
 
     perfil = historia.get("perfil_personaje", PERFIL_PERSONAJE_SHORTS)
     ubicacion = historia.get("estado_mexico", ESTADO_HISTORIA_SHORTS)
@@ -727,11 +791,10 @@ def main():
     texto_parte = partes[parte_actual - 1]
     print(f"📖 Procesando Parte {parte_actual}/{len(partes)} ({len(texto_parte.split())} palabras)...")
 
-    # Dividir el texto en segmentos (~55 palabras) para generar imágenes
     segmentos = dividir_en_segmentos(texto_parte, palabras_por_segmento=55)
     print(f"🖼️ Generando {len(segmentos)} imágenes para esta parte...")
 
-    imagenes_urls = generar_imagenes_para_segmentos(
+    imagenes_urls_or_paths = generar_imagenes_para_segmentos(
         segmentos=segmentos,
         perfil=perfil,
         ubicacion=ubicacion,
@@ -739,25 +802,22 @@ def main():
         paleta=paleta
     )
 
-    # Generar el audio de la narración
     audio_path = generar_audio(texto_parte, parte_actual)
     if not audio_path:
         print("❌ Error generando audio TTS. Abortando.")
-        return
+        sys.exit(1)
 
-    # Montar el video
     try:
         video_final = montar_video_shorts(
-            imagenes_urls=imagenes_urls,
+            imagenes_urls_or_paths=imagenes_urls_or_paths,
             audio_path=audio_path,
             fondo_path=fondo_path,
             salida="short_final.mp4"
         )
     except Exception as e:
         print(f"❌ Error montando video: {e}")
-        return
+        sys.exit(1)
 
-    # Publicar en YouTube
     print(f"🚀 Subiendo Parte {parte_actual} a YouTube...")
     subir_a_youtube(
         video_path=video_final,
@@ -767,7 +827,6 @@ def main():
         parte=parte_actual
     )
 
-    # Actualizar estado para la siguiente parte
     if parte_actual < 3:
         estado["parte"] = parte_actual + 1
         print(f"⏩ Siguiente ejecución: Parte {parte_actual + 1}")
@@ -787,4 +846,4 @@ if __name__ == "__main__":
         print(f"❌ Error fatal: {e}")
         import traceback
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
