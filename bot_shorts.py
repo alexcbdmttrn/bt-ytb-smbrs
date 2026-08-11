@@ -19,6 +19,7 @@ from moviepy.editor import (
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
+import gtts  # <--- NUEVO: fallback de Google TTS
 
 # ================================================================
 # CONFIGURACIÓN
@@ -235,7 +236,6 @@ def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     for pattern in palabras_sucias:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
     prompt_base = re.sub(r"\s+", " ", prompt).strip()[:200]
-    # 🔥 NUEVOS MODIFICADORES: planos amplios, persona a distancia
     modificadores_calidad = (
         f", {estilo}, color palette of {paleta}, "
         "vertical 9:16 format, wide environmental establishing shot, medium-wide shot, "
@@ -488,7 +488,6 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
     
     escena_desc = texto_segmento[:150] if texto_segmento else "a mysterious moment"
     
-    # 🔥 NUEVO PROMPT: Planos amplios, persona a distancia, enfoque en el entorno
     prompt_completo = (
         f"Cinematic wide establishing shot, environmental scene in {ubicacion}, "
         f"depicting: {escena_desc}. "
@@ -503,7 +502,6 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        # 🔥 NEGATIVE PROMPT LIMPIO (sin términos étnicos)
         "negative_prompt": "manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections, close-up face, portrait, headshot",
         "width": 1080,
         "height": 1920,
@@ -517,7 +515,6 @@ def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, e
             time.sleep(6)
         except Exception:
             time.sleep(6)
-    # Si falla, usar placeholder local
     print("⚠️ Falló generación de imagen, usando placeholder local...")
     placeholder_path = generar_placeholder_local("Terror", (1080, 1920))
     return placeholder_path if placeholder_path else None
@@ -548,29 +545,59 @@ def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta
     return imagenes
 
 # ================================================================
-# GENERAR AUDIO
+# 🔥 GENERAR AUDIO CON REINTENTOS, BACKOFF Y FALLBACK gTTS (NUEVO)
 # ================================================================
-def generar_audio(texto, index):
+def generar_audio(texto, index, intentos=4):
+    # 1. Limpieza agresiva del texto
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
-    if len(texto_limpio) < 50:
+    
+    if len(texto_limpio) < 30:
         print(f"⚠️ Texto corto ({len(texto_limpio)} caracteres). Rellenando...")
-        texto_limpio += " El miedo crecía con cada paso. El silencio era ensordecedor."
+        texto_limpio = "Esa noche en la carretera, el silencio era tan denso que podía cortarse con un cuchillo. El miedo lo envolvía todo. No podía escapar."
+    
     if not texto_limpio:
         return None
+
     filename = f"audio_short_{index}.mp3"
-    voz = CONFIG_VOZ_ACTUAL["voz"]
-    rate = CONFIG_VOZ_ACTUAL["velocidad"]
-    pitch = CONFIG_VOZ_ACTUAL["tono"]
-    async def _generar():
-        communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
-        await communicate.save(filename)
+    voces_a_probar = [CONFIG_VOZ_ACTUAL] + [
+        v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]
+    ]
+
+    print(f"🔊 Generando audio (Parte {index})...")
+
+    for intento, config_voz in enumerate(voces_a_probar[:intentos]):
+        voz = config_voz["voz"]
+        rate = config_voz["velocidad"]
+        pitch = config_voz["tono"]
+        print(f"🎤 Intento {intento+1}/{intentos} con voz: {voz}")
+
+        async def _generar():
+            communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
+            await communicate.save(filename)
+
+        try:
+            asyncio.run(_generar())
+            if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                print(f"✅ Audio Short generado ({index}) con {voz}")
+                return filename
+        except Exception as e:
+            print(f"❌ Falló con {voz}: {e}")
+            if intento < intentos - 1:
+                espera = 5 * (intento + 1)
+                print(f"⏳ Esperando {espera}s antes de reintentar...")
+                time.sleep(espera)
+
+    # 2. Fallback final: gTTS (Google TTS)
+    print("⚠️ Todos los intentos con edge-tts fallaron. Usando gTTS como fallback...")
     try:
-        asyncio.run(_generar())
-        print(f"✅ Audio Short generado ({index}) con {voz}")
+        from gtts import gTTS
+        tts = gTTS(texto_limpio, lang="es")
+        tts.save(filename)
+        print(f"✅ Audio generado con gTTS (fallback) para Parte {index}")
         return filename
     except Exception as e:
-        print(f"❌ Error audio: {e}")
+        print(f"❌ Fallback gTTS también falló: {e}")
         return None
 
 # ================================================================
@@ -654,7 +681,6 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
         print(f"❌ Error autenticando con YouTube: {e}")
         if "invalid_grant" in str(e) or "expired" in str(e):
             print("🔴 El token de YouTube ha expirado. Debes renovar YOUTUBE_USER_TOKEN.")
-            print("   Ve a Google Cloud Console, regenera el token y actualiza el Secret en GitHub.")
         sys.exit(1)
 
     if isinstance(etiquetas, str):
