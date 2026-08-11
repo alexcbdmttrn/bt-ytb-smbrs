@@ -25,7 +25,8 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
-          pip install Pillow>=10.0.0
+          # 🔥 FIX: Fijar Pillow<10 para compatibilidad con moviepy 1.0.3
+          pip install "Pillow<10.0.0"
           pip install moviepy==1.0.3
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           pip install edge-tts
