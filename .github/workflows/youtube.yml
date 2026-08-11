@@ -28,12 +28,12 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
-          pip install Pillow>=10.0.0
+          pip install "Pillow<10.0.0"         # Fijado para compatibilidad con moviepy 1.0.3
           pip install moviepy==1.0.3
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           pip install edge-tts
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg fonts-dejavu-core   # Fuentes para miniatura
 
       - name: Verificar instalación
         run: |
