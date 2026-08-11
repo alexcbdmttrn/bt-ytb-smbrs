@@ -19,7 +19,7 @@ from moviepy.editor import (
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
-import gtts  # <--- NUEVO: fallback de Google TTS
+import gtts  # <--- Fallback de Google TTS
 
 # ================================================================
 # CONFIGURACIÓN
@@ -217,7 +217,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (con planos amplios)
+# 🧼 LIMPIADOR DE PROMPTS (planos amplios)
 # ================================================================
 def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -480,7 +480,7 @@ def dividir_en_segmentos(texto, palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL (CON PLANOS AMPLIOS)
+# GENERAR IMAGEN VERTICAL (PLANOS AMPLIOS)
 # ================================================================
 def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, estilo_visual=None, paleta_color=None, texto_segmento="", intentos=3):
     perfil = perfil_personaje or PERFIL_PERSONAJE_SHORTS
@@ -545,7 +545,7 @@ def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta
     return imagenes
 
 # ================================================================
-# 🔥 GENERAR AUDIO CON REINTENTOS, BACKOFF Y FALLBACK gTTS (NUEVO)
+# GENERAR AUDIO CON REINTENTOS, BACKOFF Y FALLBACK gTTS
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     # 1. Limpieza agresiva del texto
@@ -671,7 +671,7 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (CON CTAS PERSONALIZADOS POR PARTE)
 # ================================================================
 def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
     try:
@@ -686,6 +686,7 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
+    # 🔥 CTAS PERSONALIZADOS POR PARTE
     if parte == 1:
         cta_texto = "📌 Parte 2 disponible en unas horas. Sígueme para no perdértela."
     elif parte == 2:
