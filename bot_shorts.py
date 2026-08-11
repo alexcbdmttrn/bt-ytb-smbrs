@@ -432,7 +432,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
             
-            # 🔥 TÍTULO MÍNIMO 50 CARACTERES (CORREGIDO)
+            # 🔥 TÍTULO MÍNIMO 50 CARACTERES
             titulo = data.get("titulo", "").strip()
             if len(titulo) < 50:
                 data["titulo"] = f"{titulo} | Relato de Terror en México"[:70]
@@ -571,27 +571,27 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 🔥 GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN DE IMAGEN)
+# 🔥 GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN DE IMAGEN POSTERIOR)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
-    """Genera una imagen y un audio para cada segmento, reutilizando imagen anterior si falla."""
-    resultados = []
-    ultima_imagen_url = None
+    """Genera una imagen y un audio para cada segmento. Si una imagen falla, usa la siguiente imagen generada."""
+    
+    # 1. Primera pasada: generar todos los recursos, guardando resultados temporales
+    resultados_temporales = []
     
     for idx, seg in enumerate(segmentos):
         print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)}...")
         
-        # 1. Generar prompt específico para este segmento
+        # Generar prompt específico para este segmento
         prompt_imagen = generar_prompt_imagen_segmento(seg, perfil, ubicacion, estilo, paleta)
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
         
-        # 2. Generar imagen (con reintentos)
+        # Generar imagen (con reintentos)
         img_url = None
         for intento in range(intentos_por_imagen):
             try:
                 img_url = generar_imagen_vertical(prompt_imagen, intentos=1)
                 if img_url:
-                    ultima_imagen_url = img_url
                     print(f"    ✅ Imagen generada (intento {intento+1})")
                     break
             except Exception:
@@ -600,25 +600,17 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
                 print(f"    ⏳ Reintentando imagen...")
                 time.sleep(6)
         
-        # Si falló la generación, reutilizar la última imagen
+        # Si falló, guardamos None (se resolverá después)
         if not img_url:
-            if ultima_imagen_url:
-                img_url = ultima_imagen_url
-                print(f"    ⚠️ Reutilizando imagen anterior")
-            else:
-                # Si no hay imagen anterior, usar placeholder como último recurso
-                img_url = generar_placeholder_local("Terror", (1080, 1920))
-                if not img_url:
-                    img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-                ultima_imagen_url = img_url
+            print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
         
-        # 3. Generar audio para este segmento
+        # Generar audio para este segmento
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
             print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
             return None
         
-        # 4. Medir duración real del audio
+        # Medir duración real del audio
         try:
             audio_clip = AudioFileClip(audio_path)
             duracion = audio_clip.duration
@@ -627,16 +619,52 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
             print(f"    ⚠️ Error midiendo duración: {e}. Usando estimación de 10s.")
             duracion = 10.0
         
-        resultados.append({
-            "imagen_url": img_url,
+        resultados_temporales.append({
+            "imagen_url": img_url,  # Puede ser None
             "audio_path": audio_path,
             "duracion": duracion
         })
         
-        # 🔥 ESPERAR 12 SEGUNDOS ANTES DEL SIGUIENTE SEGMENTO
+        # Esperar 12 segundos antes del siguiente segmento
         if idx < len(segmentos) - 1:
             print(f"    ⏳ Esperando 12 segundos antes del siguiente segmento...")
             time.sleep(12)
+    
+    # 2. Segunda pasada: reparar imágenes fallidas usando la siguiente imagen disponible
+    print("\n  🔄 Reparando imágenes fallidas...")
+    for i, res in enumerate(resultados_temporales):
+        if res["imagen_url"] is None:
+            # Buscar la siguiente imagen disponible (hacia adelante)
+            siguiente_imagen = None
+            for j in range(i + 1, len(resultados_temporales)):
+                if resultados_temporales[j]["imagen_url"] is not None:
+                    siguiente_imagen = resultados_temporales[j]["imagen_url"]
+                    print(f"    🔄 Segmento {i+1} usando imagen del segmento {j+1}")
+                    break
+            
+            if siguiente_imagen is not None:
+                res["imagen_url"] = siguiente_imagen
+            else:
+                # Si no hay siguiente imagen, usar la anterior (si existe)
+                if i > 0 and resultados_temporales[i-1]["imagen_url"] is not None:
+                    res["imagen_url"] = resultados_temporales[i-1]["imagen_url"]
+                    print(f"    🔄 Segmento {i+1} usando imagen del segmento anterior")
+                else:
+                    # Último recurso: placeholder (solo si no hay absolutamente ninguna imagen)
+                    img_url = generar_placeholder_local("Terror", (1080, 1920))
+                    if not img_url:
+                        img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+                    res["imagen_url"] = img_url
+                    print(f"    ⚠️ Segmento {i+1}: usando placeholder (sin imágenes disponibles)")
+    
+    # 3. Construir resultados finales
+    resultados = []
+    for res in resultados_temporales:
+        resultados.append({
+            "imagen_url": res["imagen_url"],
+            "audio_path": res["audio_path"],
+            "duracion": res["duracion"]
+        })
     
     return resultados
 
