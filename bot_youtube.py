@@ -302,20 +302,24 @@ def agregar_texto_miniatura(img_path, texto_portada):
         print(f"⚠️ Error en miniatura: {e}")
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON (CORREGIDO - SIN ESCAPAR SALTOS DE LÍNEA)
+# LIMPIAR RESPUESTA JSON (CORREGIDO - TOLERA CARACTERES ESPECIALES)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
         return ""
+    # Remover bloques de marcado
     respuesta = re.sub(r"```json\s*", "", respuesta, flags=re.IGNORECASE)
     respuesta = re.sub(r"```\s*", "", respuesta)
+    
     inicio = respuesta.find("{")
     fin = respuesta.rfind("}")
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio : fin + 1]
-        # Solo limpiar comas finales
+        # Remover comas finales en objetos y arreglos
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
+        # Reemplazar saltos de línea internos por \n escapados
+        json_str = re.sub(r'(?<!\\)\r?\n', r'\\n', json_str)
         return json_str
     return respuesta
 
