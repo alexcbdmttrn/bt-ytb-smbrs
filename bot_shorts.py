@@ -216,7 +216,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
+# 🧼 LIMPIADOR DE PROMPTS (con planos amplios)
 # ================================================================
 def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -235,10 +235,13 @@ def limpiar_prompt(prompt, estilo_visual=None, paleta_color=None):
     for pattern in palabras_sucias:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
     prompt_base = re.sub(r"\s+", " ", prompt).strip()[:200]
+    # 🔥 NUEVOS MODIFICADORES: planos amplios, persona a distancia
     modificadores_calidad = (
         f", {estilo}, color palette of {paleta}, "
-        "vertical 9:16 portrait format for mobile, single solitary person, exactly one person, "
-        "clean smooth skin, natural facial complexion with light skin tone, no freckles, no blemishes, no spots, "
+        "vertical 9:16 format, wide environmental establishing shot, medium-wide shot, "
+        "subject small in frame or partially visible, scene and location as focal point, "
+        "single person, exactly one person, "
+        "clean smooth skin, natural facial complexion, no freckles, no blemishes, no spots, "
         "sharp focus, bright well-lit scene, no dark underexposed areas, no text, no watermark"
     )
     return prompt_base + modificadores_calidad
@@ -286,10 +289,9 @@ def limpiar_texto_para_audio(texto):
     return texto.strip()
 
 # ================================================================
-# GENERAR PLACEHOLDER LOCAL (evita dependencia de terceros)
+# GENERAR PLACEHOLDER LOCAL
 # ================================================================
 def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
-    """Genera una imagen placeholder local con PIL."""
     try:
         img = Image.new("RGB", size, (20, 20, 20))
         draw = ImageDraw.Draw(img)
@@ -297,7 +299,6 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
         except:
             font = ImageFont.load_default()
-        # Centrar texto
         bbox = draw.textbbox((0, 0), texto, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
@@ -312,7 +313,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# EXPANDIR TEXTO CORTO (300-360 palabras)
+# EXPANDIR TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
@@ -347,7 +348,7 @@ Devuelve SOLO el relato expandido (300-360 palabras), sin títulos ni comentario
         return texto_corto
 
 # ================================================================
-# TRUNCAR TEXTO LARGO (300-360 palabras)
+# TRUNCAR TEXTO LARGO
 # ================================================================
 def truncar_texto_largo(texto, max_palabras=340):
     palabras = texto.split()
@@ -359,7 +360,7 @@ def truncar_texto_largo(texto, max_palabras=340):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA (300-360 palabras)
+# GENERAR HISTORIA COMPLETA
 # ================================================================
 def generar_historia_completa():
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
@@ -448,7 +449,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     }
 
 # ================================================================
-# DIVIDIR TEXTO EN 3 PARTES (~100-120 palabras cada una)
+# DIVIDIR TEXTO EN 3 PARTES
 # ================================================================
 def dividir_texto(texto, n_partes=3):
     palabras = texto.split()
@@ -465,7 +466,7 @@ def dividir_texto(texto, n_partes=3):
     return partes
 
 # ================================================================
-# DIVIDIR TEXTO EN SEGMENTOS DE ~50 PALABRAS (~10 SEGUNDOS)
+# DIVIDIR TEXTO EN SEGMENTOS DE ~50 PALABRAS
 # ================================================================
 def dividir_en_segmentos(texto, palabras_por_segmento=55):
     palabras = texto.split()
@@ -479,21 +480,31 @@ def dividir_en_segmentos(texto, palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL INDIVIDUAL (con placeholder local)
+# GENERAR IMAGEN VERTICAL (CON PLANOS AMPLIOS)
 # ================================================================
 def generar_imagen_vertical(prompt, perfil_personaje=None, estado_mexico=None, estilo_visual=None, paleta_color=None, texto_segmento="", intentos=3):
     perfil = perfil_personaje or PERFIL_PERSONAJE_SHORTS
     ubicacion = estado_mexico or ESTADO_HISTORIA_SHORTS
-    if texto_segmento:
-        prompt = f"{prompt}, scene depicting: {texto_segmento[:150]}"
-    prompt_completo = f"{perfil} en {ubicacion}, {prompt}, bright cinematic lighting, intense facial expression of fear or surprise, high contrast colors, vibrant highlights, sharp focus, dramatic shadows"
+    
+    escena_desc = texto_segmento[:150] if texto_segmento else "a mysterious moment"
+    
+    # 🔥 NUEVO PROMPT: Planos amplios, persona a distancia, enfoque en el entorno
+    prompt_completo = (
+        f"Cinematic wide establishing shot, environmental scene in {ubicacion}, "
+        f"depicting: {escena_desc}. "
+        f"{perfil}, shown at a distance or from behind, small within the frame, "
+        f"NOT a close-up portrait, environment and location are the main focus, "
+        f"architecture, textures and atmosphere of the setting clearly visible, "
+        f"bright cinematic lighting, high contrast colors, sharp focus, dramatic shadows"
+    )
     prompt_limpio = limpiar_prompt(prompt_completo, estilo_visual, paleta_color)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        "negative_prompt": "oscuro, dark, underexposed, low light, heavy shadows, too dark, over-saturated reds, over-saturated oranges, piel oscura, moreno, indígena, manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections",
+        # 🔥 NEGATIVE PROMPT LIMPIO (sin términos étnicos)
+        "negative_prompt": "manchas, textura fea, deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, demacrado, freckles, blemishes, skin spots, imperfections, close-up face, portrait, headshot",
         "width": 1080,
         "height": 1920,
         "num_images": 1
@@ -529,17 +540,15 @@ def generar_imagenes_para_segmentos(segmentos, perfil, ubicacion, estilo, paleta
             intentos=intentos_por_imagen
         )
         if not img_url_or_path:
-            # Si todo falla, generar placeholder local
             img_url_or_path = generar_placeholder_local("Terror", (1080, 1920))
             if not img_url_or_path:
-                # Fallback extremo: usar una URL de placeholder conocida pero con retry
                 img_url_or_path = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
         imagenes.append(img_url_or_path)
         time.sleep(2)
     return imagenes
 
 # ================================================================
-# GENERAR AUDIO PARA UNA PARTE
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -565,7 +574,7 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO CON MÚLTIPLES IMÁGENES Y UN SOLO AUDIO (acepta rutas locales)
+# MONTAR VIDEO
 # ================================================================
 def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="short_final.mp4"):
     if not imagenes_urls_or_paths or not audio_path:
@@ -578,7 +587,6 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
     clips_video = []
     for i, img_ref in enumerate(imagenes_urls_or_paths):
         try:
-            # Si es una URL, descargar; si es ruta local, usarla directamente
             if img_ref.startswith("http"):
                 r = requests.get(img_ref, timeout=30)
                 r.raise_for_status()
@@ -586,8 +594,7 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
                 with open(img_path, "wb") as f:
                     f.write(r.content)
             else:
-                img_path = img_ref  # ruta local
-            # Ajustar tamaño
+                img_path = img_ref
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
@@ -595,7 +602,6 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
             clips_video.append(video_clip)
         except Exception as e:
             print(f"⚠️ Error procesando imagen {i}: {e}")
-            # Intentar crear placeholder local
             placeholder = generar_placeholder_local(f"Img {i+1}")
             if placeholder:
                 with Image.open(placeholder) as img:
@@ -638,7 +644,7 @@ def montar_video_shorts(imagenes_urls_or_paths, audio_path, fondo_path, salida="
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (con manejo de token expirado)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
     try:
@@ -696,7 +702,7 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas, parte):
         sys.exit(1)
 
 # ================================================================
-# LIMPIEZA DE TEMPORALES DE SHORTS
+# LIMPIEZA DE TEMPORALES
 # ================================================================
 def limpiar_temporales_shorts():
     for f in os.listdir("."):
@@ -713,13 +719,12 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN (3 PARTES, MÚLTIPLES IMÁGENES POR PARTE)
+# MAIN
 # ================================================================
 def main():
     print("🎬 Iniciando Bot de SHORTS (3 partes, imágenes cada ~10s)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Validar que existe el token de YouTube
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
         sys.exit(1)
@@ -730,7 +735,6 @@ def main():
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    # Si es Parte 1 o no hay historia guardada, generar nueva historia
     if parte_actual == 1 or not estado.get("historia"):
         print("🆕 Generando nueva historia completa (3 partes)...")
         historia_raw = generar_historia_completa()
@@ -770,7 +774,6 @@ def main():
         parte_actual = 1
         guardar_estado(estado)
 
-    # Recuperar la historia y metadatos visuales
     historia = estado["historia"]
     partes = historia.get("partes", [])
     
@@ -779,7 +782,6 @@ def main():
         estado["parte"] = 1
         estado["historia"] = None
         guardar_estado(estado)
-        # No recursión infinita, simplemente salimos y el próximo cron lo reintenta
         print("⏳ Reintenta en la próxima ejecución programada.")
         return
 
