@@ -1,5 +1,18 @@
 {
   "parte": 1,
-  "ultimo_fondo": null,
-  "historia": null
+  "ultimo_fondo": "Sunless Vault.mp3",
+  "historia": {
+    "titulo": "El misterio de Aguascalientes",
+    "partes": [
+      "La noche en Aguascalientes caía como un sudario de terciopelo negro sobre la selva, espesa y antigua, donde la humedad se adhería a la piel como una segunda membrana. El arqueólogo, un hombre de cuarenta años con las manos agrietadas por el trabajo y la mirada cansada de tanto escudriñar piedras, se detuvo en seco. Algo no andaba bien. El silencio, que antes era un telón de fondo constante, de pronto se volvió denso, casi sólido, como si el aire mismo se hubiera convertido en plomo. No se oía el canto de los grillos, ni el susurro de las hojas. Nada. Solo el latido sordo de",
+      "su propio corazón, que empezaba a golpear contra sus costillas como un animal enjaulado. De repente, el silencio se rompió. Un sonido extraño, un crujido seco y húmedo, como de huesos que se parten bajo un peso invisible, surgió de las sombras. No era el viento, que apenas respiraba entre los árboles. No era un animal, pues ningún animal de esas tierras emitía un quejido tan mecánico, tan deliberado. Era algo más. Algo que parecía arrastrarse, avanzando lentamente hacia él, mientras el olor a tierra mojada y a corteza podrida se mezclaba con un hedor metálico, a sangre vieja, que le revolvió el estómago. Pensó en",
+      "huir, pero sus piernas estaban clavadas al suelo, como si las raíces de los árboles se hubieran enredado en sus tobillos. Entonces, la figura emergió de la oscuridad. No tenía rostro, solo una superficie lisa y pálida, como mármol pulido, pero de algún modo sentía que lo miraba, que sus ojos invisibles perforaban su cráneo, leyendo sus miedos más profundos. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda, un frío que no era del aire, sino que nacía de dentro, del vientre mismo del terror. Era el miedo hecho carne, y en ese instante supo que no era un descubrimiento, sino una condena."
+    ],
+    "palabras_portada": "TERROR",
+    "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda",
+    "perfil_personaje": "a 21-year-old Mexican man, with olive skin and a strong jaw, with wavy brown shoulder-length hair, wearing a simple cotton dress and sandals",
+    "estado_mexico": "Aguascalientes",
+    "paleta_color": "Deep violet haze, electric purple ambient light, dark magenta shadows",
+    "estilo_visual": "8k resolution cinematic movie frame, ultra clear facial details, bright exposure"
+  }
 }
