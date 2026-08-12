@@ -28,12 +28,13 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install --upgrade pip
-          pip install "Pillow<10.0.0"         # Fijado para compatibilidad con moviepy 1.0.3
+          pip install "Pillow<10.0.0"
           pip install moviepy==1.0.3
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           pip install edge-tts
+          pip install json5
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core   # Fuentes para miniatura
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
 
       - name: Verificar instalación
         run: |
@@ -41,6 +42,7 @@ jobs:
           python -c "from moviepy.editor import ImageClip; print('ImageClip OK')"
           python -c "import PIL; print('Pillow OK')"
           python -c "import edge_tts; print('edge-tts OK')"
+          python -c "import json5; print('json5 OK')"
 
       - name: Ejecutar bot de YouTube
         env:
