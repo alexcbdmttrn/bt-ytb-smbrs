@@ -268,7 +268,9 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        # ✅ ELIMINADA la línea que escapaba saltos de línea
+        # ✅ NO se escapan saltos de línea aquí: json.loads(strict=False) ya
+        # tolera saltos de línea literales dentro de las cadenas, y hacerlo
+        # manualmente corrompe la estructura del JSON.
         return json_str
     return respuesta
 
@@ -360,6 +362,7 @@ def expandir_texto_corto(texto_corto, ubicacion, personaje):
 Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
 y más detalles del entorno en {ubicacion}.
 Mantén la trama exactamente igual, solo añade contenido donde sea natural.
+NO agregues ningún llamado a suscribirse ni CTA — solo la narración pura.
 
 RELATO ORIGINAL (debe expandirse):
 {texto_corto}
@@ -399,7 +402,8 @@ def truncar_texto_largo(texto, max_palabras=300):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA (SIN FALLBACK)
+# GENERAR HISTORIA COMPLETA — CON SEO EXPERTO 2026 (título, tags
+# long-tail y descripción estructurada), SIN FALLBACK HARDCODEADO
 # ================================================================
 def generar_historia_completa():
     hashtags_disponibles = [
@@ -408,9 +412,12 @@ def generar_historia_completa():
         "#escalofrio", "#noche", "#pueblo", "#casasembrujadas", "#relatos",
         "#brujas", "#aparicion", "#almas", "#pena", "#real"
     ]
-    tags_titulo = " ".join(random.sample(hashtags_disponibles, 2))
-    
-    prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
+    # Los hashtags ya NO van en el título (SEO 2026): se arman aparte para
+    # colocarlos al final de la descripción, con #Shorts siempre primero.
+    hashtags_elegidos = random.sample(hashtags_disponibles, 3)
+    hashtags_descripcion_base = "#Shorts " + " ".join(hashtags_elegidos)
+
+    prompt = f"""Eres un EXPERTO EN STORYTELLING Y SEO PARA YOUTUBE SHORTS de nivel élite.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 La historia debe tener EXACTAMENTE entre 280 y 320 palabras (NO más de 320, NO menos de 280) y debe ser UNA HISTORIA COMPLETA Y AUTOCONCLUSIVA:
 - Tiene INICIO (presenta al personaje y la situación).
@@ -421,32 +428,45 @@ Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA:
 "{PERFIL_PERSONAJE_SHORTS}"
 
-REGLAS DEL TÍTULO:
-- Debe ser DESCRIPTIVO y LLAMATIVO, NO genérico.
-- Debe tener EXACTAMENTE entre 6 y 7 palabras (sin contar los hashtags).
-- Debe dar CONTEXTO de lo que pasó en la historia.
-- Ejemplo: "Las brujas de la visnaga me atraparon una noche"
-- Al final del título, DEBE incluir estos dos hashtags exactamente: {tags_titulo}
+REGLAS DEL TÍTULO (SEO 2026 — NO incluyas hashtags en este campo):
+- Longitud: entre 60 y 80 caracteres (caracteres, no palabras).
+- La PALABRA CLAVE PRINCIPAL debe ir AL INICIO del título (front-loaded para búsqueda).
+- Debe sonar natural y descriptivo, NO relleno de palabras clave forzado ni clickbait vacío.
+- Debe dar CONTEXTO real de lo que pasó en la historia (lugar + fenómeno concreto).
+- Ejemplo de longitud correcta (66 caracteres): "La bruja del panteón de Aguascalientes me siguió hasta mi casa"
+- Mal ejemplo (genérico, corto): "El misterio de Quintana Roo"
 
-REGLAS DE INICIO:
-- La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
+REGLAS DE DESCRIPCIÓN (SEO 2026):
+- "gancho_descripcion": UNA sola línea de MÁXIMO 100 caracteres que genere curiosidad de clic. Es lo único visible antes del corte "Mostrar más" en YouTube, así que debe funcionar solo, SIN ser el inicio literal de la narración ni spoilear el final.
+- "contexto_descripcion": 1-2 oraciones con contexto y palabras clave relacionadas al lugar y tipo de fenómeno paranormal, redactadas de forma natural (no relleno de keywords).
+
+REGLAS DE ETIQUETAS (SEO 2026 — campo "tags"):
+- Genera entre 10 y 15 etiquetas como FRASES long-tail específicas de ESTA historia, NO palabras sueltas genéricas.
+- Mezcla 2-3 etiquetas amplias de descubrimiento con 7-12 etiquetas específicas de nicho (lugar exacto, tipo de aparición, elemento concreto de la trama).
+- El total de caracteres de todas las etiquetas combinadas no debe superar los 480 caracteres.
+- Mal ejemplo: "terror, shorts, mexico, miedo, paranormal"
+- Buen ejemplo: "leyendas urbanas mexicanas, hacienda embrujada jalisco, relatos de terror reales, fantasmas en haciendas antiguas, testimonios paranormales mexico"
+
+REGLAS DE INICIO DEL RELATO (campo "texto_completo"):
+- La PRIMERA FRASE debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
+- Ejemplo: "Esa noche no estaba solo."
 
 REGLAS DE CONTENIDO:
-- Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español.
+- Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
 - Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
 - Resolución: final claro, cerrando la historia sin preguntas abiertas.
 - ANTI-REPETICIÓN: NO repitas frases.
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-- CTA OBLIGATORIO al final: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
-
-ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de las etiquetas debe superar los 200 caracteres.
+- IMPORTANTE: el campo "texto_completo" NO debe incluir ningún llamado a suscribirse ni CTA — eso se agrega aparte en la descripción del video, no en la narración.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título de 6-7 palabras descriptivo + {tags_titulo}",
-  "texto_completo": "Historia completa de 280-320 palabras...",
+  "titulo": "Título de 60-80 caracteres, SIN hashtags, palabra clave al inicio",
+  "gancho_descripcion": "Primera línea de máximo 100 caracteres, gancho de clic",
+  "contexto_descripcion": "1-2 oraciones con contexto y palabras clave naturales",
+  "texto_completo": "Historia completa de 280-320 palabras, con gancho impactante en la primera frase, SIN CTA de suscripción",
   "palabras_portada": "PALABRA CLAVE",
-  "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
+  "tags": "tag long-tail 1, tag long-tail 2, ... (10-15 tags en total, máx 480 caracteres combinados)"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -455,24 +475,24 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.6,
-        "max_tokens": 1000,
+        "max_tokens": 1100,
         "response_format": {"type": "json_object"}
     }
-    
+
     for intento in range(6):
         try:
             print(f"🔄 Intento {intento+1}/6 generando historia...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
-            
+
             finish_reason = r.json()["choices"][0].get("finish_reason", "unknown")
             print(f"   📊 finish_reason: {finish_reason}")
-            
+
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             print(f"   📝 Respuesta cruda (primeros 300 chars): {respuesta[:300]}...")
-            
+
             json_str = limpiar_respuesta_json(respuesta)
-            
+
             try:
                 data = json.loads(json_str, strict=False)
                 print("   ✅ JSON parseado correctamente con json.loads")
@@ -488,39 +508,77 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 except Exception as e2:
                     print(f"   ❌ json5 también falló: {e2}")
                     raise
-            
+
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto o campo faltante")
-            
+
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
-            
+
+            # ---- VALIDACIÓN DE TÍTULO (60-80 caracteres, sin hashtags) ----
             titulo = data.get("titulo", "").strip()
-            if tags_titulo not in titulo:
-                titulo = f"{titulo} {tags_titulo}"
+            titulo = re.sub(r'#\w+', '', titulo).strip()  # por si el modelo coló un hashtag
             titulo = ' '.join(titulo.split())
-            palabras_titulo = re.sub(r'#\w+', '', titulo).strip().split()
-            if len(palabras_titulo) < 6:
-                titulo = f"{titulo} | Relato de Terror"
+            if len(titulo) < 40:
+                titulo = f"{titulo} - Testimonio real de terror en {ESTADO_HISTORIA_SHORTS}"
+            if len(titulo) > 95:
+                recorte = titulo[:92].rsplit(' ', 1)[0]
+                titulo = recorte + "..."
             data["titulo"] = titulo
-            
-            tags = data.get("tags", "")
-            tags_list = [t.strip() for t in tags.split(",") if t.strip()]
-            if len(tags_list) < 20:
-                extras = ["terror", "shorts", "mexico", "paranormal", "miedo", "relatos", "leyendas", "misterio", "suspenso", "noche", "oscuridad", "sombras", "aparicion", "escalofrio", "casas", "embrujadas", "pueblo", "real", "historias", "leyenda"]
-                while len(tags_list) < 20:
-                    tags_list.append(random.choice(extras))
-            data["tags"] = ", ".join(tags_list[:20])
-            
+
+            # ---- VALIDACIÓN DE GANCHO Y CONTEXTO DE DESCRIPCIÓN ----
+            gancho = data.get("gancho_descripcion", "").strip()
+            if not gancho or len(gancho) > 110:
+                gancho = f"Esto fue lo que viví en {ESTADO_HISTORIA_SHORTS} y nunca pude explicar"[:100]
+            data["gancho_descripcion"] = gancho
+
+            contexto = data.get("contexto_descripcion", "").strip()
+            if not contexto:
+                contexto = f"Un testimonio real de fenómenos paranormales ocurrido en {ESTADO_HISTORIA_SHORTS}, México."
+            data["contexto_descripcion"] = contexto
+
+            # ---- VALIDACIÓN DE TAGS LONG-TAIL (10-15, máx 480 chars) ----
+            tags_raw = data.get("tags", "")
+            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
+            tags_list = tags_list[:15]
+
+            extras_long_tail = [
+                f"relatos de terror en {ESTADO_HISTORIA_SHORTS.lower()}",
+                "leyendas urbanas mexicanas",
+                "historias paranormales reales",
+                "testimonios de terror mexico",
+                "fenomenos paranormales reales",
+                "relatos cortos de miedo",
+                "historias de fantasmas mexico",
+            ]
+            i = 0
+            while len(tags_list) < 10 and i < len(extras_long_tail):
+                if extras_long_tail[i] not in tags_list:
+                    tags_list.append(extras_long_tail[i])
+                i += 1
+
+            tags_final = []
+            total_chars = 0
+            for t in tags_list:
+                costo = len(t) + 2  # +2 por ", "
+                if total_chars + costo > 480:
+                    break
+                tags_final.append(t)
+                total_chars += costo
+            data["tags"] = ", ".join(tags_final)
+
+            # ---- HASHTAGS DE DESCRIPCIÓN (elegidos por el script, no por la IA) ----
+            data["hashtags_descripcion"] = hashtags_descripcion_base
+
             return data
-            
+
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
                 espera = 10 + intento * 5
                 print(f"⏳ Esperando {espera}s antes de reintentar...")
                 time.sleep(espera)
-    
+
     print("❌ TODOS LOS INTENTOS DE GENERACIÓN FALLARON.")
     print("   No se pudo generar una historia válida con DeepSeek.")
     print("   Abortando ejecución para evitar publicar contenido genérico.")
@@ -620,13 +678,13 @@ def generar_imagen_vertical(prompt, intentos=3):
 # ================================================================
 def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
-    
+
     for idx, seg in enumerate(segmentos):
         print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)}...")
-        
+
         prompt_imagen = generar_prompt_imagen_segmento(seg, perfil, ubicacion, estilo, paleta)
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
-        
+
         img_url = None
         for intento in range(intentos_por_imagen):
             try:
@@ -639,15 +697,15 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
             if intento < intentos_por_imagen - 1:
                 print(f"    ⏳ Reintentando imagen...")
                 time.sleep(6)
-        
+
         if not img_url:
             print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
-        
+
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
             print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
             return None
-        
+
         try:
             audio_clip = AudioFileClip(audio_path)
             duracion = audio_clip.duration
@@ -655,17 +713,17 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
         except Exception as e:
             print(f"    ⚠️ Error midiendo duración: {e}. Usando estimación de 10s.")
             duracion = 10.0
-        
+
         resultados_temporales.append({
             "imagen_url": img_url,
             "audio_path": audio_path,
             "duracion": duracion
         })
-        
+
         if idx < len(segmentos) - 1:
             print(f"    ⏳ Esperando 12 segundos antes del siguiente segmento...")
             time.sleep(12)
-    
+
     print("\n  🔄 Reparando imágenes fallidas...")
     for i, res in enumerate(resultados_temporales):
         if res["imagen_url"] is None:
@@ -675,7 +733,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
                     siguiente_imagen = resultados_temporales[j]["imagen_url"]
                     print(f"    🔄 Segmento {i+1} usando imagen del segmento {j+1}")
                     break
-            
+
             if siguiente_imagen is not None:
                 res["imagen_url"] = siguiente_imagen
             else:
@@ -688,7 +746,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
                         img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
                     res["imagen_url"] = img_url
                     print(f"    ⚠️ Segmento {i+1}: usando placeholder")
-    
+
     return resultados_temporales
 
 # ================================================================
@@ -698,16 +756,16 @@ def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_caracteres_para_tts(texto_limpio)
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
-    
+
     if len(texto_limpio) < 30:
         print(f"⚠️ Texto corto ({len(texto_limpio)} caracteres). Rellenando...")
         texto_limpio = "Esa noche en la carretera, el silencio era tan denso que podía cortarse con un cuchillo. El miedo lo envolvía todo. No podía escapar."
-    
+
     if not texto_limpio:
         return None
 
     filename = f"audio_short_{index}.mp3"
-    
+
     voces_a_probar = []
     for v in VOCES_DISPONIBLES:
         if v["voz"] == "es-MX-JorgeNeural":
@@ -716,7 +774,7 @@ def generar_audio(texto, index, intentos=4):
     for v in VOCES_DISPONIBLES:
         if v["voz"] != "es-MX-JorgeNeural":
             voces_a_probar.append(v)
-    
+
     print(f"🔊 Generando audio para segmento {index}...")
 
     for intento, config_voz in enumerate(voces_a_probar[:intentos]):
@@ -758,22 +816,22 @@ def generar_audio(texto, index, intentos=4):
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
         raise ValueError("No hay recursos para montar el video")
-    
+
     clips_video = []
     clips_audio = []
-    
+
     for i, recurso in enumerate(recursos_por_segmento):
         img_url = recurso["imagen_url"]
         audio_path = recurso["audio_path"]
         duracion = recurso["duracion"]
-        
+
         try:
             audio_clip = AudioFileClip(audio_path)
             clips_audio.append(audio_clip)
         except Exception as e:
             print(f"⚠️ Error cargando audio segmento {i}: {e}")
             raise ValueError(f"Fallo al cargar audio del segmento {i}")
-        
+
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -783,11 +841,11 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
                     f.write(r.content)
             else:
                 img_path = img_url
-            
+
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
-            
+
             video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
         except Exception as e:
@@ -801,14 +859,14 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
                 clips_video.append(video_clip)
             else:
                 continue
-    
+
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
-    
+
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
     duracion_total = audio_narracion.duration
-    
+
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -822,10 +880,10 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
-    
+
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
-    
+
     video.close()
     audio_final.close()
     audio_narracion.close()
@@ -835,14 +893,15 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         a.close()
     if 'fondo_clip' in locals():
         fondo_clip.close()
-    
+
     print(f"✅ Short vertical creado: {salida}")
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE — DESCRIPCIÓN CON ESTRUCTURA SEO (gancho + contexto
+# + CTA + hashtags al final, empezando siempre con #Shorts)
 # ================================================================
-def subir_a_youtube(video_path, titulo, texto_corto, etiquetas):
+def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -854,18 +913,20 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas):
 
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
-    
-    cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror."
-    
-    descripcion = f"""📌 {texto_corto[:150]}...
+
+    cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror reales."
+
+    descripcion = f"""{gancho_descripcion}
+
+{contexto_descripcion}
 
 {cta_texto}
 
 🔴 SUSCRÍBETE: {CANAL_LINK}
 📱 Facebook: {FACEBOOK_LINK}
 
-#Shorts #Terror #LeyendasMexicanas {' '.join(['#'+t for t in etiquetas])} #RelatosDeTerror #Paranormal"""
-    
+{hashtags_descripcion}"""
+
     body = {
         "snippet": {
             "title": titulo,
@@ -912,37 +973,37 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (standalone - historias independientes)")
+    print("🎬 Iniciando Bot de SHORTS (standalone + SEO experto 2026)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
+
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
         sys.exit(1)
-    
+
     publicadas_hoy = obtener_publicaciones_hoy()
     if publicadas_hoy >= META_DIARIA_SHORTS:
         print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Esta ejecución no es necesaria. Saliendo.")
         sys.exit(0)
-    
+
     estado = cargar_estado()
     print(f"📌 Estado cargado: {estado}")
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    print("🆕 Generando nueva historia completa (standalone)...")
+    print("🆕 Generando nueva historia completa (standalone, con SEO)...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
         sys.exit(1)
-        
+
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
-    
+
     if palabras < 230:
         print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
         texto_completo = expandir_texto_corto(
-            texto_completo, 
-            ESTADO_HISTORIA_SHORTS, 
+            texto_completo,
+            ESTADO_HISTORIA_SHORTS,
             PERSONAJE_SHORTS
         )
     elif palabras > 340:
@@ -955,6 +1016,8 @@ def main():
     estilo = ESTILO_VISUAL_ACTUAL
 
     print(f"📖 Procesando historia ({len(texto_completo.split())} palabras)...")
+    print(f"🏷️ Título SEO ({len(historia_raw['titulo'])} chars): {historia_raw['titulo']}")
+    print(f"🏷️ Tags: {historia_raw['tags']}")
 
     segmentos = dividir_en_segmentos(texto_completo, palabras_por_segmento=55)
     print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
@@ -967,11 +1030,11 @@ def main():
         paleta=paleta,
         intentos_por_imagen=3
     )
-    
+
     if not recursos:
         print("❌ Error generando recursos para los segmentos. Abortando.")
         sys.exit(1)
-    
+
     try:
         video_final = montar_video_shorts(
             recursos_por_segmento=recursos,
@@ -986,8 +1049,10 @@ def main():
     subir_a_youtube(
         video_path=video_final,
         titulo=historia_raw["titulo"],
-        texto_corto=texto_completo,
-        etiquetas=historia_raw["tags"]
+        etiquetas=historia_raw["tags"],
+        gancho_descripcion=historia_raw["gancho_descripcion"],
+        contexto_descripcion=historia_raw["contexto_descripcion"],
+        hashtags_descripcion=historia_raw["hashtags_descripcion"]
     )
 
     incrementar_publicaciones_hoy()
