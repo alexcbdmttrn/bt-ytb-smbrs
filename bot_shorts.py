@@ -38,7 +38,7 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
 
 # ================================================================
-# 🎤 BANCO DE 12 VOCES (1.05x)
+# 🎤 BANCO DE VOCES (CandelaNeural eliminada por problemas)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-2Hz"},
@@ -51,9 +51,12 @@ VOCES_DISPONIBLES = [
     {"voz": "es-PE-CamilaNeural", "velocidad": "+5%", "tono": "+0Hz"},
     {"voz": "es-US-PalomaNeural", "velocidad": "+5%", "tono": "-1Hz"},
     {"voz": "es-ES-XimenaNeural", "velocidad": "+5%", "tono": "+1Hz"},
-    {"voz": "es-MX-CandelaNeural", "velocidad": "+5%", "tono": "-3Hz"},
     {"voz": "es-ES-AbrilNeural", "velocidad": "+5%", "tono": "-2Hz"},
+    # CandelaNeural eliminada porque siempre falla en este entorno
+    # {"voz": "es-MX-CandelaNeural", "velocidad": "+5%", "tono": "-3Hz"},
 ]
+# Ordenar para que JorgeNeural sea el primero (más confiable)
+VOCES_DISPONIBLES.sort(key=lambda x: 0 if x["voz"] == "es-MX-JorgeNeural" else 1)
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
@@ -217,7 +220,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (PLANOS AMPLIOS) - Se usa solo como base
+# 🧼 LIMPIADOR DE PROMPTS (PLANOS AMPLIOS)
 # ================================================================
 def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -250,7 +253,6 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
 # 🧹 LIMPIAR CARACTERES ESPECIALES PARA TTS
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
-    """Elimina caracteres especiales que edge-tts leería en voz alta (ej: *, -, _, [, ], etc.)."""
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
     texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
@@ -278,7 +280,6 @@ def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # Soporte para estado antiguo: extraer solo ultimo_fondo si existe
             return {"ultimo_fondo": data.get("ultimo_fondo")}
     except Exception:
         return {"ultimo_fondo": None}
@@ -289,7 +290,7 @@ def guardar_estado(estado):
     print("✅ Estado de Shorts guardado (solo música)")
 
 # ================================================================
-# 🧹 LIMPIAR TEXTO PARA AUDIO (base)
+# 🧹 LIMPIAR TEXTO PARA AUDIO
 # ================================================================
 def limpiar_texto_para_audio(texto):
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
@@ -324,7 +325,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# EXPANDIR TEXTO CORTO (fallback si DeepSeek da menos de 300 palabras)
+# EXPANDIR TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
@@ -371,30 +372,37 @@ def truncar_texto_largo(texto, max_palabras=340):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA STANDALONE COMPLETA (300-360 palabras, sin cliffhanger)
+# GENERAR HISTORIA (CON TÍTULO DE 50-70 CARACTERES + HASHTAGS)
 # ================================================================
 def generar_historia_completa():
+    # Hashtags aleatorios para incluir en el título
+    hashtags_disponibles = [
+        "#paranormal", "#terror", "#misterio", "#suspenso", "#leyendasurbanas",
+        "#miedo", "#sobrenatural", "#oscuridad", "#fantasma", "#espanto",
+        "#escalofrio", "#noche", "#pueblo", "#casasembrujadas", "#relatos"
+    ]
+    tags_titulo = " ".join(random.sample(hashtags_disponibles, 2))
+    
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 La historia debe tener EXACTAMENTE entre 300 y 360 palabras (NO más de 360, NO menos de 300) y debe ser UNA HISTORIA COMPLETA Y AUTOCONCLUSIVA:
 - Tiene INICIO (presenta al personaje y la situación).
 - Tiene DESARROLLO (construye tensión, describe sonidos, olores, sensaciones).
 - Tiene RESOLUCIÓN FINAL (cierra la historia completamente, sin cliffhanger ni cabos sueltos).
-- NO debe terminar en suspenso ni dejar nada sin resolver.
 Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
-DESCRIPCIÓN FÍSICA DEL PROTAGONISTA (ÚNICA PARA ESTE SHORT):
+DESCRIPCIÓN FÍSICA DEL PROTAGONISTA:
 "{PERFIL_PERSONAJE_SHORTS}"
 
 REGLAS DE TÍTULO (IMPORTANTE PARA CTR):
 - Debe ser DESCRIPTIVO y DIRECTO. Sin metáforas confusas.
 - Debe decir EXACTAMENTE de qué trata el video.
-- Entre 50 y 70 caracteres exactos. (MÍNIMO 50 CARACTERES)
+- Entre 50 y 70 caracteres exactos (MÍNIMO 50, MÁXIMO 70).
+- Al final del título, DEBE incluir estos dos hashtags exactamente: {tags_titulo}
+- Ejemplo: "Cosas que ocurren en el panteón de Tlaxcala 💀 #paranormal #terror"
 
 REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
 - La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
-- Ejemplo: "Esa noche no estaba solo."
-- Ejemplo: "El manicomio guardaba un secreto."
 
 REGLAS DE CONTENIDO:
 - Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
@@ -408,8 +416,8 @@ ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de la
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título descriptivo y directo de 50-70 caracteres",
-  "texto_completo": "Historia completa de 300-360 palabras... (con la primera frase como gancho y resolución final)",
+  "titulo": "Título descriptivo de 50-70 caracteres + {tags_titulo}",
+  "texto_completo": "Historia completa de 300-360 palabras...",
   "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
@@ -436,12 +444,16 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
             
-            # 🔥 TÍTULO MÍNIMO 50 CARACTERES
+            # 🔥 TÍTULO: mínimo 50 caracteres + hashtags
             titulo = data.get("titulo", "").strip()
+            # Asegurar que el título incluya los hashtags (por si DeepSeek los omite)
+            if tags_titulo not in titulo:
+                titulo = f"{titulo} {tags_titulo}"
             if len(titulo) < 50:
-                data["titulo"] = f"{titulo} | Relato de Terror en México"[:70]
+                titulo = f"{titulo} | Relato de Terror {tags_titulo}"[:70]
             elif len(titulo) > 70:
-                data["titulo"] = titulo[:67] + "..."
+                titulo = titulo[:67] + "..."
+            data["titulo"] = titulo
             
             tags = data.get("tags", "")
             tags_list = [t.strip() for t in tags.split(",") if t.strip()]
@@ -458,7 +470,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     print("⚠️ Creando fallback manual...")
     texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne."
     return {
-        "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS} | Relato de Terror",
+        "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS} {tags_titulo}",
         "texto_completo": texto_fallback,
         "palabras_portada": "TERROR",
         "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
@@ -479,10 +491,9 @@ def dividir_en_segmentos(texto, palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# 🔥 GENERAR PROMPT DE IMAGEN POR SEGMENTO (DeepSeek)
+# GENERAR PROMPT DE IMAGEN POR SEGMENTO
 # ================================================================
 def generar_prompt_imagen_segmento(segmento_texto, perfil, ubicacion, estilo_visual, paleta_color):
-    """Usa DeepSeek para interpretar el segmento y generar un prompt específico."""
     prompt = f"""Eres un director de fotografía experto en composición cinematográfica.
 Interpreta el siguiente fragmento de un relato de terror y genera un PROMPT DE IMAGEN EN INGLÉS para una foto vertical (9:16) que represente la escena exacta.
 
@@ -494,17 +505,14 @@ Fragmento del relato:
 Reglas estrictas de composición:
 - PLANO: Wide shot o extreme wide shot. PROHIBIDO close-up, portrait, headshot, medium shot ajustado.
 - Enfoque principal: el ENTORNO, la ARQUITECTURA, los OBJETOS o la ATMÓSFERA mencionados en el fragmento.
-- Si el fragmento menciona al personaje actuando o reaccionando, inclúyelo pero SIEMPRE:
-  - Ocupando como MÁXIMO el 20% del área total de la imagen.
-  - A distancia, de espaldas, de perfil lejano o silueteado.
-  - NUNCA mirando directo a cámara, NUNCA cerca del lente.
-- Si el fragmento describe solo ambiente (sonidos, olores, objetos), NO incluyas personas en la imagen.
+- Si el fragmento menciona al personaje actuando o reaccionando, inclúyelo pero SIEMPRE ocupando como MÁXIMO el 20% del área total, a distancia, de espaldas, de perfil lejano o silueteado.
+- Si el fragmento describe solo ambiente, NO incluyas personas en la imagen.
 - Estilo: professional hyperrealistic photography, 4k, ultra-detailed, natural/ambient lighting, sharp focus on textures.
 - Paleta de color: {paleta_color}
-- Personaje (si aparece): apariencia normal y agradable, piel sana, expresión neutra o de leve tensión, bien cuidado.
+- Personaje (si aparece): apariencia normal y agradable, piel sana, expresión neutra o de leve tensión.
 - Restricciones explícitas al final: "no close-up face, no portrait, no headshot, no face filling frame, person occupies max 20% of frame, environment and scene as main focus, no gore, no blood, no disfigurement, no gaunt or emaciated features, pleasant natural human appearance".
 
-Devuelve SOLO el prompt en inglés, sin explicaciones ni introducciones.
+Devuelve SOLO el prompt en inglés, sin explicaciones.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -525,7 +533,7 @@ Devuelve SOLO el prompt en inglés, sin explicaciones ni introducciones.
         return f"Wide establishing shot of {ubicacion}, depicting: {segmento_texto[:100]}, {estilo_visual}, vertical 9:16, no close-up face, environment as main subject"
 
 # ================================================================
-# GENERAR IMAGEN VERTICAL (con negative_prompt mejorado)
+# GENERAR IMAGEN VERTICAL
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
@@ -558,22 +566,17 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 🔥 GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN DE IMAGEN POSTERIOR)
+# GENERAR RECURSOS POR SEGMENTO
 # ================================================================
 def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
-    """Genera una imagen y un audio para cada segmento. Si una imagen falla, usa la siguiente imagen generada."""
-    
-    # 1. Primera pasada: generar todos los recursos, guardando resultados temporales
     resultados_temporales = []
     
     for idx, seg in enumerate(segmentos):
         print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)}...")
         
-        # Generar prompt específico para este segmento
         prompt_imagen = generar_prompt_imagen_segmento(seg, perfil, ubicacion, estilo, paleta)
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
         
-        # Generar imagen (con reintentos)
         img_url = None
         for intento in range(intentos_por_imagen):
             try:
@@ -587,17 +590,14 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
                 print(f"    ⏳ Reintentando imagen...")
                 time.sleep(6)
         
-        # Si falló, guardamos None (se resolverá después)
         if not img_url:
             print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
         
-        # Generar audio para este segmento
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
             print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
             return None
         
-        # Medir duración real del audio
         try:
             audio_clip = AudioFileClip(audio_path)
             duracion = audio_clip.duration
@@ -607,21 +607,18 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
             duracion = 10.0
         
         resultados_temporales.append({
-            "imagen_url": img_url,  # Puede ser None
+            "imagen_url": img_url,
             "audio_path": audio_path,
             "duracion": duracion
         })
         
-        # Esperar 12 segundos antes del siguiente segmento
         if idx < len(segmentos) - 1:
             print(f"    ⏳ Esperando 12 segundos antes del siguiente segmento...")
             time.sleep(12)
     
-    # 2. Segunda pasada: reparar imágenes fallidas usando la siguiente imagen disponible
     print("\n  🔄 Reparando imágenes fallidas...")
     for i, res in enumerate(resultados_temporales):
         if res["imagen_url"] is None:
-            # Buscar la siguiente imagen disponible (hacia adelante)
             siguiente_imagen = None
             for j in range(i + 1, len(resultados_temporales)):
                 if resultados_temporales[j]["imagen_url"] is not None:
@@ -632,31 +629,20 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
             if siguiente_imagen is not None:
                 res["imagen_url"] = siguiente_imagen
             else:
-                # Si no hay siguiente imagen, usar la anterior (si existe)
                 if i > 0 and resultados_temporales[i-1]["imagen_url"] is not None:
                     res["imagen_url"] = resultados_temporales[i-1]["imagen_url"]
                     print(f"    🔄 Segmento {i+1} usando imagen del segmento anterior")
                 else:
-                    # Último recurso: placeholder (solo si no hay absolutamente ninguna imagen)
                     img_url = generar_placeholder_local("Terror", (1080, 1920))
                     if not img_url:
                         img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
                     res["imagen_url"] = img_url
-                    print(f"    ⚠️ Segmento {i+1}: usando placeholder (sin imágenes disponibles)")
+                    print(f"    ⚠️ Segmento {i+1}: usando placeholder")
     
-    # 3. Construir resultados finales
-    resultados = []
-    for res in resultados_temporales:
-        resultados.append({
-            "imagen_url": res["imagen_url"],
-            "audio_path": res["audio_path"],
-            "duracion": res["duracion"]
-        })
-    
-    return resultados
+    return resultados_temporales
 
 # ================================================================
-# GENERAR AUDIO CON REINTENTOS, BACKOFF Y FALLBACK gTTS
+# GENERAR AUDIO (CON JORGENEURAL COMO PRIORIDAD)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -671,10 +657,19 @@ def generar_audio(texto, index, intentos=4):
         return None
 
     filename = f"audio_short_{index}.mp3"
-    voces_a_probar = [CONFIG_VOZ_ACTUAL] + [
-        v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]
-    ]
-
+    
+    # Priorizar JorgeNeural (más confiable) y luego las demás
+    voces_a_probar = []
+    # Primero JorgeNeural (la que funcionó)
+    for v in VOCES_DISPONIBLES:
+        if v["voz"] == "es-MX-JorgeNeural":
+            voces_a_probar.append(v)
+            break
+    # Luego las demás (excluyendo JorgeNeural para no repetir)
+    for v in VOCES_DISPONIBLES:
+        if v["voz"] != "es-MX-JorgeNeural":
+            voces_a_probar.append(v)
+    
     print(f"🔊 Generando audio para segmento {index}...")
 
     for intento, config_voz in enumerate(voces_a_probar[:intentos]):
@@ -711,7 +706,7 @@ def generar_audio(texto, index, intentos=4):
         return None
 
 # ================================================================
-# MONTAR VIDEO CON SINCRONÍA REAL (usando duraciones exactas)
+# MONTAR VIDEO
 # ================================================================
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
@@ -813,7 +808,6 @@ def subir_a_youtube(video_path, titulo, texto_corto, etiquetas):
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
-    # CTA FIJO (sin condicional de parte)
     cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror."
     
     descripcion = f"""📌 {texto_corto[:150]}...
@@ -868,7 +862,7 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN (FLUJO SIMPLIFICADO: historia standalone por ejecución)
+# MAIN
 # ================================================================
 def main():
     print("🎬 Iniciando Bot de SHORTS (standalone - historias independientes)")
@@ -878,13 +872,11 @@ def main():
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
         sys.exit(1)
     
-    # Cargar estado (solo ultimo_fondo)
     estado = cargar_estado()
     print(f"📌 Estado cargado (música): {estado}")
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    # Generar nueva historia standalone (siempre)
     print("🆕 Generando nueva historia completa (standalone)...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
@@ -912,7 +904,6 @@ def main():
 
     print(f"📖 Procesando historia ({len(texto_completo.split())} palabras)...")
 
-    # Dividir en segmentos (~55 palabras)
     segmentos = dividir_en_segmentos(texto_completo, palabras_por_segmento=55)
     print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
 
@@ -947,7 +938,6 @@ def main():
         etiquetas=historia_raw["tags"]
     )
 
-    # Guardar solo ultimo_fondo
     guardar_estado(estado)
     limpiar_temporales_shorts()
     print("✨ Ejecución del Bot finalizada con éxito.")
