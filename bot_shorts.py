@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
 import gtts
+import pytz  # <--- NUEVO para zona horaria
 
 # ================================================================
 # CONFIGURACIÓN
@@ -36,9 +37,10 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 ESTADO_FILE = "estado_shorts.json"
+META_DIARIA_SHORTS = 3  # <--- NUEVO: meta diaria
 
 # ================================================================
-# 🎤 BANCO DE VOCES (CandelaNeural eliminada por problemas)
+# 🎤 BANCO DE VOCES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-2Hz"},
@@ -52,15 +54,12 @@ VOCES_DISPONIBLES = [
     {"voz": "es-US-PalomaNeural", "velocidad": "+5%", "tono": "-1Hz"},
     {"voz": "es-ES-XimenaNeural", "velocidad": "+5%", "tono": "+1Hz"},
     {"voz": "es-ES-AbrilNeural", "velocidad": "+5%", "tono": "-2Hz"},
-    # CandelaNeural eliminada porque siempre falla en este entorno
-    # {"voz": "es-MX-CandelaNeural", "velocidad": "+5%", "tono": "-3Hz"},
 ]
-# Ordenar para que JorgeNeural sea el primero (más confiable)
 VOCES_DISPONIBLES.sort(key=lambda x: 0 if x["voz"] == "es-MX-JorgeNeural" else 1)
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS REORDENADAS (60% FRÍAS / 40% CÁLIDAS)
+# 🎨 PALETAS REORDENADAS
 # ================================================================
 PALETAS_COLOR = [
     "Cold cyan blue fog, navy blue shadows, pale white moonlight",
@@ -83,7 +82,7 @@ PALETAS_COLOR = [
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES CON ILUMINACIÓN CLARA
+# 📷 ESTILOS VISUALES
 # ================================================================
 ESTILOS_VISUALES = [
     "Clean 35mm film photograph, bright cinematic lighting, well-lit scene, sharp focus",
@@ -184,7 +183,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO CON PERSISTENCIA
+# 🎵 AUDIO DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -220,7 +219,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (PLANOS AMPLIOS)
+# 🧼 LIMPIADOR DE PROMPTS
 # ================================================================
 def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -274,20 +273,51 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🗂️ ESTADO DE SHORTS (SOLO "ultimo_fondo")
+# 🗂️ ESTADO DE SHORTS (ahora con publicaciones_hoy)
 # ================================================================
 def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return {"ultimo_fondo": data.get("ultimo_fondo")}
+            # Asegurar que exista el campo publicaciones_hoy
+            if "publicaciones_hoy" not in data:
+                data["publicaciones_hoy"] = None
+            return data
     except Exception:
-        return {"ultimo_fondo": None}
+        return {"ultimo_fondo": None, "publicaciones_hoy": None}
 
 def guardar_estado(estado):
     with open(ESTADO_FILE, "w", encoding="utf-8") as f:
-        json.dump({"ultimo_fondo": estado.get("ultimo_fondo")}, f, indent=2, ensure_ascii=False)
-    print("✅ Estado de Shorts guardado (solo música)")
+        json.dump({
+            "ultimo_fondo": estado.get("ultimo_fondo"),
+            "publicaciones_hoy": estado.get("publicaciones_hoy")
+        }, f, indent=2, ensure_ascii=False)
+    print("✅ Estado de Shorts guardado")
+
+# ================================================================
+# 📊 FUNCIONES DE CONTEO DIARIO
+# ================================================================
+def obtener_publicaciones_hoy():
+    """Devuelve el número de shorts publicados hoy (0 si no hay registro o fecha distinta)."""
+    estado = cargar_estado()
+    pub = estado.get("publicaciones_hoy")
+    if not pub:
+        return 0
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
+    if pub.get("fecha") == hoy:
+        return pub.get("cantidad", 0)
+    return 0
+
+def incrementar_publicaciones_hoy():
+    """Incrementa en 1 el contador de publicaciones de hoy y guarda el estado."""
+    estado = cargar_estado()
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
+    pub = estado.get("publicaciones_hoy")
+    if pub and pub.get("fecha") == hoy:
+        pub["cantidad"] = pub.get("cantidad", 0) + 1
+    else:
+        estado["publicaciones_hoy"] = {"fecha": hoy, "cantidad": 1}
+    guardar_estado(estado)
 
 # ================================================================
 # 🧹 LIMPIAR TEXTO PARA AUDIO
@@ -329,7 +359,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 300 y 360 palabras.
+    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 280 y 320 palabras.
 Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
 y más detalles del entorno en {ubicacion}.
 Mantén la trama exactamente igual, solo añade contenido donde sea natural.
@@ -337,7 +367,7 @@ Mantén la trama exactamente igual, solo añade contenido donde sea natural.
 RELATO ORIGINAL (debe expandirse):
 {texto_corto}
 
-Devuelve SOLO el relato expandido (300-360 palabras), sin títulos ni comentarios adicionales.
+Devuelve SOLO el relato expandido (280-320 palabras), sin títulos ni comentarios adicionales.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -362,7 +392,7 @@ Devuelve SOLO el relato expandido (300-360 palabras), sin títulos ni comentario
 # ================================================================
 # TRUNCAR TEXTO LARGO
 # ================================================================
-def truncar_texto_largo(texto, max_palabras=340):
+def truncar_texto_largo(texto, max_palabras=300):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -372,42 +402,45 @@ def truncar_texto_largo(texto, max_palabras=340):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA (CON TÍTULO DE 50-70 CARACTERES + HASHTAGS)
+# GENERAR HISTORIA COMPLETA (SIN FALLBACK HARCODEADO)
 # ================================================================
 def generar_historia_completa():
-    # Hashtags aleatorios para incluir en el título
+    # Hashtags aleatorios para el título
     hashtags_disponibles = [
         "#paranormal", "#terror", "#misterio", "#suspenso", "#leyendasurbanas",
         "#miedo", "#sobrenatural", "#oscuridad", "#fantasma", "#espanto",
-        "#escalofrio", "#noche", "#pueblo", "#casasembrujadas", "#relatos"
+        "#escalofrio", "#noche", "#pueblo", "#casasembrujadas", "#relatos",
+        "#brujas", "#aparicion", "#almas", "#pena", "#real"
     ]
     tags_titulo = " ".join(random.sample(hashtags_disponibles, 2))
     
     prompt = f"""Eres un EXPERTO EN STORYTELLING PARA YOUTUBE SHORTS.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-La historia debe tener EXACTAMENTE entre 300 y 360 palabras (NO más de 360, NO menos de 300) y debe ser UNA HISTORIA COMPLETA Y AUTOCONCLUSIVA:
+La historia debe tener EXACTAMENTE entre 280 y 320 palabras (NO más de 320, NO menos de 280) y debe ser UNA HISTORIA COMPLETA Y AUTOCONCLUSIVA:
 - Tiene INICIO (presenta al personaje y la situación).
 - Tiene DESARROLLO (construye tensión, describe sonidos, olores, sensaciones).
-- Tiene RESOLUCIÓN FINAL (cierra la historia completamente, sin cliffhanger ni cabos sueltos).
+- Tiene RESOLUCIÓN FINAL (cierra la historia completamente, sin cliffhanger).
 Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA:
 "{PERFIL_PERSONAJE_SHORTS}"
 
-REGLAS DE TÍTULO (IMPORTANTE PARA CTR):
-- Debe ser DESCRIPTIVO y DIRECTO. Sin metáforas confusas.
-- Debe decir EXACTAMENTE de qué trata el video.
-- Entre 50 y 70 caracteres exactos (MÍNIMO 50, MÁXIMO 70).
+REGLAS DEL TÍTULO (IMPORTANTE - CLAVE PARA CTR):
+- Debe ser DESCRIPTIVO y LLAMATIVO, NO genérico.
+- Debe tener EXACTAMENTE entre 6 y 7 palabras (sin contar los hashtags).
+- Debe dar CONTEXTO de lo que pasó en la historia (no solo "El misterio de X").
+- Buen ejemplo: "Las brujas de la visnaga me atraparon una noche"
+- Mal ejemplo: "El misterio de Quintana Roo" (demasiado genérico)
 - Al final del título, DEBE incluir estos dos hashtags exactamente: {tags_titulo}
-- Ejemplo: "Cosas que ocurren en el panteón de Tlaxcala 💀 #paranormal #terror"
+- Ejemplo completo: "Las brujas de la visnaga me atraparon una noche {tags_titulo}"
 
-REGLAS DE INICIO (IMPORTANTE PARA RETENCIÓN):
+REGLAS DE INICIO:
 - La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
 
 REGLAS DE CONTENIDO:
-- Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
+- Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español.
 - Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
-- Resolución: el final debe ser claro, cerrando la historia sin dejar preguntas abiertas.
+- Resolución: final claro, cerrando la historia sin preguntas abiertas.
 - ANTI-REPETICIÓN: NO repitas frases.
 - PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
 - CTA OBLIGATORIO al final: "¿Te gustó este relato? SUSCRÍBETE para más historias de terror."
@@ -416,9 +449,9 @@ ETIQUETAS: Genera 20 etiquetas separadas por comas. El total de caracteres de la
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título descriptivo de 50-70 caracteres + {tags_titulo}",
-  "texto_completo": "Historia completa de 300-360 palabras...",
-  "palabras_portada": "PALABRA CLAVE (ej: TERROR, APARICIÓN)",
+  "titulo": "Título de 6-7 palabras descriptivo + {tags_titulo}",
+  "texto_completo": "Historia completa de 280-320 palabras...",
+  "palabras_portada": "PALABRA CLAVE",
   "tags": "tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, tag10, tag11, tag12, tag13, tag14, tag15, tag16, tag17, tag18, tag19, tag20"
 }}
 """
@@ -427,32 +460,54 @@ Devuelve ESTRICTAMENTE este JSON válido:
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.85,
-        "max_tokens": 700,
+        "temperature": 0.6,
+        "max_tokens": 1000,
         "response_format": {"type": "json_object"}
     }
-    for intento in range(5):
+    
+    for intento in range(6):
         try:
-            print(f"🔄 Intento {intento+1}/5 generando historia...")
+            print(f"🔄 Intento {intento+1}/6 generando historia...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
+            
+            finish_reason = r.json()["choices"][0].get("finish_reason", "unknown")
+            print(f"   📊 finish_reason: {finish_reason}")
+            
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
+            print(f"   📝 Respuesta cruda (primeros 300 chars): {respuesta[:300]}...")
+            
             json_str = limpiar_respuesta_json(respuesta)
-            data = json.loads(json_str, strict=False)
+            
+            try:
+                data = json.loads(json_str, strict=False)
+                print("   ✅ JSON parseado correctamente con json.loads")
+            except json.JSONDecodeError as e:
+                print(f"   ⚠️ json.loads falló: {e}")
+                try:
+                    import json5
+                    data = json5.loads(json_str)
+                    print("   ✅ JSON parseado correctamente con json5 (fallback)")
+                except ImportError:
+                    print("   ❌ json5 no está instalado. Instálalo con: pip install json5")
+                    raise
+                except Exception as e2:
+                    print(f"   ❌ json5 también falló: {e2}")
+                    raise
+            
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
-                raise ValueError("Texto demasiado corto")
+                raise ValueError("Texto demasiado corto o campo faltante")
+            
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
             
-            # 🔥 TÍTULO: mínimo 50 caracteres + hashtags
             titulo = data.get("titulo", "").strip()
-            # Asegurar que el título incluya los hashtags (por si DeepSeek los omite)
             if tags_titulo not in titulo:
                 titulo = f"{titulo} {tags_titulo}"
-            if len(titulo) < 50:
-                titulo = f"{titulo} | Relato de Terror {tags_titulo}"[:70]
-            elif len(titulo) > 70:
-                titulo = titulo[:67] + "..."
+            titulo = ' '.join(titulo.split())
+            palabras_titulo = re.sub(r'#\w+', '', titulo).strip().split()
+            if len(palabras_titulo) < 6:
+                titulo = f"{titulo} | Relato de Terror"
             data["titulo"] = titulo
             
             tags = data.get("tags", "")
@@ -462,22 +517,24 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 while len(tags_list) < 20:
                     tags_list.append(random.choice(extras))
             data["tags"] = ", ".join(tags_list[:20])
+            
             return data
+            
         except Exception as e:
-            print(f"❌ Intento {intento+1}/5 falló: {e}")
-            if intento < 4:
-                time.sleep(10 + intento * 5)
-    print("⚠️ Creando fallback manual...")
-    texto_fallback = f"Esa noche en {ESTADO_HISTORIA_SHORTS}, {ARTICULO_SHORTS} {PERSONAJE_SHORTS} sintió que algo no andaba bien. El silencio era pesado. De repente, un ruido extraño rompió la calma. No era el viento, no era un animal. Era algo más. Algo que parecía venir de las sombras. El corazón le latía con fuerza. Entonces, una figura emergió de la oscuridad. No tenía rostro, pero parecía mirarlo directamente. Sin tiempo para reaccionar, sintió un frío helado recorrer su espalda. Era el miedo hecho carne."
-    return {
-        "titulo": f"El misterio de {ESTADO_HISTORIA_SHORTS} {tags_titulo}",
-        "texto_completo": texto_fallback,
-        "palabras_portada": "TERROR",
-        "tags": "terror, shorts, mexico, paranormal, miedo, relatos, leyendas, misterio, suspenso, noche, oscuridad, sombras, aparicion, escalofrio, casas, embrujadas, pueblo, real, historias, leyenda"
-    }
+            print(f"❌ Intento {intento+1}/6 falló: {e}")
+            if intento < 5:
+                espera = 10 + intento * 5
+                print(f"⏳ Esperando {espera}s antes de reintentar...")
+                time.sleep(espera)
+    
+    # Si todos los intentos fallan, abortar (sin fallback)
+    print("❌ TODOS LOS INTENTOS DE GENERACIÓN FALLARON.")
+    print("   No se pudo generar una historia válida con DeepSeek.")
+    print("   Abortando ejecución para evitar publicar contenido genérico.")
+    sys.exit(1)
 
 # ================================================================
-# DIVIDIR TEXTO EN SEGMENTOS DE ~50 PALABRAS
+# DIVIDIR TEXTO EN SEGMENTOS
 # ================================================================
 def dividir_en_segmentos(texto, palabras_por_segmento=55):
     palabras = texto.split()
@@ -503,14 +560,14 @@ Fragmento del relato:
 \"\"\"
 
 Reglas estrictas de composición:
-- PLANO: Wide shot o extreme wide shot. PROHIBIDO close-up, portrait, headshot, medium shot ajustado.
-- Enfoque principal: el ENTORNO, la ARQUITECTURA, los OBJETOS o la ATMÓSFERA mencionados en el fragmento.
-- Si el fragmento menciona al personaje actuando o reaccionando, inclúyelo pero SIEMPRE ocupando como MÁXIMO el 20% del área total, a distancia, de espaldas, de perfil lejano o silueteado.
-- Si el fragmento describe solo ambiente, NO incluyas personas en la imagen.
-- Estilo: professional hyperrealistic photography, 4k, ultra-detailed, natural/ambient lighting, sharp focus on textures.
+- PLANO: Wide shot o extreme wide shot. PROHIBIDO close-up, portrait, headshot.
+- Enfoque principal: el ENTORNO, ARQUITECTURA u OBJETOS mencionados.
+- Si el fragmento menciona al personaje, inclúyelo ocupando como MÁXIMO el 20% del área, a distancia.
+- Si solo describe ambiente, NO incluyas personas.
+- Estilo: professional hyperrealistic photography, 4k, ultra-detailed, natural lighting.
 - Paleta de color: {paleta_color}
-- Personaje (si aparece): apariencia normal y agradable, piel sana, expresión neutra o de leve tensión.
-- Restricciones explícitas al final: "no close-up face, no portrait, no headshot, no face filling frame, person occupies max 20% of frame, environment and scene as main focus, no gore, no blood, no disfigurement, no gaunt or emaciated features, pleasant natural human appearance".
+- Personaje (si aparece): apariencia normal y agradable, piel sana.
+- Restricciones explícitas: "no close-up face, no portrait, no face filling frame, person occupies max 20% of frame, environment as main focus, no gore, no blood"
 
 Devuelve SOLO el prompt en inglés, sin explicaciones.
 """
@@ -529,7 +586,7 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         prompt_imagen += f", {estilo_visual}, vertical 9:16, wide establishing shot, person occupies max 20% of frame, environment as main subject, no close-up face, no portrait, no blood, no gore"
         return prompt_imagen
     except Exception as e:
-        print(f"⚠️ Error generando prompt de imagen para segmento: {e}")
+        print(f"⚠️ Error generando prompt de imagen: {e}")
         return f"Wide establishing shot of {ubicacion}, depicting: {segmento_texto[:100]}, {estilo_visual}, vertical 9:16, no close-up face, environment as main subject"
 
 # ================================================================
@@ -642,7 +699,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     return resultados_temporales
 
 # ================================================================
-# GENERAR AUDIO (CON JORGENEURAL COMO PRIORIDAD)
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -658,14 +715,11 @@ def generar_audio(texto, index, intentos=4):
 
     filename = f"audio_short_{index}.mp3"
     
-    # Priorizar JorgeNeural (más confiable) y luego las demás
     voces_a_probar = []
-    # Primero JorgeNeural (la que funcionó)
     for v in VOCES_DISPONIBLES:
         if v["voz"] == "es-MX-JorgeNeural":
             voces_a_probar.append(v)
             break
-    # Luego las demás (excluyendo JorgeNeural para no repetir)
     for v in VOCES_DISPONIBLES:
         if v["voz"] != "es-MX-JorgeNeural":
             voces_a_probar.append(v)
@@ -793,7 +847,7 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CTA FIJO DE SUSCRIPCIÓN)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, texto_corto, etiquetas):
     try:
@@ -862,7 +916,7 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN
+# MAIN (CON CONTEO DIARIO)
 # ================================================================
 def main():
     print("🎬 Iniciando Bot de SHORTS (standalone - historias independientes)")
@@ -872,8 +926,15 @@ def main():
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
         sys.exit(1)
     
+    # ----- VERIFICAR META DIARIA -----
+    publicadas_hoy = obtener_publicaciones_hoy()
+    if publicadas_hoy >= META_DIARIA_SHORTS:
+        print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Esta ejecución no es necesaria. Saliendo.")
+        sys.exit(0)
+    # ---------------------------------
+    
     estado = cargar_estado()
-    print(f"📌 Estado cargado (música): {estado}")
+    print(f"📌 Estado cargado: {estado}")
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
@@ -886,16 +947,16 @@ def main():
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
     
-    if palabras < 250:
+    if palabras < 230:
         print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
         texto_completo = expandir_texto_corto(
             texto_completo, 
             ESTADO_HISTORIA_SHORTS, 
             PERSONAJE_SHORTS
         )
-    elif palabras > 360:
+    elif palabras > 340:
         print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
-        texto_completo = truncar_texto_largo(texto_completo, max_palabras=340)
+        texto_completo = truncar_texto_largo(texto_completo, max_palabras=300)
 
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
@@ -937,6 +998,10 @@ def main():
         texto_corto=texto_completo,
         etiquetas=historia_raw["tags"]
     )
+
+    # ----- INCREMENTAR CONTADOR DESPUÉS DE SUBIR -----
+    incrementar_publicaciones_hoy()
+    # ------------------------------------------------
 
     guardar_estado(estado)
     limpiar_temporales_shorts()
