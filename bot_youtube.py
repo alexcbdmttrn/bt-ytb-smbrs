@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 import json
+import json5
 import os
 import random
 import re
@@ -333,7 +334,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (VERSIÓN PARA VIDEO LARGO ~10 MIN) - CORREGIDO
+# GENERAR GUION CON DEEPSEEK (VERSIÓN PARA VIDEO LARGO ~10 MIN) - CORREGIDO CON json5 Y LOGGING
 # ================================================================
 def generar_guion(contexto_extra=""):
     prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -360,6 +361,7 @@ REGLAS DE GENERACIÓN VISUAL:
    - Además, la persona (si aparece) debe ocupar como máximo el 20-25% del encuadre (plano general o medio, nunca primer plano).
    - La persona debe ser descrita como de apariencia natural y agradable, sana, sin rasgos de sufrimiento ni deformidades.
 6. ESTRUCTURA NARRATIVA: presentación, desarrollo con varios puntos de tensión, clímax, resolución — repartida en los segmentos.
+7. MINIATURA: Debes generar también un campo 'miniatura_descripcion' (1-2 oraciones en español describiendo la escena o momento MÁS IMPACTANTE Y VISUAL del relato) y un 'miniatura_prompt' en inglés específico para esa escena, con composición dramática y atractiva para captar clics. A diferencia de las imágenes de los segmentos, la miniatura puede usar un encuadre más cercano (plano medio o medio-corto) para maximizar el impacto visual, pero sin llegar a primer plano extremo. Usa la paleta de colores indicada y asegura que sea llamativa y de alta calidad.
 
 {contexto_extra}
 
@@ -369,7 +371,8 @@ Responde únicamente en formato JSON con esta estructura exacta:
   "palabras_portada": "CASO REAL",
   "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio",
   "tags": "tag1, tag2, tag3, tag4, tag5",
-  "miniatura_prompt": "Horizontal 16:9 cinematic image prompt of {PERFIL_PERSONAJE} in {UBICACION_HISTORIA}",
+  "miniatura_descripcion": "Breve descripción en español de la escena o momento más impactante y visual del relato (1-2 oraciones).",
+  "miniatura_prompt": "Dramatic cinematic photo of [escena específica derivada de miniatura_descripcion] in {UBICACION_HISTORIA}, [paleta de color], striking and eye-catching composition, professional thumbnail photography, high visual impact, dramatic lighting, sharp focus, no text, no watermark, flawless hyperrealistic quality, no deformities, no blurriness, no artifacts, [personaje si aplica, ocupando un encuadre más cercano pero sin ser primer plano extremo]",
   "segmentos": [
     {{
       "texto": "Texto narrativo único en español para ser locutado por voz en off...",
@@ -385,17 +388,35 @@ Responde únicamente en formato JSON con esta estructura exacta:
         "messages": [{"role": "user", "content": prompt_base}],
         "temperature": 0.7,
         "max_tokens": 7000,
-        "response_format": {"type": "json_object"}   # <--- CORREGIDO: se agregó esta línea
+        "response_format": {"type": "json_object"}
     }
 
     for intento in range(3):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=120)
             r.raise_for_status()
-            respuesta = r.json()["choices"][0]["message"]["content"].strip()
+            respuesta_json = r.json()
+            respuesta = respuesta_json["choices"][0]["message"]["content"].strip()
+            finish_reason = respuesta_json["choices"][0].get("finish_reason", "desconocido")
+
+            # LOGGING DE DIAGNÓSTICO
+            print(f"📝 Respuesta cruda (primeros 300 chars): {respuesta[:300]}")
+            print(f"🏁 Finish reason: {finish_reason}")
+
             json_str = limpiar_respuesta_json(respuesta)
 
-            data = json.loads(json_str, strict=False)
+            # Parser con respaldo json5
+            data = None
+            try:
+                data = json.loads(json_str, strict=False)
+            except json.JSONDecodeError as e:
+                print(f"⚠️ json.loads falló: {e}. Intentando con json5...")
+                try:
+                    data = json5.loads(json_str)
+                    print("✅ json5 parseó exitosamente.")
+                except Exception as e5:
+                    print(f"❌ json5 también falló: {e5}")
+                    raise
 
             if "segmentos" in data and len(data["segmentos"]) >= 28:
                 for seg in data["segmentos"]:
@@ -411,12 +432,11 @@ Responde únicamente en formato JSON con esta estructura exacta:
             print(f"❌ Intento {intento+1}/3 falló al procesar JSON de DeepSeek: {e}")
             time.sleep(5)
 
-    # Si falla después de 3 intentos, abortamos (sin fallback corto)
     print("❌ No se pudo generar un guion válido después de 3 intentos.")
     sys.exit(1)
 
 # ================================================================
-# EXPANSIÓN DE GUION (para alcanzar duración mínima) - CORREGIDO
+# EXPANSIÓN DE GUION (para alcanzar duración mínima) - CORREGIDO CON json5 Y LOGGING
 # ================================================================
 def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
     """
@@ -443,18 +463,35 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
         "max_tokens": 3000,
-        "response_format": {"type": "json_object"}   # <--- CORREGIDO: se agregó esta línea
+        "response_format": {"type": "json_object"}
     }
 
     for intento in range(2):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=120)
             r.raise_for_status()
-            respuesta = r.json()["choices"][0]["message"]["content"].strip()
+            respuesta_json = r.json()
+            respuesta = respuesta_json["choices"][0]["message"]["content"].strip()
+            finish_reason = respuesta_json["choices"][0].get("finish_reason", "desconocido")
+
+            print(f"📝 Respuesta expansión (primeros 300 chars): {respuesta[:300]}")
+            print(f"🏁 Finish reason expansión: {finish_reason}")
+
             json_str = limpiar_respuesta_json(respuesta)
-            data = json.loads(json_str, strict=False)
+
+            data = None
+            try:
+                data = json.loads(json_str, strict=False)
+            except json.JSONDecodeError as e:
+                print(f"⚠️ json.loads en expansión falló: {e}. Intentando con json5...")
+                try:
+                    data = json5.loads(json_str)
+                    print("✅ json5 parseó la expansión exitosamente.")
+                except Exception as e5:
+                    print(f"❌ json5 también falló en expansión: {e5}")
+                    raise
+
             if "segmentos_extra" in data and len(data["segmentos_extra"]) > 0:
-                # Limpiar prompts de imagen
                 for seg in data["segmentos_extra"]:
                     seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
                 print(f"✅ Expansión generada: {len(data['segmentos_extra'])} segmentos adicionales.")
@@ -467,7 +504,7 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
             time.sleep(5)
 
     print("❌ No se pudo generar expansión después de 2 intentos.")
-    return []  # Retorna lista vacía; luego se validará y se abortará si no alcanza duración
+    return []
 
 # ================================================================
 # GENERAR IMAGEN CON TEXTO DEL SEGMENTO (MEJORADO NEGATIVE PROMPT)
@@ -506,6 +543,63 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
             time.sleep(5)
         except Exception:
             time.sleep(5)
+    return None
+
+# ================================================================
+# 🖼️ GENERAR MINIATURA (NUEVA FUNCIÓN DEDICADA)
+# ================================================================
+def generar_miniatura(prompt, width=1280, height=720, intentos=5):
+    """
+    Genera una imagen para la miniatura con reintentos específicos y negative_prompt
+    más estricto para calidad visual. Retorna la URL o None si falla.
+    """
+    prompt_limpio = limpiar_prompt(prompt)
+    url = "https://apihub.agnes-ai.com/v1/images/generations"
+    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+    
+    # Negative prompt específico para miniaturas: añade restricciones de calidad
+    negative = (
+        "oscuro, dark, underexposed, low light, heavy shadows, too dark, "
+        "over-saturated reds, over-saturated oranges, manchas, textura fea, "
+        "deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, "
+        "demacrado, freckles, blemishes, skin spots, imperfections, "
+        "close-up face, portrait, headshot, person filling frame, "
+        "deformed face, disfigured, mutated, bad anatomy, extra limbs, "
+        "extra fingers, asymmetrical eyes, malformed features, uncanny valley, "
+        "gaunt, emaciated, ugly, grotesque, "
+        "low quality, low resolution, boring composition, flat lighting, "
+        "dull colors, amateur photography, plain background, empty background, "
+        "poorly lit, washed out colors"
+    )
+    payload = {
+        "model": "agnes-image-2.1-flash",
+        "prompt": prompt_limpio,
+        "negative_prompt": negative,
+        "width": width,
+        "height": height,
+        "num_images": 1
+    }
+
+    backoff = [5, 10, 15, 20, 25]  # segundos entre reintentos
+    for intento in range(intentos):
+        print(f"🖼️ Intento {intento+1}/{intentos} generando miniatura...")
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=90)
+            if r.status_code == 200:
+                url_imagen = r.json()["data"][0]["url"]
+                print(f"✅ Miniatura generada exitosamente (intento {intento+1}).")
+                return url_imagen
+            else:
+                print(f"⚠️ Respuesta no exitosa: {r.status_code} - {r.text}")
+        except Exception as e:
+            print(f"⚠️ Error en intento {intento+1}: {e}")
+        
+        if intento < intentos - 1:
+            espera = backoff[intento] if intento < len(backoff) else 30
+            print(f"⏳ Esperando {espera}s antes de reintentar...")
+            time.sleep(espera)
+    
+    print("❌ No se pudo generar la miniatura después de 5 intentos. El video se subirá sin miniatura personalizada (YouTube generará una automática).")
     return None
 
 # ================================================================
@@ -775,10 +869,11 @@ def main():
 
     print(f"✅ Duración final aceptable: {duracion_actual/60:.1f} minutos.")
 
-    # 4. Generar miniatura
+    # 4. Generar miniatura (MEJORADO: función dedicada + logs explícitos)
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
-    miniatura_url = generar_imagen(guion_data.get("miniatura_prompt", "Dark mysterious scene"), width=1280, height=720)
+    miniatura_url = generar_miniatura(guion_data.get("miniatura_prompt", "Dark mysterious scene"))
+
     if miniatura_url:
         try:
             r = requests.get(miniatura_url, timeout=30)
@@ -788,9 +883,14 @@ def main():
             with Image.open(miniatura_path) as img:
                 ImageOps.fit(img, (1280, 720), Image.LANCZOS).save(miniatura_path)
             agregar_texto_miniatura(miniatura_path, palabras_portada)
+            print("✅ Miniatura procesada y guardada.")
         except Exception as e:
-            print(f"⚠️ Error en miniatura: {e}")
+            print(f"⚠️ Error al descargar o procesar la miniatura: {e}")
             miniatura_path = None
+    else:
+        # Ahora este caso se loguea explícitamente
+        print("⚠️ No se generó URL de miniatura. El video se subirá sin miniatura personalizada.")
+        miniatura_path = None
 
     # 5. Montar video
     print("🎬 Montando video...")
