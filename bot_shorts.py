@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
 import gtts
-import pytz  # <--- NUEVO para zona horaria
+import pytz
 
 # ================================================================
 # CONFIGURACIÓN
@@ -37,7 +37,7 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 ESTADO_FILE = "estado_shorts.json"
-META_DIARIA_SHORTS = 3  # <--- NUEVO: meta diaria
+META_DIARIA_SHORTS = 3
 
 # ================================================================
 # 🎤 BANCO DE VOCES
@@ -257,7 +257,7 @@ def limpiar_caracteres_para_tts(texto):
     return texto.strip()
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON
+# LIMPIAR RESPUESTA JSON (CORREGIDA)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
@@ -268,18 +268,18 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        json_str = re.sub(r'(?<!\\)\r?\n', r'\\n', json_str)
+        # 🔥 CORREGIDO: se eliminó la línea que escapaba saltos de línea
+        # json.loads(..., strict=False) ya tolera saltos de línea dentro de cadenas
         return json_str
     return respuesta
 
 # ================================================================
-# 🗂️ ESTADO DE SHORTS (ahora con publicaciones_hoy)
+# 🗂️ ESTADO DE SHORTS
 # ================================================================
 def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # Asegurar que exista el campo publicaciones_hoy
             if "publicaciones_hoy" not in data:
                 data["publicaciones_hoy"] = None
             return data
@@ -298,7 +298,6 @@ def guardar_estado(estado):
 # 📊 FUNCIONES DE CONTEO DIARIO
 # ================================================================
 def obtener_publicaciones_hoy():
-    """Devuelve el número de shorts publicados hoy (0 si no hay registro o fecha distinta)."""
     estado = cargar_estado()
     pub = estado.get("publicaciones_hoy")
     if not pub:
@@ -309,7 +308,6 @@ def obtener_publicaciones_hoy():
     return 0
 
 def incrementar_publicaciones_hoy():
-    """Incrementa en 1 el contador de publicaciones de hoy y guarda el estado."""
     estado = cargar_estado()
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
     pub = estado.get("publicaciones_hoy")
@@ -402,10 +400,9 @@ def truncar_texto_largo(texto, max_palabras=300):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA (SIN FALLBACK HARCODEADO)
+# GENERAR HISTORIA COMPLETA (SIN FALLBACK)
 # ================================================================
 def generar_historia_completa():
-    # Hashtags aleatorios para el título
     hashtags_disponibles = [
         "#paranormal", "#terror", "#misterio", "#suspenso", "#leyendasurbanas",
         "#miedo", "#sobrenatural", "#oscuridad", "#fantasma", "#espanto",
@@ -425,14 +422,12 @@ Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 DESCRIPCIÓN FÍSICA DEL PROTAGONISTA:
 "{PERFIL_PERSONAJE_SHORTS}"
 
-REGLAS DEL TÍTULO (IMPORTANTE - CLAVE PARA CTR):
+REGLAS DEL TÍTULO:
 - Debe ser DESCRIPTIVO y LLAMATIVO, NO genérico.
 - Debe tener EXACTAMENTE entre 6 y 7 palabras (sin contar los hashtags).
-- Debe dar CONTEXTO de lo que pasó en la historia (no solo "El misterio de X").
-- Buen ejemplo: "Las brujas de la visnaga me atraparon una noche"
-- Mal ejemplo: "El misterio de Quintana Roo" (demasiado genérico)
+- Debe dar CONTEXTO de lo que pasó en la historia.
+- Ejemplo: "Las brujas de la visnaga me atraparon una noche"
 - Al final del título, DEBE incluir estos dos hashtags exactamente: {tags_titulo}
-- Ejemplo completo: "Las brujas de la visnaga me atraparon una noche {tags_titulo}"
 
 REGLAS DE INICIO:
 - La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
@@ -527,7 +522,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 print(f"⏳ Esperando {espera}s antes de reintentar...")
                 time.sleep(espera)
     
-    # Si todos los intentos fallan, abortar (sin fallback)
     print("❌ TODOS LOS INTENTOS DE GENERACIÓN FALLARON.")
     print("   No se pudo generar una historia válida con DeepSeek.")
     print("   Abortando ejecución para evitar publicar contenido genérico.")
@@ -916,7 +910,7 @@ def limpiar_temporales_shorts():
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
-# MAIN (CON CONTEO DIARIO)
+# MAIN
 # ================================================================
 def main():
     print("🎬 Iniciando Bot de SHORTS (standalone - historias independientes)")
@@ -926,12 +920,10 @@ def main():
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
         sys.exit(1)
     
-    # ----- VERIFICAR META DIARIA -----
     publicadas_hoy = obtener_publicaciones_hoy()
     if publicadas_hoy >= META_DIARIA_SHORTS:
         print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Esta ejecución no es necesaria. Saliendo.")
         sys.exit(0)
-    # ---------------------------------
     
     estado = cargar_estado()
     print(f"📌 Estado cargado: {estado}")
@@ -999,9 +991,7 @@ def main():
         etiquetas=historia_raw["tags"]
     )
 
-    # ----- INCREMENTAR CONTADOR DESPUÉS DE SUBIR -----
     incrementar_publicaciones_hoy()
-    # ------------------------------------------------
 
     guardar_estado(estado)
     limpiar_temporales_shorts()
