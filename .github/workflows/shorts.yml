@@ -1,10 +1,11 @@
-name: Bot YouTube - Shorts (3 al día)
+name: Bot YouTube - Shorts (3 al día + respaldo)
 
 on:
   schedule:
     - cron: '14 14 * * *'   # ~8:14 AM CDMX (14:14 UTC)
     - cron: '22 20 * * *'   # ~2:22 PM CDMX (20:22 UTC)
     - cron: '44 2 * * *'    # ~8:44 PM CDMX (02:44 UTC)
+    - cron: '30 5 * * *'    # ~11:30 PM CDMX (05:30 UTC) - respaldo
   workflow_dispatch:
 
 permissions:
@@ -29,7 +30,9 @@ jobs:
           pip install moviepy==1.0.3
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           pip install edge-tts
-          pip install gTTS   # <--- NUEVO: fallback de Google TTS
+          pip install gTTS
+          pip install json5
+          pip install pytz
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
