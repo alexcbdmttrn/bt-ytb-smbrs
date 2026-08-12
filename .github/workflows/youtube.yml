@@ -2,7 +2,8 @@ name: Bot YouTube - Publicación
 
 on:
   schedule:
-    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC)
+    - cron: '0 21 * * *'   # 3:00 PM CDMX - intento principal
+    - cron: '0 1 * * *'    # 7:00 PM CDMX - respaldo (se auto-cancela si ya se publicó)
   workflow_dispatch:
 
 permissions:
