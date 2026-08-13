@@ -52,7 +52,6 @@ VOCES_DISPONIBLES = [
     {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz"},
     {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
 ]
-# ✅ Se selecciona UNA voz al inicio y se usa para TODO el video
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
@@ -1096,6 +1095,86 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         sys.exit(1)
 
 # ================================================================
+# 🆕 SUBIR VIDEO A HOST TEMPORAL (para Facebook)
+# ================================================================
+def subir_video_temporal(video_path, intentos=2):
+    """Sube el video a un host temporal y devuelve la URL directa."""
+    # 1) litterbox.catbox.moe (dura 72 horas)
+    for _ in range(intentos):
+        try:
+            with open(video_path, "rb") as f:
+                r = requests.post(
+                    "https://litterbox.catbox.moe/resources/internals/api.php",
+                    data={"reqtype": "fileupload", "time": "72h"},
+                    files={"fileToUpload": f},
+                    timeout=180,
+                )
+            if r.status_code == 200 and r.text.strip().startswith("http"):
+                url = r.text.strip()
+                print(f"✅ Video subido a litterbox: {url}")
+                return url
+        except Exception as e:
+            print(f"⚠️ litterbox falló: {e}")
+        time.sleep(3)
+
+    # 2) tmpfiles.org (dura 60 minutos)
+    for _ in range(intentos):
+        try:
+            with open(video_path, "rb") as f:
+                r = requests.post(
+                    "https://tmpfiles.org/api/v1/upload",
+                    files={"file": f},
+                    timeout=180,
+                )
+            if r.status_code == 200:
+                url = r.json()["data"]["url"]
+                url = url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
+                print(f"✅ Video subido a tmpfiles: {url}")
+                return url
+        except Exception as e:
+            print(f"⚠️ tmpfiles falló: {e}")
+        time.sleep(3)
+
+    # 3) 0x0.st (último recurso)
+    try:
+        with open(video_path, "rb") as f:
+            r = requests.post("https://0x0.st", files={"file": f}, timeout=180)
+        if r.status_code == 200 and r.text.strip().startswith("http"):
+            url = r.text.strip()
+            print(f"✅ Video subido a 0x0.st: {url}")
+            return url
+    except Exception as e:
+        print(f"⚠️ 0x0.st falló: {e}")
+
+    print("❌ No se pudo subir el video a ningún host temporal.")
+    return None
+
+
+# ================================================================
+# 🆕 ENVIAR A MAKE (WEBHOOK DE REELS PARA FACEBOOK)
+# ================================================================
+def enviar_a_make(titulo, descripcion, video_url):
+    """Envía los datos del Reel al webhook de Make para publicarlo en Facebook."""
+    webhook_url = os.getenv("MAKE_WEBHOOK_URL_REELS")
+    if not webhook_url:
+        print("⚠️ MAKE_WEBHOOK_URL_REELS no configurado. Saltando Facebook.")
+        return False
+
+    payload = {
+        "titulo": titulo,
+        "descripcion": descripcion,
+        "video_url": video_url,
+    }
+    try:
+        print("📡 Enviando datos al webhook de Make...")
+        r = requests.post(webhook_url, json=payload, timeout=60)
+        print(f"📡 Make respondió con código: {r.status_code}")
+        return r.status_code == 200
+    except Exception as e:
+        print(f"❌ Error enviando a Make: {e}")
+        return False
+
+# ================================================================
 # LIMPIEZA DE TEMPORALES
 # ================================================================
 def limpiar_temporales_shorts():
@@ -1202,6 +1281,27 @@ def main():
     )
 
     guardar_titulo_publicado(historia_raw["titulo"])
+
+    # 🆕 ENVIAR A FACEBOOK VÍA MAKE (solo los 2 primeros Reels del día)
+    publicaciones_antes = obtener_publicaciones_hoy()
+    if publicaciones_antes < 2:
+        print(f"\n📘 Reel #{publicaciones_antes + 1} del día: enviando a Facebook vía Make...")
+        video_url_temporal = subir_video_temporal(video_final)
+        if video_url_temporal:
+            descripcion_facebook = f"""{historia_raw['gancho_descripcion']}
+
+{historia_raw['contexto_descripcion']}
+
+📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real compartido en internet.')}
+
+🔴 Relatos completos en el canal. Visítanos: {CANAL_LINK}
+
+{historia_raw['hashtags_descripcion']}"""
+            enviar_a_make(historia_raw["titulo"], descripcion_facebook, video_url_temporal)
+        else:
+            print("⚠️ No se pudo subir al host temporal. Facebook omitido.")
+    else:
+        print(f"\n⏭️ Reel #{publicaciones_antes + 1} del día: NO se envía a Facebook (límite: 2 diarios).")
 
     incrementar_publicaciones_hoy()
 
