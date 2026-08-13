@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date, datetime  # <--- CORREGIDO: importar ambos
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 import json
 import json5
@@ -311,11 +311,12 @@ def agregar_texto_miniatura(img_path, texto_portada):
         print(f"⚠️ Error en miniatura: {e}")
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON
+# LIMPIAR RESPUESTA JSON (CORREGIDO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
         return ""
+    # Remover bloques de marcado
     respuesta = re.sub(r"```json\s*", "", respuesta, flags=re.IGNORECASE)
     respuesta = re.sub(r"```\s*", "", respuesta)
     
@@ -323,14 +324,16 @@ def limpiar_respuesta_json(respuesta):
     fin = respuesta.rfind("}")
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio : fin + 1]
+        # Remover comas finales en objetos y arreglos
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        json_str = re.sub(r'(?<!\\)\r?\n', r'\\n', json_str)
+        # ⚠️ LÍNEA ELIMINADA: ya no reemplazamos saltos de línea, eso rompía el JSON.
+        # Ahora confiamos en strict=False y json5.
         return json_str
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (con json5 y logging)
+# GENERAR GUION CON DEEPSEEK (con json5 y logging mejorado)
 # ================================================================
 def generar_guion(contexto_extra=""):
     prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -400,16 +403,18 @@ Responde únicamente en formato JSON con esta estructura exacta:
 
             json_str = limpiar_respuesta_json(respuesta)
 
+            # Parser: primero intentamos con json5 (más tolerante), luego con json estándar
             data = None
             try:
-                data = json.loads(json_str, strict=False)
-            except json.JSONDecodeError as e:
-                print(f"⚠️ json.loads falló: {e}. Intentando con json5...")
+                data = json5.loads(json_str)
+                print("✅ json5 parseó exitosamente.")
+            except Exception as e5:
+                print(f"⚠️ json5 falló: {e5}. Intentando con json.loads(strict=False)...")
                 try:
-                    data = json5.loads(json_str)
-                    print("✅ json5 parseó exitosamente.")
-                except Exception as e5:
-                    print(f"❌ json5 también falló: {e5}")
+                    data = json.loads(json_str, strict=False)
+                    print("✅ json.loads(strict=False) parseó exitosamente.")
+                except json.JSONDecodeError as e:
+                    print(f"❌ Ambos parsers fallaron: {e}")
                     raise
 
             if "segmentos" in data and len(data["segmentos"]) >= 28:
@@ -430,7 +435,7 @@ Responde únicamente en formato JSON con esta estructura exacta:
     sys.exit(1)
 
 # ================================================================
-# EXPANSIÓN DE GUION (con json5 y logging)
+# EXPANSIÓN DE GUION (con json5 y logging mejorado)
 # ================================================================
 def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
     contexto = f"""
@@ -470,14 +475,15 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
 
             data = None
             try:
-                data = json.loads(json_str, strict=False)
-            except json.JSONDecodeError as e:
-                print(f"⚠️ json.loads en expansión falló: {e}. Intentando con json5...")
+                data = json5.loads(json_str)
+                print("✅ json5 parseó la expansión exitosamente.")
+            except Exception as e5:
+                print(f"⚠️ json5 en expansión falló: {e5}. Intentando con json.loads(strict=False)...")
                 try:
-                    data = json5.loads(json_str)
-                    print("✅ json5 parseó la expansión exitosamente.")
-                except Exception as e5:
-                    print(f"❌ json5 también falló en expansión: {e5}")
+                    data = json.loads(json_str, strict=False)
+                    print("✅ json.loads(strict=False) parseó la expansión.")
+                except json.JSONDecodeError as e:
+                    print(f"❌ Ambos parsers fallaron en expansión: {e}")
                     raise
 
             if "segmentos_extra" in data and len(data["segmentos_extra"]) > 0:
