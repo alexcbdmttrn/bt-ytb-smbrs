@@ -22,7 +22,6 @@ from moviepy.editor import (
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
-import gtts
 import pytz
 
 # ================================================================
@@ -44,18 +43,29 @@ TITULOS_FILE = "titulos_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 
 # ================================================================
-# 🎤 SOLO 4 VOCES MASCULINAS - SE SELECCIONA UNA AL INICIO
+# 🎤 VOCES NEURALES VÁLIDAS (solo las que SÍ existen en Edge TTS)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
+    {"voz": "es-MX-DaliaNeural", "velocidad": "+10%", "tono": "+0Hz"},
     {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz"},
-    {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-ES-ElviraNeural", "velocidad": "+10%", "tono": "+1Hz"},
+    {"voz": "es-CO-GonzaloNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-CO-SalomeNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+10%", "tono": "+2Hz"},
+    {"voz": "es-AR-DiegoNeural", "velocidad": "+10%", "tono": "-2Hz"},
+    {"voz": "es-US-AlonsoNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-US-PalomaNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-PE-CamilaNeural", "velocidad": "+10%", "tono": "+0Hz"},
+    {"voz": "es-PE-AlexNeural", "velocidad": "+10%", "tono": "-1Hz"},
     {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
+    {"voz": "es-CL-CatalinaNeural", "velocidad": "+10%", "tono": "+1Hz"},
 ]
+
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS MODERNAS 2026 (sin sepia/vintage/óxido)
+# 🎨 PALETAS MODERNAS 2026
 # ================================================================
 PALETAS_COLOR = [
     "Cold cyan blue LED fog, navy blue modern shadows, crisp white moonlight",
@@ -91,7 +101,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (con profesiones modernas)
+# 🧑 GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje_shorts():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -208,7 +218,6 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
     
-    # 🆕 Eliminar palabras que causan el efecto "antiguo/oxidado/demacrado"
     palabras_antiguas = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\blemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -231,7 +240,6 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     
     prompt_base = re.sub(r"\s+", " ", prompt).strip()[:200]
     
-    # 🆕 Modificadores de MODERNIDAD 2026
     modificadores_modernidad = (
         f", {estilo}, color palette of {paleta}, "
         "vertical 9:16 format, wide environmental establishing shot, medium-wide shot, "
@@ -293,7 +301,7 @@ def guardar_estado(estado):
     print("✅ Estado de Shorts guardado")
 
 # ================================================================
-# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS (sin repetir jamás)
+# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS
 # ================================================================
 def cargar_titulos_publicados():
     try:
@@ -385,7 +393,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🆕 EXPANDIR TEXTO CORTO (manteniendo estilo de testimonio real)
+# 🆕 EXPANDIR TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto (manteniendo estilo de testimonio real)...")
@@ -434,7 +442,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🆕 GENERAR HISTORIA — BASADA EN RELATOS REALES DE INTERNET
+# 🆕 GENERAR HISTORIA
 # ================================================================
 def generar_historia_completa():
     hashtags_disponibles = [
@@ -499,15 +507,10 @@ REGLAS DEL TÍTULO (SEO 2026):
 REGLAS DE DESCRIPCIÓN:
 - "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres que genere curiosidad.
 - "contexto_descripcion": 1 oración con contexto y palabras clave naturales.
-- "fuente_relato": 1 línea indicando el tipo de fuente real, por ejemplo:
-  "Basado en un testimonio real compartido en un foro de terror."
-  "Basado en una leyenda real contada por habitantes de {ESTADO_HISTORIA_SHORTS}."
-  "Basado en un relato real publicado en redes sociales."
+- "fuente_relato": 1 línea indicando el tipo de fuente real.
 
 REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres):
 - Mezcla etiquetas de relatos reales + lugar + fenómeno.
-- Ejemplo: "relatos reales de terror en internet, testimonios paranormales reales,
-  leyendas reales de {ESTADO_HISTORIA_SHORTS}, historias reales contadas en primera persona"
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
@@ -649,7 +652,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     sys.exit(1)
 
 # ================================================================
-# 🆕 DIVIDIR TEXTO POR ORACIONES (sin cortes antinaturales)
+# 🆕 DIVIDIR TEXTO POR ORACIONES
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -679,7 +682,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     return segmentos
 
 # ================================================================
-# 🆕 GENERAR PROMPT DE IMAGEN POR SEGMENTO (MODERNO 2026)
+# 🆕 GENERAR PROMPT DE IMAGEN POR SEGMENTO
 # ================================================================
 def generar_prompt_imagen_segmento(segmento_texto, perfil, ubicacion, estilo_visual, paleta_color):
     prompt = f"""Eres un director de fotografía experto en composición cinematográfica.
@@ -729,7 +732,7 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         return f"Wide establishing shot of modern {ubicacion} in 2026, depicting: {segmento_texto[:100]}, {estilo_visual}, vertical 9:16, no close-up face, environment as main subject, contemporary era"
 
 # ================================================================
-# 🆕 GENERAR IMAGEN VERTICAL (negative prompt anti-vintage)
+# 🆕 GENERAR IMAGEN VERTICAL
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
@@ -845,9 +848,15 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO - UNA SOLA VOZ PARA TODO EL VIDEO
+# ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES (SIN gTTS)
 # ================================================================
-def generar_audio(texto, index, intentos=4):
+def generar_audio(texto, index, intentos_por_voz=2):
+    """
+    Intenta generar audio con la voz actual. Si falla, prueba con otras voces
+    de la lista hasta que una funcione. NUNCA usa gTTS.
+    """
+    global CONFIG_VOZ_ACTUAL
+    
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_caracteres_para_tts(texto_limpio)
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
@@ -861,64 +870,103 @@ def generar_audio(texto, index, intentos=4):
 
     filename = f"audio_short_{index}.mp3"
 
-    voz = CONFIG_VOZ_ACTUAL["voz"]
-    rate = CONFIG_VOZ_ACTUAL["velocidad"]
-    pitch = CONFIG_VOZ_ACTUAL["tono"]
+    # Lista de voces a probar: primero la actual, luego las demás
+    voces_a_probar = [CONFIG_VOZ_ACTUAL]
+    for voz_config in VOCES_DISPONIBLES:
+        if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
+            voces_a_probar.append(voz_config)
+    
+    print(f"🔊 Generando audio para segmento {index}. Probando hasta {len(voces_a_probar)} voces neurales...")
 
-    print(f"🔊 Generando audio para segmento {index} con voz: {voz}")
+    for intento_voz, voz_config in enumerate(voces_a_probar):
+        voz = voz_config["voz"]
+        rate = voz_config["velocidad"]
+        pitch = voz_config["tono"]
+        
+        print(f"🎤 Intento {intento_voz+1}/{len(voces_a_probar)} con voz: {voz}")
+        
+        for intento in range(intentos_por_voz):
+            async def _generar():
+                communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
+                await communicate.save(filename)
 
-    for intento in range(intentos):
-        print(f"🎤 Intento {intento+1}/{intentos} con voz: {voz}")
-
-        async def _generar():
-            communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
-            await communicate.save(filename)
-
-        try:
-            asyncio.run(_generar())
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                print(f"✅ Audio segmento {index} generado con {voz}")
-                return filename
-        except Exception as e:
-            print(f"❌ Falló con {voz}: {e}")
-            if intento < intentos - 1:
-                espera = 5 * (intento + 1)
-                print(f"⏳ Esperando {espera}s antes de reintentar...")
-                time.sleep(espera)
-
-    print("⚠️ Todos los intentos con edge-tts fallaron. Usando gTTS como fallback...")
-    try:
-        from gtts import gTTS
-        tts = gTTS(texto_limpio, lang="es")
-        tts.save(filename)
-        print(f"✅ Audio generado con gTTS (fallback) para segmento {index}")
-        return filename
-    except Exception as e:
-        print(f"❌ Fallback gTTS también falló: {e}")
-        return None
+            try:
+                asyncio.run(_generar())
+                if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                    print(f"✅ Audio segmento {index} generado con {voz}")
+                    
+                    # Si la voz actual falló pero otra funcionó, actualizarla
+                    if voz != CONFIG_VOZ_ACTUAL["voz"]:
+                        print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
+                        CONFIG_VOZ_ACTUAL = voz_config
+                    
+                    return filename
+            except Exception as e:
+                print(f"❌ Falló con {voz}: {e}")
+                if intento < intentos_por_voz - 1:
+                    espera = 3 * (intento + 1)
+                    print(f"⏳ Esperando {espera}s antes de reintentar con la misma voz...")
+                    time.sleep(espera)
+        
+        # Si esta voz falló en todos sus intentos, limpiar archivo si existe
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except:
+                pass
+    
+    # Si TODAS las voces neurales fallaron, abortar (nunca usar gTTS)
+    print("❌ TODAS las voces neurales de Edge TTS fallaron. Abortando generación de audio.")
+    return None
 
 # ================================================================
-# GENERAR AUDIO CTA FINAL (misma voz que el relato)
+# ✅ GENERAR AUDIO CTA FINAL (mismo sistema de fallback)
 # ================================================================
 def generar_audio_cta_final():
+    """Genera el CTA final con el mismo sistema de fallback entre voces neurales."""
+    global CONFIG_VOZ_ACTUAL
+    
     cta_texto = "Relatos completos en el canal. Visítanos."
     filename = "audio_cta_final.mp3"
     
-    voz = CONFIG_VOZ_ACTUAL["voz"]
-    rate = CONFIG_VOZ_ACTUAL["velocidad"]
-    pitch = CONFIG_VOZ_ACTUAL["tono"]
+    voces_a_probar = [CONFIG_VOZ_ACTUAL]
+    for voz_config in VOCES_DISPONIBLES:
+        if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
+            voces_a_probar.append(voz_config)
     
-    async def _generar():
-        communicate = edge_tts.Communicate(cta_texto, voz, rate=rate, pitch=pitch)
-        await communicate.save(filename)
+    print(f"🔊 Generando audio CTA final. Probando hasta {len(voces_a_probar)} voces neurales...")
     
-    try:
-        asyncio.run(_generar())
-        print(f"✅ Audio CTA final generado con voz: {voz}")
-        return filename
-    except Exception as e:
-        print(f"⚠️ Error generando audio CTA: {e}")
-        return None
+    for intento_voz, voz_config in enumerate(voces_a_probar):
+        voz = voz_config["voz"]
+        rate = voz_config["velocidad"]
+        pitch = voz_config["tono"]
+        
+        print(f"🎤 CTA - Intento {intento_voz+1}/{len(voces_a_probar)} con voz: {voz}")
+        
+        async def _generar():
+            communicate = edge_tts.Communicate(cta_texto, voz, rate=rate, pitch=pitch)
+            await communicate.save(filename)
+        
+        try:
+            asyncio.run(_generar())
+            if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                print(f"✅ Audio CTA final generado con voz: {voz}")
+                
+                if voz != CONFIG_VOZ_ACTUAL["voz"]:
+                    print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
+                    CONFIG_VOZ_ACTUAL = voz_config
+                
+                return filename
+        except Exception as e:
+            print(f"❌ CTA falló con {voz}: {e}")
+            if os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                except:
+                    pass
+    
+    print("❌ No se pudo generar audio CTA con ninguna voz neural.")
+    return None
 
 # ================================================================
 # MONTAR VIDEO CON TRANSICIONES SUAVES
@@ -1100,11 +1148,10 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         sys.exit(1)
 
 # ================================================================
-# 🆕 SUBIR VIDEO A HOST TEMPORAL (para Facebook)
+# 🆕 SUBIR VIDEO A HOST TEMPORAL
 # ================================================================
 def subir_video_temporal(video_path, intentos=2):
     """Sube el video a un host temporal y devuelve la URL directa."""
-    # 1) litterbox.catbox.moe (dura 72 horas)
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1122,7 +1169,6 @@ def subir_video_temporal(video_path, intentos=2):
             print(f"⚠️ litterbox falló: {e}")
         time.sleep(3)
 
-    # 2) tmpfiles.org (dura 60 minutos)
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1140,7 +1186,6 @@ def subir_video_temporal(video_path, intentos=2):
             print(f"⚠️ tmpfiles falló: {e}")
         time.sleep(3)
 
-    # 3) 0x0.st (último recurso)
     try:
         with open(video_path, "rb") as f:
             r = requests.post("https://0x0.st", files={"file": f}, timeout=180)
@@ -1154,11 +1199,10 @@ def subir_video_temporal(video_path, intentos=2):
     print("❌ No se pudo subir el video a ningún host temporal.")
     return None
 
-
 # ================================================================
-# 🆕 ENVIAR A MAKE (WEBHOOK DE REELS PARA FACEBOOK)
+# 🆕 ENVIAR A MAKE (con url_youtube para el post)
 # ================================================================
-def enviar_a_make(titulo, descripcion, video_url):
+def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
     """Envía los datos del Reel al webhook de Make para publicarlo en Facebook."""
     webhook_url = os.getenv("MAKE_WEBHOOK_URL_REELS")
     if not webhook_url:
@@ -1169,6 +1213,7 @@ def enviar_a_make(titulo, descripcion, video_url):
         "titulo": titulo,
         "descripcion": descripcion,
         "video_url": video_url,
+        "url_youtube": url_youtube,
     }
     try:
         print("📡 Enviando datos al webhook de Make...")
@@ -1202,7 +1247,7 @@ def limpiar_temporales_shorts():
 def main():
     print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES de internet)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎤 Voz seleccionada para TODO el video: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
@@ -1275,7 +1320,7 @@ def main():
         sys.exit(1)
 
     print(f"🚀 Subiendo Short a YouTube...")
-    subir_a_youtube(
+    video_id_youtube = subir_a_youtube(
         video_path=video_final,
         titulo=historia_raw["titulo"],
         etiquetas=historia_raw["tags"],
@@ -1287,7 +1332,6 @@ def main():
 
     guardar_titulo_publicado(historia_raw["titulo"])
 
-    # 🆕 ENVIAR A FACEBOOK VÍA MAKE (solo los 2 primeros Reels del día)
     publicaciones_antes = obtener_publicaciones_hoy()
     if publicaciones_antes < 2:
         print(f"\n📘 Reel #{publicaciones_antes + 1} del día: enviando a Facebook vía Make...")
@@ -1302,7 +1346,12 @@ def main():
 🔴 Relatos completos en el canal. Visítanos: {CANAL_LINK}
 
 {historia_raw['hashtags_descripcion']}"""
-            enviar_a_make(historia_raw["titulo"], descripcion_facebook, video_url_temporal)
+            enviar_a_make(
+                titulo=historia_raw["titulo"],
+                descripcion=descripcion_facebook,
+                video_url=video_url_temporal,
+                url_youtube=f"https://youtu.be/{video_id_youtube}"
+            )
         else:
             print("⚠️ No se pudo subir al host temporal. Facebook omitido.")
     else:
