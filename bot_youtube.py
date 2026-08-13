@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date
+from datetime import date, datetime  # <--- CORREGIDO: importar ambos
 from zoneinfo import ZoneInfo
 import json
 import json5
@@ -496,7 +496,7 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
     return []
 
 # ================================================================
-# GENERAR IMAGEN
+# GENERAR IMAGEN (3 intentos con 10s de espera)
 # ================================================================
 def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
     if texto_segmento:
@@ -522,18 +522,26 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
         "height": height,
         "num_images": 1
     }
-    for _ in range(intentos):
+    for intento in range(intentos):
         try:
+            print(f"🖼️ Intentando generar imagen (intento {intento+1}/{intentos})...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
-                return r.json()["data"][0]["url"]
-            time.sleep(5)
-        except Exception:
-            time.sleep(5)
+                url_img = r.json()["data"][0]["url"]
+                print(f"✅ Imagen generada exitosamente en intento {intento+1}")
+                return url_img
+            else:
+                print(f"⚠️ Respuesta no exitosa: {r.status_code} - {r.text[:100]}")
+        except Exception as e:
+            print(f"⚠️ Error en intento {intento+1}: {e}")
+        if intento < intentos - 1:
+            print(f"⏳ Esperando 10s antes de reintentar...")
+            time.sleep(10)
+    print("❌ No se pudo generar la imagen después de 3 intentos.")
     return None
 
 # ================================================================
-# GENERAR MINIATURA (dedicada con 5 reintentos)
+# GENERAR MINIATURA (5 intentos con backoff)
 # ================================================================
 def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     prompt_limpio = limpiar_prompt(prompt)
@@ -572,7 +580,7 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
                 print(f"✅ Miniatura generada exitosamente (intento {intento+1}).")
                 return url_imagen
             else:
-                print(f"⚠️ Respuesta no exitosa: {r.status_code} - {r.text}")
+                print(f"⚠️ Respuesta no exitosa: {r.status_code} - {r.text[:100]}")
         except Exception as e:
             print(f"⚠️ Error en intento {intento+1}: {e}")
         
@@ -748,10 +756,9 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             print(f"⚠️ Error al subir miniatura: {e}")
 
 # ================================================================
-# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA (nuevas)
+# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA
 # ================================================================
 def verificar_publicacion_hoy():
-    """Devuelve True si ya se publicó un video hoy en la zona horaria de CDMX."""
     estado = cargar_estado_musica()
     ultima = estado.get("ultima_publicacion_exitosa")
     if not ultima:
@@ -760,7 +767,6 @@ def verificar_publicacion_hoy():
     return ultima == hoy
 
 def marcar_publicacion_exitosa():
-    """Marca en el estado que hoy se publicó exitosamente."""
     estado = cargar_estado_musica()
     hoy = date.today(ZoneInfo("America/Mexico_City")).isoformat()
     estado["ultima_publicacion_exitosa"] = hoy
@@ -780,7 +786,6 @@ def verificar_envs():
 def main():
     verificar_envs()
 
-    # --- NUEVA VERIFICACIÓN: si ya se publicó hoy, salimos sin hacer nada ---
     if verificar_publicacion_hoy():
         print("✅ Ya se publicó un video hoy. Esta es la ejecución de respaldo, no se necesita generar otro. Saliendo.")
         sys.exit(0)
@@ -792,7 +797,6 @@ def main():
     print(f"🎵 Fondo musical: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # 1. Generar guion
     guion_data = generar_guion()
     titulo_video = guion_data.get("titulo", "Relato Paranormal Real")
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
@@ -800,7 +804,6 @@ def main():
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
     segmentos = guion_data.get("segmentos", [])
 
-    # 2. Procesar segmentos
     textos_registrados = set()
     elementos_validos = []
     imagen_ultimo_recurso = None
@@ -814,13 +817,18 @@ def main():
         if i > 0:
             time.sleep(3)
 
+        # Intenta generar imagen con reintentos (3 intentos, 10s espera)
         url_img = generar_imagen(seg.get("imagen_prompt", ""), texto_segmento=seg["texto"], width=2048, height=1152)
         if url_img:
             imagen_ultimo_recurso = url_img
-        elif imagen_ultimo_recurso:
-            url_img = imagen_ultimo_recurso
         else:
-            continue
+            # Si falla, reutiliza la última imagen generada con éxito
+            if imagen_ultimo_recurso:
+                print(f"⚠️ Reutilizando imagen anterior para segmento {i}.")
+                url_img = imagen_ultimo_recurso
+            else:
+                print(f"❌ No se pudo generar ni reutilizar imagen para segmento {i}. Saltando...")
+                continue
 
         audio_file = generar_audio(seg["texto"], i)
         if not audio_file:
@@ -832,7 +840,7 @@ def main():
         print("❌ No hay elementos válidos para crear el video.")
         sys.exit(1)
 
-    # 3. Validar duración y expandir si es necesario
+    # Validar duración y expandir si es necesario
     duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
     print(f"⏱️ Duración estimada del video (solo narración): {duracion_actual/60:.1f} minutos")
 
@@ -842,13 +850,21 @@ def main():
         ultimos_textos = [seg["texto"] for seg in segmentos[-3:]] if len(segmentos) >= 3 else [seg["texto"] for seg in segmentos]
         nuevos_segmentos = expandir_guion(titulo_video, ultimos_textos, intentos_expansion+1)
         if nuevos_segmentos:
-            for i, seg in enumerate(nuevos_segmentos):
+            for j, seg in enumerate(nuevos_segmentos):
                 url_img = generar_imagen(seg.get("imagen_prompt", ""), texto_segmento=seg["texto"], width=2048, height=1152)
                 if url_img:
-                    audio_file = generar_audio(seg["texto"], len(elementos_validos) + i)
-                    if audio_file:
-                        elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
-                        segmentos.append(seg)
+                    imagen_ultimo_recurso = url_img
+                else:
+                    if imagen_ultimo_recurso:
+                        print(f"⚠️ Reutilizando imagen anterior para expansión {j}.")
+                        url_img = imagen_ultimo_recurso
+                    else:
+                        print(f"❌ No se pudo generar imagen para expansión {j}. Saltando...")
+                        continue
+                audio_file = generar_audio(seg["texto"], len(elementos_validos) + j)
+                if audio_file:
+                    elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
+                    segmentos.append(seg)
             duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
             print(f"⏱️ Duración después de expansión: {duracion_actual/60:.1f} minutos")
             intentos_expansion += 1
@@ -862,7 +878,7 @@ def main():
 
     print(f"✅ Duración final aceptable: {duracion_actual/60:.1f} minutos.")
 
-    # 4. Generar miniatura
+    # Generar miniatura
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_miniatura(guion_data.get("miniatura_prompt", "Dark mysterious scene"))
@@ -884,16 +900,16 @@ def main():
         print("⚠️ No se generó URL de miniatura. El video se subirá sin miniatura personalizada.")
         miniatura_path = None
 
-    # 5. Montar video
+    # Montar video
     print("🎬 Montando video...")
     video_path, duracion_final = montar_video(elementos_validos)
     print(f"⏱️ Duración final del video generado: {duracion_final/60:.1f} minutos")
 
-    # 6. Subir a YouTube
+    # Subir a YouTube
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
 
-    # --- NUEVA: marcar publicación exitosa ---
+    # Marcar publicación exitosa
     marcar_publicacion_exitosa()
 
     limpiar_archivos_temporales()
