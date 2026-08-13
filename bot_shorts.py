@@ -997,44 +997,7 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     return salida
 
 # ================================================================
-# PUBLICAR COMENTARIO FIJADO
-# ================================================================
-def publicar_comentario_fijado(video_id):
-    try:
-        creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
-        youtube = build("youtube", "v3", credentials=creds)
-        
-        mensaje_comentario = f"""👻 ¿Te gustó este relato real?
-
-🔴 SUSCRÍBETE para más historias de terror reales: {CANAL_LINK}
-📱 Síguenos en Facebook: {FACEBOOK_LINK}
-
-¿Te ha pasado algo parecido? Cuéntamelo en los comentarios 👇"""
-        
-        request = youtube.commentThreads().insert(
-            part="snippet",
-            body={
-                "snippet": {
-                    "videoId": video_id,
-                    "topLevelComment": {
-                        "snippet": {
-                            "textOriginal": mensaje_comentario
-                        }
-                    }
-                }
-            }
-        )
-        response = request.execute()
-        comentario_id = response["id"]
-        
-        print(f"✅ Comentario publicado en el Short {video_id}")
-        return comentario_id
-    except Exception as e:
-        print(f"⚠️ No se pudo publicar comentario: {e}")
-        return None
-
-# ================================================================
-# 🆕 SUBIR A YOUTUBE (incluye fuente del relato real)
+# 🆕 SUBIR A YOUTUBE (SIN comentario fijado)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
@@ -1085,10 +1048,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         response = request.execute()
         video_id = response["id"]
         print(f"✅ Short subido: https://youtu.be/{video_id}")
-        
-        time.sleep(3)
-        publicar_comentario_fijado(video_id)
-        
         return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
