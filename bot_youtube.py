@@ -36,6 +36,7 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 MUSICA_ESTADO_FILE = "estado_musica.json"
+TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"  # 🆕 Registro de títulos
 
 # Duración mínima aceptable para el video (8 minutos)
 DURACION_MINIMA_SEGUNDOS = 480
@@ -207,6 +208,45 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
+# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS (sin repetir jamás)
+# ================================================================
+def cargar_titulos_largos():
+    """Carga la lista de títulos de videos largos ya publicados."""
+    try:
+        with open(TITULOS_LARGOS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"titulos": []}
+
+def guardar_titulo_largo(titulo):
+    """Guarda un título nuevo en la lista de publicados."""
+    data = cargar_titulos_largos()
+    if titulo not in data["titulos"]:
+        data["titulos"].append(titulo)
+        with open(TITULOS_LARGOS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print(f"✅ Título largo guardado en registro: '{titulo}'")
+
+def titulo_largo_ya_publicado(titulo):
+    """Verifica si un título ya fue publicado (comparación flexible)."""
+    data = cargar_titulos_largos()
+    titulo_norm = titulo.lower().strip()
+    # Comparación flexible: busca coincidencia exacta o palabras clave similares
+    for t in data["titulos"]:
+        t_norm = t.lower().strip()
+        if titulo_norm == t_norm:
+            return True
+        # Si comparten más del 70% de palabras clave, también se considera duplicado
+        palabras1 = set(re.findall(r'\w+', titulo_norm))
+        palabras2 = set(re.findall(r'\w+', t_norm))
+        if len(palabras1) > 3 and len(palabras2) > 3:
+            interseccion = palabras1.intersection(palabras2)
+            similitud = len(interseccion) / min(len(palabras1), len(palabras2))
+            if similitud > 0.7:
+                return True
+    return False
+
+# ================================================================
 # 🧼 LIMPIADOR DE PROMPTS
 # ================================================================
 def limpiar_prompt(prompt):
@@ -310,7 +350,7 @@ def agregar_texto_miniatura(img_path, texto_portada):
         print(f"⚠️ Error en miniatura: {e}")
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON (CORREGIDO)
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
@@ -324,17 +364,21 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        # ✅ NO se escapan saltos de línea aquí: json.loads(strict=False) ya
-        # tolera saltos de línea literales dentro de las cadenas, y hacerlo
-        # manualmente corrompe la estructura del JSON.
         return json_str
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (con json5 y logging)
+# GENERAR GUION CON DEEPSEEK (con títulos publicados como contexto)
 # ================================================================
 def generar_guion(contexto_extra=""):
+    # 🆕 Cargar últimos títulos publicados para pasarlos como contexto
+    titulos_pub = cargar_titulos_largos()["titulos"][-20:]  # Últimos 20 para referencia
+    titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+    
     prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE A ESTOS):
+{titulos_referencia}
 
 Escribe un relato de eventos paranormales o misterio real en primera persona en español de aproximadamente 9.500 a 11.000 caracteres (1.600-1.850 palabras), ambientado en {UBICACION_HISTORIA}, México.
 Divide la historia en 28 a 34 segmentos, CADA UNO de 45 a 55 palabras (esto asegura que cada segmento se narre en ~18-22 segundos a velocidad normal de TTS).
@@ -344,6 +388,8 @@ PERSONAJE PRINCIPAL (ÚNICO PARA ESTE VIDEO):
 
 REGLAS DE TÍTULO:
 - Debe ser DESCRIPTIVO y DIRECTO (50-80 caracteres).
+- NO debe parecerse a ningún título ya publicado listado arriba.
+- El tema/lugar/fenómeno debe ser ORIGINAL (no repitas minas, casonas, espejos, carreteras si ya aparecieron recientemente).
 - Ejemplo: "El misterio de la casona abandonada en {UBICACION_HISTORIA}"
 
 REGLAS DE INICIO:
@@ -358,22 +404,22 @@ REGLAS DE GENERACIÓN VISUAL:
    - La persona debe ocupar como máximo el 20-25% del encuadre (plano general o medio, nunca primer plano).
    - La persona debe ser descrita como de apariencia natural y agradable, sana, sin rasgos de sufrimiento ni deformidades.
 6. ESTRUCTURA NARRATIVA: presentación, desarrollo con varios puntos de tensión, clímax, resolución — repartida en los segmentos.
-7. MINIATURA: Debes generar también un campo 'miniatura_descripcion' (1-2 oraciones en español describiendo la escena o momento MÁS IMPACTANTE Y VISUAL del relato) y un 'miniatura_prompt' en inglés específico para esa escena, con composición dramática y atractiva para captar clics. A diferencia de las imágenes de los segmentos, la miniatura puede usar un encuadre más cercano (plano medio o medio-corto) para maximizar el impacto visual, pero sin llegar a primer plano extremo.
+7. MINIATURA: Debes generar también un campo 'miniatura_descripcion' (1-2 oraciones en español describiendo la escena o momento MÁS IMPACTANTE Y VISUAL del relato) y un 'miniatura_prompt' en inglés específico para esa escena, con composición dramática y atractiva para captar clics.
 
 {contexto_extra}
 
 Responde únicamente en formato JSON con esta estructura exacta:
 {{
-  "titulo": "Título descriptivo y directo",
+  "titulo": "Título descriptivo y directo, ORIGINAL, sin parecerse a publicados",
   "palabras_portada": "CASO REAL",
   "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio",
   "tags": "tag1, tag2, tag3, tag4, tag5",
   "miniatura_descripcion": "Breve descripción en español de la escena o momento más impactante y visual del relato (1-2 oraciones).",
-  "miniatura_prompt": "Dramatic cinematic photo of [escena específica derivada de miniatura_descripcion] in {UBICACION_HISTORIA}, [paleta de color], striking and eye-catching composition, professional thumbnail photography, high visual impact, dramatic lighting, sharp focus, no text, no watermark, flawless hyperrealistic quality, no deformities, no blurriness, no artifacts, [personaje si aplica, ocupando un encuadre más cercano pero sin ser primer plano extremo]",
+  "miniatura_prompt": "Dramatic cinematic photo of [escena específica] in {UBICACION_HISTORIA}, [paleta de color], striking composition, professional thumbnail photography, high visual impact, dramatic lighting, sharp focus, no text, no watermark",
   "segmentos": [
     {{
       "texto": "Texto narrativo único en español para ser locutado por voz en off...",
-      "imagen_prompt": "Detailed cinematic prompt in English for this specific scene: [describe the scene based on the 'texto' field]. Include {PERFIL_PERSONAJE} if present. Single subject, medium shot, bright well-lit, 16:9, no text, no gore"
+      "imagen_prompt": "Detailed cinematic prompt in English for this specific scene. Include {PERFIL_PERSONAJE} if present. Single subject, medium shot, bright well-lit, 16:9, no text, no gore"
     }}
   ]
 }}
@@ -415,10 +461,17 @@ Responde únicamente en formato JSON con esta estructura exacta:
                     raise
 
             if "segmentos" in data and len(data["segmentos"]) >= 28:
+                # 🆕 VALIDAR QUE EL TÍTULO NO ESTÉ REPETIDO
+                titulo_generado = data.get("titulo", "")
+                if titulo_largo_ya_publicado(titulo_generado):
+                    print(f"⚠️ Título YA PUBLICADO o muy similar: '{titulo_generado}'. Regenerando...")
+                    raise ValueError("Título duplicado o muy similar a uno ya publicado")
+                
                 for seg in data["segmentos"]:
                     if "imagen_prompt" in seg:
                         seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
                 print(f"✅ Guion generado exitosamente con {len(data['segmentos'])} segmentos.")
+                print(f"🏷️ Título nuevo: {titulo_generado}")
                 return data
             else:
                 print(f"⚠️ Número insuficiente de segmentos ({len(data.get('segmentos', []))}). Reintentando...")
@@ -432,7 +485,7 @@ Responde únicamente en formato JSON con esta estructura exacta:
     sys.exit(1)
 
 # ================================================================
-# EXPANSIÓN DE GUION (con json5 y logging)
+# EXPANSIÓN DE GUION
 # ================================================================
 def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
     contexto = f"""
@@ -440,7 +493,7 @@ La historia ya tiene un título: "{titulo}".
 Los últimos segmentos generados son (texto únicamente):
 {" --- ".join(ultimos_segmentos_texto[-3:])}
 
-Continúa la historia de forma coherente a partir de ese punto. Genera aproximadamente 10 segmentos adicionales (cada uno de 45-55 palabras) que sigan el mismo estilo y temática. Incluye en cada segmento el campo "imagen_prompt" siguiendo las mismas reglas visuales (personaje máximo 25% del encuadre, apariencia natural, etc.).
+Continúa la historia de forma coherente a partir de ese punto. Genera aproximadamente 10 segmentos adicionales (cada uno de 45-55 palabras) que sigan el mismo estilo y temática. Incluye en cada segmento el campo "imagen_prompt" siguiendo las mismas reglas visuales.
 Devuelve únicamente un array JSON llamado "segmentos_extra" con la misma estructura de objetos que en el guion original.
 """
     prompt = f"""Eres el mismo guionista. {contexto}
@@ -499,7 +552,7 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
     return []
 
 # ================================================================
-# GENERAR IMAGEN (3 intentos con 10s de espera)
+# GENERAR IMAGEN
 # ================================================================
 def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
     if texto_segmento:
@@ -544,7 +597,7 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
     return None
 
 # ================================================================
-# GENERAR MINIATURA (5 intentos con backoff)
+# GENERAR MINIATURA
 # ================================================================
 def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     prompt_limpio = limpiar_prompt(prompt)
@@ -592,7 +645,7 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
             print(f"⏳ Esperando {espera}s antes de reintentar...")
             time.sleep(espera)
     
-    print("❌ No se pudo generar la miniatura después de 5 intentos. El video se subirá sin miniatura personalizada (YouTube generará una automática).")
+    print("❌ No se pudo generar la miniatura después de 5 intentos. El video se subirá sin miniatura personalizada.")
     return None
 
 # ================================================================
@@ -600,7 +653,7 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
-    texto_limpio = re.sub(r"prompt.*", texto_limpio, flags=re.IGNORECASE)
+    texto_limpio = re.sub(r"prompt.*", "", texto_limpio, flags=re.IGNORECASE)
     texto_limpio = re.sub(r'[\{\}\[\]"]', "", texto_limpio)
     texto_limpio = re.sub(r"\s+", " ", texto_limpio).strip()
 
@@ -759,19 +812,19 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             print(f"⚠️ Error al subir miniatura: {e}")
 
 # ================================================================
-# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA (CORREGIDAS)
+# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA
 # ================================================================
 def verificar_publicacion_hoy():
     estado = cargar_estado_musica()
     ultima = estado.get("ultima_publicacion_exitosa")
     if not ultima:
         return False
-    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()  # ✅ CORREGIDO
+    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()
     return ultima == hoy
 
 def marcar_publicacion_exitosa():
     estado = cargar_estado_musica()
-    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()  # ✅ CORREGIDO
+    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()
     estado["ultima_publicacion_exitosa"] = hoy
     guardar_estado_musica(estado)
     print(f"✅ Publicación exitosa marcada para hoy: {hoy}")
@@ -820,12 +873,10 @@ def main():
         if i > 0:
             time.sleep(3)
 
-        # Intenta generar imagen con reintentos (3 intentos, 10s espera)
         url_img = generar_imagen(seg.get("imagen_prompt", ""), texto_segmento=seg["texto"], width=2048, height=1152)
         if url_img:
             imagen_ultimo_recurso = url_img
         else:
-            # Si falla, reutiliza la última imagen generada con éxito
             if imagen_ultimo_recurso:
                 print(f"⚠️ Reutilizando imagen anterior para segmento {i}.")
                 url_img = imagen_ultimo_recurso
@@ -843,7 +894,6 @@ def main():
         print("❌ No hay elementos válidos para crear el video.")
         sys.exit(1)
 
-    # Validar duración y expandir si es necesario
     duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
     print(f"⏱️ Duración estimada del video (solo narración): {duracion_actual/60:.1f} minutos")
 
@@ -881,7 +931,6 @@ def main():
 
     print(f"✅ Duración final aceptable: {duracion_actual/60:.1f} minutos.")
 
-    # Generar miniatura
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_miniatura(guion_data.get("miniatura_prompt", "Dark mysterious scene"))
@@ -903,15 +952,16 @@ def main():
         print("⚠️ No se generó URL de miniatura. El video se subirá sin miniatura personalizada.")
         miniatura_path = None
 
-    # Montar video
     print("🎬 Montando video...")
     video_path, duracion_final = montar_video(elementos_validos)
     print(f"⏱️ Duración final del video generado: {duracion_final/60:.1f} minutos")
 
-    # Subir a YouTube
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
 
+    # 🆕 Guardar título publicado ANTES de marcar publicación exitosa
+    guardar_titulo_largo(titulo_video)
+    
     # Marcar publicación exitosa
     marcar_publicacion_exitosa()
 
