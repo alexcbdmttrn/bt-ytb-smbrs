@@ -15,6 +15,8 @@ from moviepy.editor import (
     ImageClip,
     concatenate_audioclips,
     concatenate_videoclips,
+    TextClip,
+    CompositeVideoClip,
 )
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
@@ -40,20 +42,20 @@ ESTADO_FILE = "estado_shorts.json"
 META_DIARIA_SHORTS = 3
 
 # ================================================================
-# 🎤 BANCO DE VOCES
+# 🎤 BANCO DE VOCES (VELOCIDAD +10% para relatos más rápidos)
 # ================================================================
 VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-2Hz"},
-    {"voz": "es-MX-DaliaNeural", "velocidad": "+5%", "tono": "+0Hz"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+5%", "tono": "-3Hz"},
-    {"voz": "es-ES-ElviraNeural", "velocidad": "+5%", "tono": "+1Hz"},
-    {"voz": "es-CO-SalomeNeural", "velocidad": "+5%", "tono": "-1Hz"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+5%", "tono": "+2Hz"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+5%", "tono": "-2Hz"},
-    {"voz": "es-PE-CamilaNeural", "velocidad": "+5%", "tono": "+0Hz"},
-    {"voz": "es-US-PalomaNeural", "velocidad": "+5%", "tono": "-1Hz"},
-    {"voz": "es-ES-XimenaNeural", "velocidad": "+5%", "tono": "+1Hz"},
-    {"voz": "es-ES-AbrilNeural", "velocidad": "+5%", "tono": "-2Hz"},
+    {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
+    {"voz": "es-MX-DaliaNeural", "velocidad": "+10%", "tono": "+0Hz"},
+    {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz"},
+    {"voz": "es-ES-ElviraNeural", "velocidad": "+10%", "tono": "+1Hz"},
+    {"voz": "es-CO-SalomeNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+10%", "tono": "+2Hz"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
+    {"voz": "es-PE-CamilaNeural", "velocidad": "+10%", "tono": "+0Hz"},
+    {"voz": "es-US-PalomaNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-ES-XimenaNeural", "velocidad": "+10%", "tono": "+1Hz"},
+    {"voz": "es-ES-AbrilNeural", "velocidad": "+10%", "tono": "-2Hz"},
 ]
 VOCES_DISPONIBLES.sort(key=lambda x: 0 if x["voz"] == "es-MX-JorgeNeural" else 1)
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
@@ -231,7 +233,7 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
-        r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
+        r"\blemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
         r"\bblood\b", r"\bgore\b", r"\bdemacrad[oa]s?\b", r"\bzombies?\b",
         r"\bdisfigured\b", r"\bwounds?\b", r"\bmonster\b"
     ]
@@ -257,7 +259,7 @@ def limpiar_caracteres_para_tts(texto):
     return texto.strip()
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON (CORREGIDA)
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
@@ -268,9 +270,6 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        # ✅ NO se escapan saltos de línea aquí: json.loads(strict=False) ya
-        # tolera saltos de línea literales dentro de las cadenas, y hacerlo
-        # manualmente corrompe la estructura del JSON.
         return json_str
     return respuesta
 
@@ -358,7 +357,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un escritor experto en terror. Expande el siguiente relato para que tenga entre 280 y 320 palabras.
+    prompt = f"""Eres un escritor experto en micro-relatos de terror. Expande el siguiente relato para que tenga entre 160 y 200 palabras.
 Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
 y más detalles del entorno en {ubicacion}.
 Mantén la trama exactamente igual, solo añade contenido donde sea natural.
@@ -367,7 +366,7 @@ NO agregues ningún llamado a suscribirse ni CTA — solo la narración pura.
 RELATO ORIGINAL (debe expandirse):
 {texto_corto}
 
-Devuelve SOLO el relato expandido (280-320 palabras), sin títulos ni comentarios adicionales.
+Devuelve SOLO el relato expandido (160-200 palabras), sin títulos ni comentarios adicionales.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -381,7 +380,7 @@ Devuelve SOLO el relato expandido (280-320 palabras), sin títulos ni comentario
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         texto_expandido = r.json()["choices"][0]["message"]["content"].strip()
-        if len(texto_expandido.split()) > 200:
+        if len(texto_expandido.split()) > 140:
             return texto_expandido
         else:
             return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor."
@@ -392,7 +391,7 @@ Devuelve SOLO el relato expandido (280-320 palabras), sin títulos ni comentario
 # ================================================================
 # TRUNCAR TEXTO LARGO
 # ================================================================
-def truncar_texto_largo(texto, max_palabras=300):
+def truncar_texto_largo(texto, max_palabras=200):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -402,8 +401,7 @@ def truncar_texto_largo(texto, max_palabras=300):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA — CON SEO EXPERTO 2026 (título, tags
-# long-tail y descripción estructurada), SIN FALLBACK HARDCODEADO
+# GENERAR HISTORIA COMPLETA — MICRO-RELATO VIRAL (160-200 palabras)
 # ================================================================
 def generar_historia_completa():
     hashtags_disponibles = [
@@ -412,61 +410,62 @@ def generar_historia_completa():
         "#escalofrio", "#noche", "#pueblo", "#casasembrujadas", "#relatos",
         "#brujas", "#aparicion", "#almas", "#pena", "#real"
     ]
-    # Los hashtags ya NO van en el título (SEO 2026): se arman aparte para
-    # colocarlos al final de la descripción, con #Shorts siempre primero.
     hashtags_elegidos = random.sample(hashtags_disponibles, 3)
     hashtags_descripcion_base = "#Shorts " + " ".join(hashtags_elegidos)
 
-    prompt = f"""Eres un EXPERTO EN STORYTELLING Y SEO PARA YOUTUBE SHORTS de nivel élite.
+    prompt = f"""Eres un MAESTRO DEL MICRO-RELATO DE TERROR, especializado en historias virales para YouTube Shorts.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-La historia debe tener EXACTAMENTE entre 280 y 320 palabras (NO más de 320, NO menos de 280) y debe ser UNA HISTORIA COMPLETA Y AUTOCONCLUSIVA:
-- Tiene INICIO (presenta al personaje y la situación).
-- Tiene DESARROLLO (construye tensión, describe sonidos, olores, sensaciones).
-- Tiene RESOLUCIÓN FINAL (cierra la historia completamente, sin cliffhanger).
-Ambientada en el estado de {ESTADO_HISTORIA_SHORTS}, México.
 
-DESCRIPCIÓN FÍSICA DEL PROTAGONISTA:
-"{PERFIL_PERSONAJE_SHORTS}"
+🎯 REGLA CRÍTICA DE LONGITUD:
+- EXACTAMENTE entre 160 y 200 palabras (NO más de 200, NO menos de 160).
+- Esto debe durar entre 55 y 75 segundos al ser narrado a velocidad +10%.
+- Cada palabra cuenta: NO hay espacio para relleno.
 
-REGLAS DEL TÍTULO (SEO 2026 — NO incluyas hashtags en este campo):
-- Longitud: entre 60 y 80 caracteres (caracteres, no palabras).
-- La PALABRA CLAVE PRINCIPAL debe ir AL INICIO del título (front-loaded para búsqueda).
-- Debe sonar natural y descriptivo, NO relleno de palabras clave forzado ni clickbait vacío.
-- Debe dar CONTEXTO real de lo que pasó en la historia (lugar + fenómeno concreto).
-- Ejemplo de longitud correcta (66 caracteres): "La bruja del panteón de Aguascalientes me siguió hasta mi casa"
-- Mal ejemplo (genérico, corto): "El misterio de Quintana Roo"
+📐 ESTRUCTURA DE MICRO-RELATO VIRAL:
+1. GANCHO (5-10 palabras): Frase inicial impactante que atrape en el primer segundo.
+   Ej: "Nunca debí abrir esa puerta."
+2. CONTEXTO (20-30 palabras): Establece el lugar y situación rápidamente.
+3. TENSIÓN (80-100 palabras): Construye el miedo con detalles sensoriales precisos.
+4. TWIST FINAL (30-40 palabras): Remate inesperado que deje al espectador impactado.
+   Ej: "Cuando miré por el espejo, vi que detrás de mí... no había nadie. Pero la mano en mi hombro seguía ahí."
 
-REGLAS DE DESCRIPCIÓN (SEO 2026):
-- "gancho_descripcion": UNA sola línea de MÁXIMO 100 caracteres que genere curiosidad de clic. Es lo único visible antes del corte "Mostrar más" en YouTube, así que debe funcionar solo, SIN ser el inicio literal de la narración ni spoilear el final.
-- "contexto_descripcion": 1-2 oraciones con contexto y palabras clave relacionadas al lugar y tipo de fenómeno paranormal, redactadas de forma natural (no relleno de keywords).
+⚠️ REGLAS DEL TWIST FINAL:
+- Debe ser INESPERADO pero LÓGICO con la historia.
+- Debe generar ganas de COMENTAR y COMPARTIR.
+- NO uses finales abiertos tipo "y nunca supe qué pasó".
+- SÍ usa revelaciones concretas que dejen escalofríos.
 
-REGLAS DE ETIQUETAS (SEO 2026 — campo "tags"):
-- Genera entre 10 y 15 etiquetas como FRASES long-tail específicas de ESTA historia, NO palabras sueltas genéricas.
-- Mezcla 2-3 etiquetas amplias de descubrimiento con 7-12 etiquetas específicas de nicho (lugar exacto, tipo de aparición, elemento concreto de la trama).
-- El total de caracteres de todas las etiquetas combinadas no debe superar los 480 caracteres.
-- Mal ejemplo: "terror, shorts, mexico, miedo, paranormal"
-- Buen ejemplo: "leyendas urbanas mexicanas, hacienda embrujada jalisco, relatos de terror reales, fantasmas en haciendas antiguas, testimonios paranormales mexico"
+REGLAS DEL TÍTULO (SEO 2026):
+- Longitud: entre 55 y 75 caracteres.
+- Palabra clave al inicio (front-loaded).
+- Debe sugerir el twist sin spoilearlo.
+- Ejemplo correcto: "El susurro en mi habitación no era humano"
+- Mal ejemplo: "Historia de terror en Quintana Roo"
 
-REGLAS DE INICIO DEL RELATO (campo "texto_completo"):
-- La PRIMERA FRASE debe ser un GANCHO IMPACTANTE de máximo 5 palabras.
-- Ejemplo: "Esa noche no estaba solo."
+REGLAS DE DESCRIPCIÓN:
+- "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres que genere curiosidad.
+- "contexto_descripcion": 1 oración con palabras clave naturales.
 
-REGLAS DE CONTENIDO:
-- Escribe con ORTOGRAFÍA Y ACENTUACIÓN CORRECTA en español (usa ñ, acentos, etc.).
-- Desarrollo: construye tensión, describe sonidos, olores, sensaciones.
-- Resolución: final claro, cerrando la historia sin preguntas abiertas.
-- ANTI-REPETICIÓN: NO repitas frases.
-- PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-- IMPORTANTE: el campo "texto_completo" NO debe incluir ningún llamado a suscribirse ni CTA — eso se agrega aparte en la descripción del video, no en la narración.
+REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres):
+- Mezcla etiquetas específicas del lugar + tipo de fenómeno + micro-relato.
+- Ejemplo: "micro relatos de terror, historias cortas de miedo, leyendas de Zacatecas, fantasmas reales mexico"
+
+REGLAS GENERALES:
+- PRIMERA FRASE = GANCHO IMPACTANTE de máximo 5 palabras.
+- Ortografía perfecta (acentos, ñ, signos).
+- NO repitas frases.
+- PALETA: {PALETA_COLOR_ACTUAL}
+- IMPORTANTE: el campo "texto_completo" debe ser una historia AUTOCONCLUSIVA con final cerrado y twist impactante.
+- NO incluyas CTA de suscripción en el relato.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título de 60-80 caracteres, SIN hashtags, palabra clave al inicio",
-  "gancho_descripcion": "Primera línea de máximo 100 caracteres, gancho de clic",
-  "contexto_descripcion": "1-2 oraciones con contexto y palabras clave naturales",
-  "texto_completo": "Historia completa de 280-320 palabras, con gancho impactante en la primera frase, SIN CTA de suscripción",
-  "palabras_portada": "PALABRA CLAVE",
-  "tags": "tag long-tail 1, tag long-tail 2, ... (10-15 tags en total, máx 480 caracteres combinados)"
+  "titulo": "Título 55-75 caracteres, SIN hashtags",
+  "gancho_descripcion": "Gancho de máx 90 caracteres",
+  "contexto_descripcion": "1 oración con contexto",
+  "texto_completo": "Micro-relato AUTOCONCLUSIVO de 160-200 palabras con twist final impactante",
+  "palabras_portada": "2-3 PALABRAS CLAVE",
+  "tags": "tag long-tail 1, tag long-tail 2, ... (10-15 tags)"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -515,9 +514,9 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
 
-            # ---- VALIDACIÓN DE TÍTULO (60-80 caracteres, sin hashtags) ----
+            # ---- VALIDACIÓN DE TÍTULO (55-75 caracteres, sin hashtags) ----
             titulo = data.get("titulo", "").strip()
-            titulo = re.sub(r'#\w+', '', titulo).strip()  # por si el modelo coló un hashtag
+            titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
             if len(titulo) < 40:
                 titulo = f"{titulo} - Testimonio real de terror en {ESTADO_HISTORIA_SHORTS}"
@@ -560,14 +559,14 @@ Devuelve ESTRICTAMENTE este JSON válido:
             tags_final = []
             total_chars = 0
             for t in tags_list:
-                costo = len(t) + 2  # +2 por ", "
+                costo = len(t) + 2
                 if total_chars + costo > 480:
                     break
                 tags_final.append(t)
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
 
-            # ---- HASHTAGS DE DESCRIPCIÓN (elegidos por el script, no por la IA) ----
+            # ---- HASHTAGS DE DESCRIPCIÓN ----
             data["hashtags_descripcion"] = hashtags_descripcion_base
 
             return data
@@ -750,7 +749,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     return resultados_temporales
 
 # ================================================================
-# GENERAR AUDIO
+# GENERAR AUDIO (VELOCIDAD +10%)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -811,7 +810,32 @@ def generar_audio(texto, index, intentos=4):
         return None
 
 # ================================================================
-# MONTAR VIDEO
+# GENERAR AUDIO CTA FINAL
+# ================================================================
+def generar_audio_cta_final():
+    """Genera un audio corto de CTA para el final del video."""
+    cta_texto = "Relatos completos en el canal. Visítanos."
+    filename = "audio_cta_final.mp3"
+    
+    async def _generar():
+        communicate = edge_tts.Communicate(
+            cta_texto,
+            CONFIG_VOZ_ACTUAL["voz"],
+            rate="+10%",
+            pitch=CONFIG_VOZ_ACTUAL["tono"]
+        )
+        await communicate.save(filename)
+    
+    try:
+        asyncio.run(_generar())
+        print("✅ Audio CTA final generado")
+        return filename
+    except Exception as e:
+        print(f"⚠️ Error generando audio CTA: {e}")
+        return None
+
+# ================================================================
+# MONTAR VIDEO CON CTA FINAL
 # ================================================================
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
@@ -865,6 +889,28 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
 
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
+    
+    # 🆕 AGREGAR CTA FINAL
+    cta_audio_path = generar_audio_cta_final()
+    if cta_audio_path and os.path.exists(cta_audio_path):
+        try:
+            cta_clip = AudioFileClip(cta_audio_path)
+            # Agregar 0.5s de silencio antes del CTA
+            from moviepy.editor import AudioClip
+            silencio = AudioClip(lambda t: 0, duration=0.5)
+            audio_narracion = concatenate_audioclips([audio_narracion, silencio, cta_clip])
+            
+            # Extender el último clip de video para cubrir el CTA
+            duracion_cta = cta_clip.duration + 0.5
+            ultimo_clip = clips_video[-1]
+            ultimo_clip = ultimo_clip.set_duration(ultimo_clip.duration + duracion_cta)
+            clips_video[-1] = ultimo_clip
+            
+            video = concatenate_videoclips(clips_video, method="compose")
+            print(f"✅ CTA final agregado ({duracion_cta:.1f}s adicionales)")
+        except Exception as e:
+            print(f"⚠️ Error agregando CTA final: {e}")
+    
     duracion_total = audio_narracion.duration
 
     if fondo_path and os.path.exists(fondo_path):
@@ -893,13 +939,55 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         a.close()
     if 'fondo_clip' in locals():
         fondo_clip.close()
+    if cta_audio_path and os.path.exists(cta_audio_path):
+        try:
+            os.remove(cta_audio_path)
+        except:
+            pass
 
     print(f"✅ Short vertical creado: {salida}")
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE — DESCRIPCIÓN CON ESTRUCTURA SEO (gancho + contexto
-# + CTA + hashtags al final, empezando siempre con #Shorts)
+# PUBLICAR COMENTARIO FIJADO
+# ================================================================
+def publicar_comentario_fijado(video_id):
+    """Publica un comentario fijado con link al canal."""
+    try:
+        creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
+        youtube = build("youtube", "v3", credentials=creds)
+        
+        mensaje_comentario = f"""👻 ¿Te gustó este micro-relato?
+
+🔴 SUSCRÍBETE para más historias de terror reales: {CANAL_LINK}
+📱 Síguenos en Facebook: {FACEBOOK_LINK}
+
+¿Qué harías tú en esta situación? Déjamelo en los comentarios 👇"""
+        
+        request = youtube.commentThreads().insert(
+            part="snippet",
+            body={
+                "snippet": {
+                    "videoId": video_id,
+                    "topLevelComment": {
+                        "snippet": {
+                            "textOriginal": mensaje_comentario
+                        }
+                    }
+                }
+            }
+        )
+        response = request.execute()
+        comentario_id = response["id"]
+        
+        print(f"✅ Comentario publicado en el Short {video_id}")
+        return comentario_id
+    except Exception as e:
+        print(f"⚠️ No se pudo publicar comentario: {e}")
+        return None
+
+# ================================================================
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion):
     try:
@@ -914,15 +1002,15 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    cta_texto = "👻 ¿Te gustó la historia? SUSCRÍBETE para más relatos de terror reales."
-
     descripcion = f"""{gancho_descripcion}
 
 {contexto_descripcion}
 
-{cta_texto}
+🔴 Relatos completos en el canal. Visítanos: {CANAL_LINK}
 
-🔴 SUSCRÍBETE: {CANAL_LINK}
+👇 SUSCRÍBETE PARA MÁS RELATOS REALES 👇
+{CANAL_LINK}
+
 📱 Facebook: {FACEBOOK_LINK}
 
 {hashtags_descripcion}"""
@@ -948,6 +1036,12 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         response = request.execute()
         video_id = response["id"]
         print(f"✅ Short subido: https://youtu.be/{video_id}")
+        
+        # 🆕 Publicar comentario fijado
+        time.sleep(3)
+        publicar_comentario_fijado(video_id)
+        
+        return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
         sys.exit(1)
@@ -973,7 +1067,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (standalone + SEO experto 2026)")
+    print("🎬 Iniciando Bot de SHORTS (Micro-relatos virales +10% velocidad)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if not YOUTUBE_USER_TOKEN:
@@ -990,7 +1084,7 @@ def main():
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    print("🆕 Generando nueva historia completa (standalone, con SEO)...")
+    print("🆕 Generando nueva historia completa (micro-relato viral)...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
@@ -999,16 +1093,16 @@ def main():
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
 
-    if palabras < 230:
+    if palabras < 140:
         print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
         texto_completo = expandir_texto_corto(
             texto_completo,
             ESTADO_HISTORIA_SHORTS,
             PERSONAJE_SHORTS
         )
-    elif palabras > 340:
+    elif palabras > 220:
         print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
-        texto_completo = truncar_texto_largo(texto_completo, max_palabras=300)
+        texto_completo = truncar_texto_largo(texto_completo, max_palabras=200)
 
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
