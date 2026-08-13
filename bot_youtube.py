@@ -36,7 +36,7 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 MUSICA_ESTADO_FILE = "estado_musica.json"
-TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"  # 🆕 Registro de títulos
+TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 
 # Duración mínima aceptable para el video (8 minutos)
 DURACION_MINIMA_SEGUNDOS = 480
@@ -258,7 +258,7 @@ def limpiar_prompt(prompt):
 
     palabras_sucias = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
-        r"\bblemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
+        r"\blemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
         r"\bblood\b", r"\bgore\b", r"\bdemacrad[oa]s?\b", r"\bzombies?\b",
         r"\bdisfigured\b", r"\bwounds?\b", r"\bmonster\b"
     ]
@@ -454,13 +454,15 @@ Responde únicamente en formato JSON con esta estructura exacta:
             except json.JSONDecodeError as e:
                 print(f"⚠️ json.loads falló: {e}. Intentando con json5...")
                 try:
+                    import json5
                     data = json5.loads(json_str)
                     print("✅ json5 parseó exitosamente.")
                 except Exception as e5:
                     print(f"❌ json5 también falló: {e5}")
                     raise
 
-            if "segmentos" in data and len(data["segmentos"]) >= 28:
+            # ✅ CORREGIDO: Mínimo de segmentos bajado de 28 a 20
+            if "segmentos" in data and len(data["segmentos"]) >= 20:
                 # 🆕 VALIDAR QUE EL TÍTULO NO ESTÉ REPETIDO
                 titulo_generado = data.get("titulo", "")
                 if titulo_largo_ya_publicado(titulo_generado):
@@ -474,7 +476,8 @@ Responde únicamente en formato JSON con esta estructura exacta:
                 print(f"🏷️ Título nuevo: {titulo_generado}")
                 return data
             else:
-                print(f"⚠️ Número insuficiente de segmentos ({len(data.get('segmentos', []))}). Reintentando...")
+                num_segmentos = len(data.get('segmentos', [])) if data else 0
+                print(f"⚠️ Número insuficiente de segmentos ({num_segmentos}, mínimo requerido: 20). Reintentando...")
                 raise ValueError("Número insuficiente de segmentos")
 
         except Exception as e:
@@ -530,6 +533,7 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
             except json.JSONDecodeError as e:
                 print(f"⚠️ json.loads en expansión falló: {e}. Intentando con json5...")
                 try:
+                    import json5
                     data = json5.loads(json_str)
                     print("✅ json5 parseó la expansión exitosamente.")
                 except Exception as e5:
