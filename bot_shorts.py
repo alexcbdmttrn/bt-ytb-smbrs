@@ -358,14 +358,15 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# EXPANDIR TEXTO CORTO
+# 🆕 EXPANDIR TEXTO CORTO (manteniendo estilo de testimonio real)
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
-    print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un escritor experto en micro-relatos de terror. Expande el siguiente relato para que tenga entre 150 y 170 palabras.
-Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
-y más detalles del entorno en {ubicacion}.
-Mantén la trama exactamente igual, solo añade contenido donde sea natural.
+    print("🔄 Expandiendo texto corto (manteniendo estilo de testimonio real)...")
+    prompt = f"""Eres un editor de testimonios paranormales reales. Expande el siguiente
+relato (basado en una historia real contada en internet) para que tenga entre 150 y 170 palabras.
+Añade más detalles sensoriales y específicos (sonidos, olores, lugares reales de {ubicacion},
+horas, objetos) como los que incluiría una persona contando su experiencia real.
+Mantén la trama y el tono coloquial exactamente iguales, solo añade contenido donde sea natural.
 NO agregues ningún llamado a suscribirse ni CTA — solo la narración pura.
 
 RELATO ORIGINAL (debe expandirse):
@@ -406,7 +407,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA — MICRO-RELATO VIRAL (150-170 palabras)
+# 🆕 GENERAR HISTORIA — BASADA EN RELATOS REALES DE INTERNET
 # ================================================================
 def generar_historia_completa():
     hashtags_disponibles = [
@@ -421,56 +422,79 @@ def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    prompt = f"""Eres un MAESTRO DEL MICRO-RELATO DE TERROR, especializado en historias virales para YouTube Shorts.
-Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
+    prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet.
+Tu trabajo es tomar testimonios y relatos que PERSONAS REALES han contado y publicado
+en Facebook, YouTube, Reddit (r/nosleep, r/LetsNotMeet), foros de terror, blogs de
+misterio y páginas de leyendas, y adaptarlos como micro-relatos para YouTube Shorts.
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE A ESTOS):
-{titulos_referencia}
+🚨 REGLA DE ORO:
+La historia DEBE estar basada en un relato que REALMENTE alguien contó o escribió
+en internet. NO inventes tramas de cero: adapta, condensa y reescribe en primera
+persona un testimonio real existente. Puedes cambiar nombres por privacidad, pero
+conserva los hechos centrales del relato original.
+
+📚 FUENTES VÁLIDAS DE INSPIRACIÓN:
+- Testimonios reales publicados en foros, redes y secciones de comentarios.
+- Leyendas urbanas mexicanas documentadas, contadas por supuestos testigos.
+- Casos paranormales reales reportados en medios, blogs y videos de YouTube.
+- Experiencias personales reales de veladores, traileros, mineros, enfermeras,
+  taxistas, policías, velorios, velas de difuntos, caminos y pueblos.
+
+🎯 INSTRUCCIONES DE ADAPTACIÓN:
+1. Elige un relato/caso REAL conocido o un testimonio real publicado en internet,
+   ambientado o adaptable al estado de {ESTADO_HISTORIA_SHORTS}, México.
+2. Cuéntalo en PRIMERA PERSONA, como si tú fueras la persona que lo vivió y lo
+   estuviera contando en un post de Facebook o en un video de YouTube.
+3. Usa detalles específicos y creíbles: nombres reales de pueblos, carreteras o
+   lugares de {ESTADO_HISTORIA_SHORTS}, años, horas, oficios y objetos concretos.
+4. Tono NATURAL Y COLOQUIAL, como alguien contando su experiencia real,
+   NO como novela literaria. Frases cortas y directas.
+5. PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 
 🎯 REGLA CRÍTICA DE LONGITUD:
 - EXACTAMENTE entre 150 y 170 palabras (NO más de 170, NO menos de 150).
-- Esto debe durar entre 50 y 65 segundos al ser narrado a velocidad +10%.
-- Cada palabra cuenta: NO hay espacio para relleno.
+- Duración narrada: 50-65 segundos a velocidad +10%.
 
-📐 ESTRUCTURA DE MICRO-RELATO VIRAL:
-1. GANCHO (5-10 palabras): Frase inicial impactante que atrape en el primer segundo.
-2. CONTEXTO (20-30 palabras): Establece el lugar y situación rápidamente.
-3. TENSIÓN (80-90 palabras): Construye el miedo con detalles sensoriales precisos.
-4. TWIST FINAL (30-40 palabras): Remate inesperado que deje al espectador impactado.
-
-⚠️ REGLAS DEL TWIST FINAL:
-- Debe ser INESPERADO pero LÓGICO con la historia.
-- Debe generar ganas de COMENTAR y COMPARTIR.
-- NO uses finales abiertos tipo "y nunca supe qué pasó".
-- SÍ usa revelaciones concretas que dejen escalofríos.
+📐 ESTRUCTURA:
+1. GANCHO (5-10 palabras): Frase inicial impactante.
+2. CONTEXTO (20-30 palabras): Lugar y situación reales rápidamente.
+3. TENSIÓN (80-90 palabras): Detalles sensoriales y hechos del testimonio.
+4. TWIST FINAL (30-40 palabras): El remate real del relato, inesperado pero lógico.
 
 REGLAS DEL TÍTULO (SEO 2026):
-- Longitud: entre 55 y 75 caracteres.
-- Palabra clave al inicio (front-loaded).
-- Debe sugerir el twist sin spoilearlo.
-- NO debe parecerse a ningún título ya publicado listado arriba.
+- Entre 55 y 75 caracteres, palabra clave al inicio.
+- Debe sonar a testimonio real, no a ficción.
+- NO debe parecerse a ningún título ya publicado listado abajo.
 
 REGLAS DE DESCRIPCIÓN:
 - "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres que genere curiosidad.
-- "contexto_descripcion": 1 oración con palabras clave naturales.
+- "contexto_descripcion": 1 oración con contexto y palabras clave naturales.
+- "fuente_relato": 1 línea indicando el tipo de fuente real, por ejemplo:
+  "Basado en un testimonio real compartido en un foro de terror."
+  "Basado en una leyenda real contada por habitantes de {ESTADO_HISTORIA_SHORTS}."
+  "Basado en un relato real publicado en redes sociales."
 
 REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres):
-- Mezcla etiquetas específicas del lugar + tipo de fenómeno + micro-relato.
+- Mezcla etiquetas de relatos reales + lugar + fenómeno.
+- Ejemplo: "relatos reales de terror en internet, testimonios paranormales reales,
+  leyendas reales de {ESTADO_HISTORIA_SHORTS}, historias reales contadas en primera persona"
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
+{titulos_referencia}
 
 REGLAS GENERALES:
 - PRIMERA FRASE = GANCHO IMPACTANTE de máximo 5 palabras.
-- Ortografía perfecta (acentos, ñ, signos).
-- NO repitas frases.
+- Ortografía perfecta. NO repitas frases.
 - PALETA: {PALETA_COLOR_ACTUAL}
-- IMPORTANTE: el campo "texto_completo" debe ser una historia AUTOCONCLUSIVA con final cerrado y twist impactante.
-- NO incluyas CTA de suscripción en el relato.
+- El campo "texto_completo" NO debe incluir CTA de suscripción.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título 55-75 caracteres, SIN hashtags, original",
+  "titulo": "Título 55-75 caracteres, estilo testimonio real",
   "gancho_descripcion": "Gancho de máx 90 caracteres",
   "contexto_descripcion": "1 oración con contexto",
-  "texto_completo": "Micro-relato AUTOCONCLUSIVO de 150-170 palabras con twist final impactante",
+  "fuente_relato": "Basado en un testimonio/leyenda real de ...",
+  "texto_completo": "Micro-relato REAL adaptado, 150-170 palabras, primera persona, tono coloquial",
   "palabras_portada": "2-3 PALABRAS CLAVE",
   "tags": "tag long-tail 1, tag long-tail 2, ... (10-15 tags)"
 }}
@@ -487,7 +511,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
 
     for intento in range(6):
         try:
-            print(f"🔄 Intento {intento+1}/6 generando historia...")
+            print(f"🔄 Intento {intento+1}/6 generando historia real...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
 
@@ -545,18 +569,23 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 contexto = f"Un testimonio real de fenómenos paranormales ocurrido en {ESTADO_HISTORIA_SHORTS}, México."
             data["contexto_descripcion"] = contexto
 
+            fuente = data.get("fuente_relato", "").strip()
+            if not fuente:
+                fuente = "Basado en un testimonio real compartido en internet."
+            data["fuente_relato"] = fuente
+
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             tags_list = tags_list[:15]
 
             extras_long_tail = [
-                f"relatos de terror en {ESTADO_HISTORIA_SHORTS.lower()}",
-                "leyendas urbanas mexicanas",
-                "historias paranormales reales",
-                "testimonios de terror mexico",
-                "fenomenos paranormales reales",
-                "relatos cortos de miedo",
-                "historias de fantasmas mexico",
+                f"relatos reales de terror en {ESTADO_HISTORIA_SHORTS.lower()}",
+                "testimonios paranormales reales",
+                "historias reales contadas en primera persona",
+                "leyendas urbanas mexicanas reales",
+                "relatos de internet reales",
+                "casos paranormales reales mexico",
+                "historias de fantasmas reales",
             ]
             i = 0
             while len(tags_list) < 10 and i < len(extras_long_tail):
@@ -576,6 +605,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
 
             data["hashtags_descripcion"] = hashtags_descripcion_base
 
+            print(f"   📖 Fuente del relato: {data['fuente_relato']}")
             return data
 
         except Exception as e:
@@ -770,7 +800,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO - UNA SOLA VOZ PARA TODO EL VIDEO (CORREGIDO)
+# ✅ GENERAR AUDIO - UNA SOLA VOZ PARA TODO EL VIDEO
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -786,7 +816,6 @@ def generar_audio(texto, index, intentos=4):
 
     filename = f"audio_short_{index}.mp3"
 
-    # ✅ USAR SIEMPRE LA MISMA VOZ (CONFIG_VOZ_ACTUAL seleccionada al inicio)
     voz = CONFIG_VOZ_ACTUAL["voz"]
     rate = CONFIG_VOZ_ACTUAL["velocidad"]
     pitch = CONFIG_VOZ_ACTUAL["tono"]
@@ -976,12 +1005,12 @@ def publicar_comentario_fijado(video_id):
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
         
-        mensaje_comentario = f"""👻 ¿Te gustó este micro-relato?
+        mensaje_comentario = f"""👻 ¿Te gustó este relato real?
 
 🔴 SUSCRÍBETE para más historias de terror reales: {CANAL_LINK}
 📱 Síguenos en Facebook: {FACEBOOK_LINK}
 
-¿Qué harías tú en esta situación? Déjamelo en los comentarios 👇"""
+¿Te ha pasado algo parecido? Cuéntamelo en los comentarios 👇"""
         
         request = youtube.commentThreads().insert(
             part="snippet",
@@ -1006,9 +1035,9 @@ def publicar_comentario_fijado(video_id):
         return None
 
 # ================================================================
-# SUBIR A YOUTUBE
+# 🆕 SUBIR A YOUTUBE (incluye fuente del relato real)
 # ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion):
+def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -1024,6 +1053,8 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
     descripcion = f"""{gancho_descripcion}
 
 {contexto_descripcion}
+
+📖 {fuente_relato}
 
 🔴 Relatos completos en el canal. Visítanos: {CANAL_LINK}
 
@@ -1085,7 +1116,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Micro-relatos virales +10% velocidad)")
+    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES de internet)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz seleccionada para TODO el video: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1103,7 +1134,7 @@ def main():
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    print("🆕 Generando nueva historia completa (micro-relato viral)...")
+    print("🆕 Generando nueva historia REAL (basada en testimonios de internet)...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
@@ -1130,6 +1161,7 @@ def main():
 
     print(f"📖 Procesando historia ({len(texto_completo.split())} palabras)...")
     print(f"🏷️ Título SEO ({len(historia_raw['titulo'])} chars): {historia_raw['titulo']}")
+    print(f"📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"🏷️ Tags: {historia_raw['tags']}")
 
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
@@ -1165,7 +1197,8 @@ def main():
         etiquetas=historia_raw["tags"],
         gancho_descripcion=historia_raw["gancho_descripcion"],
         contexto_descripcion=historia_raw["contexto_descripcion"],
-        hashtags_descripcion=historia_raw["hashtags_descripcion"]
+        hashtags_descripcion=historia_raw["hashtags_descripcion"],
+        fuente_relato=historia_raw.get("fuente_relato", "Basado en un testimonio real compartido en internet."),
     )
 
     guardar_titulo_publicado(historia_raw["titulo"])
