@@ -17,6 +17,7 @@ from moviepy.editor import (
     concatenate_videoclips,
     TextClip,
     CompositeVideoClip,
+    AudioClip,
 )
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
@@ -39,25 +40,18 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 ESTADO_FILE = "estado_shorts.json"
+TITULOS_FILE = "titulos_publicados.json"  # 🆕 Archivo para títulos publicados
 META_DIARIA_SHORTS = 3
 
 # ================================================================
-# 🎤 BANCO DE VOCES (VELOCIDAD +10% para relatos más rápidos)
+# 🎤 SOLO 4 VOCES MASCULINAS (aleatorias, sin prioridad)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
-    {"voz": "es-MX-DaliaNeural", "velocidad": "+10%", "tono": "+0Hz"},
     {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz"},
-    {"voz": "es-ES-ElviraNeural", "velocidad": "+10%", "tono": "+1Hz"},
-    {"voz": "es-CO-SalomeNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+10%", "tono": "+2Hz"},
+    {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz"},
     {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
-    {"voz": "es-PE-CamilaNeural", "velocidad": "+10%", "tono": "+0Hz"},
-    {"voz": "es-US-PalomaNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-ES-XimenaNeural", "velocidad": "+10%", "tono": "+1Hz"},
-    {"voz": "es-ES-AbrilNeural", "velocidad": "+10%", "tono": "-2Hz"},
 ]
-VOCES_DISPONIBLES.sort(key=lambda x: 0 if x["voz"] == "es-MX-JorgeNeural" else 1)
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
@@ -101,7 +95,6 @@ ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 # ================================================================
 def generar_perfil_personaje_shorts():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
-    generos = ["man", "woman"]
     vestimentas = [
         "wearing a denim jacket and grey shirt",
         "wearing a dark green coat and wool scarf",
@@ -110,22 +103,15 @@ def generar_perfil_personaje_shorts():
         "wearing a dark sweater and classic trousers",
         "wearing a red flannel shirt and jeans",
         "wearing a black leather jacket and boots",
-        "wearing a traditional embroidered blouse (huipil) and long skirt",
-        "wearing a white guayabera shirt and dark pants",
         "wearing a charro suit with silver buttons",
-        "wearing a simple cotton dress and sandals",
         "wearing a baseball cap and hoodie",
     ]
     cabellos = [
         "short curly dark hair",
-        "long straight black hair tied back",
         "grey cropped hair",
-        "wavy brown shoulder-length hair",
         "bald with a short beard",
-        "long grey braided hair",
         "short spiky black hair",
         "chestnut brown curly hair",
-        "long wavy dark hair with grey streaks",
         "short salt-and-pepper hair",
     ]
     rasgos = [
@@ -133,7 +119,6 @@ def generar_perfil_personaje_shorts():
         "with light brown skin and freckles",
         "with olive skin and a strong jaw",
         "with pale skin and green eyes",
-        "with fair skin and blue eyes",
         "with tan skin and a warm smile",
         "with light beige skin and a serious expression",
     ]
@@ -147,33 +132,18 @@ def generar_perfil_personaje_shorts():
         "arqueólogo de 40 años excavando en la selva",
         "enfermero de 30 años en un psiquiátrico abandonado",
         "minero de 48 años en una mina clausurada",
+        "guardia de seguridad de 45 años en una fábrica abandonada",
+        "pescador de 55 años en un pueblo costero",
+        "carpintero de 60 años en un taller antiguo",
     ]
-    profesiones_femeninas = [
-        "estudiante de medicina de 22 años en un hospital antiguo",
-        "periodista de investigación de 35 años en un pueblo fantasma",
-        "bailarina de 25 años en un teatro embrujado",
-    ]
-    profesiones_neutras = [
-        "agricultor de 50 años en una hacienda del siglo XIX",
-        "fotógrafo urbano de 28 años en edificios abandonados",
-        "taxista nocturno de 55 años en zonas peligrosas",
-        "arqueólogo de 40 años excavando en la selva",
-        "enfermero de 30 años en un psiquiátrico abandonado",
-        "minero de 48 años en una mina clausurada",
-    ]
-    genero = random.choice(generos)
-    if genero == "man":
-        profesion = random.choice(profesiones_masculinas + profesiones_neutras)
-        articulo = "un"
-    else:
-        profesion = random.choice(profesiones_femeninas + profesiones_neutras)
-        articulo = "una"
+    profesion = random.choice(profesiones_masculinas)
+    articulo = "un"
     perfil_fisico = (
-        f"a {random.choice(edades)} Mexican {genero}, "
+        f"a {random.choice(edades)} Mexican man, "
         f"{random.choice(rasgos)}, "
         f"with {random.choice(cabellos)}, {random.choice(vestimentas)}"
     )
-    return perfil_fisico, profesion, articulo, genero
+    return perfil_fisico, profesion, articulo, "man"
 
 PERFIL_PERSONAJE_SHORTS, PERSONAJE_SHORTS, ARTICULO_SHORTS, GENERO_SHORTS = generar_perfil_personaje_shorts()
 ESTADO_HISTORIA_SHORTS = random.choice([
@@ -295,6 +265,31 @@ def guardar_estado(estado):
     print("✅ Estado de Shorts guardado")
 
 # ================================================================
+# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS (sin repetir jamás)
+# ================================================================
+def cargar_titulos_publicados():
+    """Carga la lista de títulos ya publicados."""
+    try:
+        with open(TITULOS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"titulos": []}
+
+def guardar_titulo_publicado(titulo):
+    """Guarda un título nuevo en la lista de publicados."""
+    data = cargar_titulos_publicados()
+    if titulo not in data["titulos"]:
+        data["titulos"].append(titulo)
+        with open(TITULOS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print(f"✅ Título guardado en registro: '{titulo}'")
+
+def titulo_ya_publicado(titulo):
+    """Verifica si un título ya fue publicado."""
+    data = cargar_titulos_publicados()
+    return titulo.lower().strip() in [t.lower().strip() for t in data["titulos"]]
+
+# ================================================================
 # 📊 FUNCIONES DE CONTEO DIARIO
 # ================================================================
 def obtener_publicaciones_hoy():
@@ -357,7 +352,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un escritor experto en micro-relatos de terror. Expande el siguiente relato para que tenga entre 160 y 200 palabras.
+    prompt = f"""Eres un escritor experto en micro-relatos de terror. Expande el siguiente relato para que tenga entre 150 y 170 palabras.
 Añade más descripciones sensoriales (sonidos, olores, texturas), más pensamientos internos del protagonista 
 y más detalles del entorno en {ubicacion}.
 Mantén la trama exactamente igual, solo añade contenido donde sea natural.
@@ -366,7 +361,7 @@ NO agregues ningún llamado a suscribirse ni CTA — solo la narración pura.
 RELATO ORIGINAL (debe expandirse):
 {texto_corto}
 
-Devuelve SOLO el relato expandido (160-200 palabras), sin títulos ni comentarios adicionales.
+Devuelve SOLO el relato expandido (150-170 palabras), sin títulos ni comentarios adicionales.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -380,7 +375,7 @@ Devuelve SOLO el relato expandido (160-200 palabras), sin títulos ni comentario
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         texto_expandido = r.json()["choices"][0]["message"]["content"].strip()
-        if len(texto_expandido.split()) > 140:
+        if len(texto_expandido.split()) > 130:
             return texto_expandido
         else:
             return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor."
@@ -391,7 +386,7 @@ Devuelve SOLO el relato expandido (160-200 palabras), sin títulos ni comentario
 # ================================================================
 # TRUNCAR TEXTO LARGO
 # ================================================================
-def truncar_texto_largo(texto, max_palabras=200):
+def truncar_texto_largo(texto, max_palabras=170):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -401,7 +396,7 @@ def truncar_texto_largo(texto, max_palabras=200):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA COMPLETA — MICRO-RELATO VIRAL (160-200 palabras)
+# GENERAR HISTORIA COMPLETA — MICRO-RELATO VIRAL (150-170 palabras)
 # ================================================================
 def generar_historia_completa():
     hashtags_disponibles = [
@@ -413,21 +408,26 @@ def generar_historia_completa():
     hashtags_elegidos = random.sample(hashtags_disponibles, 3)
     hashtags_descripcion_base = "#Shorts " + " ".join(hashtags_elegidos)
 
+    # 🆕 Cargar títulos publicados para pasarlos al prompt como referencia
+    titulos_pub = cargar_titulos_publicados()["titulos"][-10:]  # Últimos 10 para contexto
+    titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+
     prompt = f"""Eres un MAESTRO DEL MICRO-RELATO DE TERROR, especializado en historias virales para YouTube Shorts.
 Crea una historia de TERROR/PARANORMAL en PRIMERA PERSONA, protagonizada por {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE A ESTOS):
+{titulos_referencia}
+
 🎯 REGLA CRÍTICA DE LONGITUD:
-- EXACTAMENTE entre 160 y 200 palabras (NO más de 200, NO menos de 160).
-- Esto debe durar entre 55 y 75 segundos al ser narrado a velocidad +10%.
+- EXACTAMENTE entre 150 y 170 palabras (NO más de 170, NO menos de 150).
+- Esto debe durar entre 50 y 65 segundos al ser narrado a velocidad +10%.
 - Cada palabra cuenta: NO hay espacio para relleno.
 
 📐 ESTRUCTURA DE MICRO-RELATO VIRAL:
 1. GANCHO (5-10 palabras): Frase inicial impactante que atrape en el primer segundo.
-   Ej: "Nunca debí abrir esa puerta."
 2. CONTEXTO (20-30 palabras): Establece el lugar y situación rápidamente.
-3. TENSIÓN (80-100 palabras): Construye el miedo con detalles sensoriales precisos.
+3. TENSIÓN (80-90 palabras): Construye el miedo con detalles sensoriales precisos.
 4. TWIST FINAL (30-40 palabras): Remate inesperado que deje al espectador impactado.
-   Ej: "Cuando miré por el espejo, vi que detrás de mí... no había nadie. Pero la mano en mi hombro seguía ahí."
 
 ⚠️ REGLAS DEL TWIST FINAL:
 - Debe ser INESPERADO pero LÓGICO con la historia.
@@ -439,8 +439,7 @@ REGLAS DEL TÍTULO (SEO 2026):
 - Longitud: entre 55 y 75 caracteres.
 - Palabra clave al inicio (front-loaded).
 - Debe sugerir el twist sin spoilearlo.
-- Ejemplo correcto: "El susurro en mi habitación no era humano"
-- Mal ejemplo: "Historia de terror en Quintana Roo"
+- NO debe parecerse a ningún título ya publicado listado arriba.
 
 REGLAS DE DESCRIPCIÓN:
 - "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres que genere curiosidad.
@@ -448,7 +447,6 @@ REGLAS DE DESCRIPCIÓN:
 
 REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres):
 - Mezcla etiquetas específicas del lugar + tipo de fenómeno + micro-relato.
-- Ejemplo: "micro relatos de terror, historias cortas de miedo, leyendas de Zacatecas, fantasmas reales mexico"
 
 REGLAS GENERALES:
 - PRIMERA FRASE = GANCHO IMPACTANTE de máximo 5 palabras.
@@ -460,10 +458,10 @@ REGLAS GENERALES:
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título 55-75 caracteres, SIN hashtags",
+  "titulo": "Título 55-75 caracteres, SIN hashtags, original",
   "gancho_descripcion": "Gancho de máx 90 caracteres",
   "contexto_descripcion": "1 oración con contexto",
-  "texto_completo": "Micro-relato AUTOCONCLUSIVO de 160-200 palabras con twist final impactante",
+  "texto_completo": "Micro-relato AUTOCONCLUSIVO de 150-170 palabras con twist final impactante",
   "palabras_portada": "2-3 PALABRAS CLAVE",
   "tags": "tag long-tail 1, tag long-tail 2, ... (10-15 tags)"
 }}
@@ -473,7 +471,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6,
+        "temperature": 0.7,
         "max_tokens": 1100,
         "response_format": {"type": "json_object"}
     }
@@ -514,7 +512,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
 
-            # ---- VALIDACIÓN DE TÍTULO (55-75 caracteres, sin hashtags) ----
+            # ---- VALIDACIÓN DE TÍTULO ----
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
@@ -524,6 +522,11 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 recorte = titulo[:92].rsplit(' ', 1)[0]
                 titulo = recorte + "..."
             data["titulo"] = titulo
+
+            # 🆕 VERIFICAR SI EL TÍTULO YA FUE PUBLICADO
+            if titulo_ya_publicado(titulo):
+                print(f"   ⚠️ Título YA PUBLICADO: '{titulo}'. Regenerando...")
+                raise ValueError("Título duplicado")
 
             # ---- VALIDACIÓN DE GANCHO Y CONTEXTO DE DESCRIPCIÓN ----
             gancho = data.get("gancho_descripcion", "").strip()
@@ -536,7 +539,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 contexto = f"Un testimonio real de fenómenos paranormales ocurrido en {ESTADO_HISTORIA_SHORTS}, México."
             data["contexto_descripcion"] = contexto
 
-            # ---- VALIDACIÓN DE TAGS LONG-TAIL (10-15, máx 480 chars) ----
+            # ---- VALIDACIÓN DE TAGS LONG-TAIL ----
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             tags_list = tags_list[:15]
@@ -579,22 +582,40 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 time.sleep(espera)
 
     print("❌ TODOS LOS INTENTOS DE GENERACIÓN FALLARON.")
-    print("   No se pudo generar una historia válida con DeepSeek.")
-    print("   Abortando ejecución para evitar publicar contenido genérico.")
     sys.exit(1)
 
 # ================================================================
-# DIVIDIR TEXTO EN SEGMENTOS
+# 🆕 DIVIDIR TEXTO POR ORACIONES (sin cortes antinaturales)
 # ================================================================
-def dividir_en_segmentos(texto, palabras_por_segmento=55):
-    palabras = texto.split()
-    total = len(palabras)
-    if total <= palabras_por_segmento:
+def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
+    """Divide el texto respetando límites de oración para evitar cortes."""
+    # Dividir por oraciones (punto, exclamación, interrogación)
+    oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
+    oraciones = [o.strip() for o in oraciones if o.strip()]
+    
+    if not oraciones:
         return [texto]
+    
     segmentos = []
-    for i in range(0, total, palabras_por_segmento):
-        segmento = " ".join(palabras[i:i+palabras_por_segmento])
-        segmentos.append(segmento.strip())
+    segmento_actual = []
+    palabras_actuales = 0
+    
+    for oracion in oraciones:
+        palabras_oracion = len(oracion.split())
+        
+        # Si agregar esta oración excede el límite y ya tenemos contenido
+        if palabras_actuales + palabras_oracion > max_palabras_por_segmento and segmento_actual:
+            segmentos.append(" ".join(segmento_actual))
+            segmento_actual = [oracion]
+            palabras_actuales = palabras_oracion
+        else:
+            segmento_actual.append(oracion)
+            palabras_actuales += palabras_oracion
+    
+    # Agregar el último segmento
+    if segmento_actual:
+        segmentos.append(" ".join(segmento_actual))
+    
     return segmentos
 
 # ================================================================
@@ -679,7 +700,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     resultados_temporales = []
 
     for idx, seg in enumerate(segmentos):
-        print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)}...")
+        print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)} ({len(seg.split())} palabras)...")
 
         prompt_imagen = generar_prompt_imagen_segmento(seg, perfil, ubicacion, estilo, paleta)
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
@@ -749,7 +770,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     return resultados_temporales
 
 # ================================================================
-# GENERAR AUDIO (VELOCIDAD +10%)
+# GENERAR AUDIO (4 VOCES MASCULINAS ALEATORIAS)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -765,18 +786,13 @@ def generar_audio(texto, index, intentos=4):
 
     filename = f"audio_short_{index}.mp3"
 
-    voces_a_probar = []
-    for v in VOCES_DISPONIBLES:
-        if v["voz"] == "es-MX-JorgeNeural":
-            voces_a_probar.append(v)
-            break
-    for v in VOCES_DISPONIBLES:
-        if v["voz"] != "es-MX-JorgeNeural":
-            voces_a_probar.append(v)
-
     print(f"🔊 Generando audio para segmento {index}...")
 
-    for intento, config_voz in enumerate(voces_a_probar[:intentos]):
+    # Mezclar las voces para intentar en orden aleatorio
+    voces_mezcladas = VOCES_DISPONIBLES.copy()
+    random.shuffle(voces_mezcladas)
+
+    for intento, config_voz in enumerate(voces_mezcladas[:intentos]):
         voz = config_voz["voz"]
         rate = config_voz["velocidad"]
         pitch = config_voz["tono"]
@@ -835,7 +851,7 @@ def generar_audio_cta_final():
         return None
 
 # ================================================================
-# MONTAR VIDEO CON CTA FINAL
+# 🆕 MONTAR VIDEO CON TRANSICIONES SUAVES (sin cortes bruscos)
 # ================================================================
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
@@ -887,8 +903,21 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
 
+    # 🆕 Agregar pequeña pausa entre segmentos para transición natural
+    PAUSA_ENTRE_SEGMENTOS = 0.3  # 300ms de pausa
+    
+    if len(clips_audio) > 1:
+        audio_con_pausas = []
+        for i, audio in enumerate(clips_audio):
+            audio_con_pausas.append(audio)
+            if i < len(clips_audio) - 1:  # No agregar pausa después del último
+                silencio = AudioClip(lambda t: 0, duration=PAUSA_ENTRE_SEGMENTOS)
+                audio_con_pausas.append(silencio)
+        audio_narracion = concatenate_audioclips(audio_con_pausas)
+    else:
+        audio_narracion = clips_audio[0]
+
     video = concatenate_videoclips(clips_video, method="compose")
-    audio_narracion = concatenate_audioclips(clips_audio)
     
     # 🆕 AGREGAR CTA FINAL
     cta_audio_path = generar_audio_cta_final()
@@ -896,9 +925,8 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         try:
             cta_clip = AudioFileClip(cta_audio_path)
             # Agregar 0.5s de silencio antes del CTA
-            from moviepy.editor import AudioClip
-            silencio = AudioClip(lambda t: 0, duration=0.5)
-            audio_narracion = concatenate_audioclips([audio_narracion, silencio, cta_clip])
+            silencio_antes_cta = AudioClip(lambda t: 0, duration=0.5)
+            audio_narracion = concatenate_audioclips([audio_narracion, silencio_antes_cta, cta_clip])
             
             # Extender el último clip de video para cubrir el CTA
             duracion_cta = cta_clip.duration + 0.5
@@ -1069,6 +1097,7 @@ def limpiar_temporales_shorts():
 def main():
     print("🎬 Iniciando Bot de SHORTS (Micro-relatos virales +10% velocidad)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🎤 Voz seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
@@ -1076,7 +1105,7 @@ def main():
 
     publicadas_hoy = obtener_publicaciones_hoy()
     if publicadas_hoy >= META_DIARIA_SHORTS:
-        print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Esta ejecución no es necesaria. Saliendo.")
+        print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
 
     estado = cargar_estado()
@@ -1093,16 +1122,16 @@ def main():
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
 
-    if palabras < 140:
+    if palabras < 130:
         print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
         texto_completo = expandir_texto_corto(
             texto_completo,
             ESTADO_HISTORIA_SHORTS,
             PERSONAJE_SHORTS
         )
-    elif palabras > 220:
+    elif palabras > 190:
         print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
-        texto_completo = truncar_texto_largo(texto_completo, max_palabras=200)
+        texto_completo = truncar_texto_largo(texto_completo, max_palabras=170)
 
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
@@ -1113,7 +1142,8 @@ def main():
     print(f"🏷️ Título SEO ({len(historia_raw['titulo'])} chars): {historia_raw['titulo']}")
     print(f"🏷️ Tags: {historia_raw['tags']}")
 
-    segmentos = dividir_en_segmentos(texto_completo, palabras_por_segmento=55)
+    # 🆕 Dividir por oraciones (sin cortes antinaturales)
+    segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
     print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
 
     recursos = generar_recursos_por_segmento(
@@ -1148,6 +1178,9 @@ def main():
         contexto_descripcion=historia_raw["contexto_descripcion"],
         hashtags_descripcion=historia_raw["hashtags_descripcion"]
     )
+
+    # 🆕 Guardar título publicado
+    guardar_titulo_publicado(historia_raw["titulo"])
 
     incrementar_publicaciones_hoy()
 
