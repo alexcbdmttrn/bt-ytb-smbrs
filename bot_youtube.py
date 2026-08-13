@@ -1,8 +1,7 @@
 import asyncio
-from datetime import date, datetime
+from datetime import datetime
 from zoneinfo import ZoneInfo
 import json
-import json5
 import os
 import random
 import re
@@ -316,7 +315,6 @@ def agregar_texto_miniatura(img_path, texto_portada):
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
         return ""
-    # Remover bloques de marcado
     respuesta = re.sub(r"```json\s*", "", respuesta, flags=re.IGNORECASE)
     respuesta = re.sub(r"```\s*", "", respuesta)
     
@@ -324,16 +322,16 @@ def limpiar_respuesta_json(respuesta):
     fin = respuesta.rfind("}")
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio : fin + 1]
-        # Remover comas finales en objetos y arreglos
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        # ⚠️ LÍNEA ELIMINADA: ya no reemplazamos saltos de línea, eso rompía el JSON.
-        # Ahora confiamos en strict=False y json5.
+        # ✅ NO se escapan saltos de línea aquí: json.loads(strict=False) ya
+        # tolera saltos de línea literales dentro de las cadenas, y hacerlo
+        # manualmente corrompe la estructura del JSON.
         return json_str
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (con json5 y logging mejorado)
+# GENERAR GUION CON DEEPSEEK (con json5 y logging)
 # ================================================================
 def generar_guion(contexto_extra=""):
     prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
@@ -403,18 +401,17 @@ Responde únicamente en formato JSON con esta estructura exacta:
 
             json_str = limpiar_respuesta_json(respuesta)
 
-            # Parser: primero intentamos con json5 (más tolerante), luego con json estándar
             data = None
             try:
-                data = json5.loads(json_str)
-                print("✅ json5 parseó exitosamente.")
-            except Exception as e5:
-                print(f"⚠️ json5 falló: {e5}. Intentando con json.loads(strict=False)...")
+                data = json.loads(json_str, strict=False)
+                print("✅ json.loads parseó exitosamente.")
+            except json.JSONDecodeError as e:
+                print(f"⚠️ json.loads falló: {e}. Intentando con json5...")
                 try:
-                    data = json.loads(json_str, strict=False)
-                    print("✅ json.loads(strict=False) parseó exitosamente.")
-                except json.JSONDecodeError as e:
-                    print(f"❌ Ambos parsers fallaron: {e}")
+                    data = json5.loads(json_str)
+                    print("✅ json5 parseó exitosamente.")
+                except Exception as e5:
+                    print(f"❌ json5 también falló: {e5}")
                     raise
 
             if "segmentos" in data and len(data["segmentos"]) >= 28:
@@ -435,7 +432,7 @@ Responde únicamente en formato JSON con esta estructura exacta:
     sys.exit(1)
 
 # ================================================================
-# EXPANSIÓN DE GUION (con json5 y logging mejorado)
+# EXPANSIÓN DE GUION (con json5 y logging)
 # ================================================================
 def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
     contexto = f"""
@@ -475,15 +472,15 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
 
             data = None
             try:
-                data = json5.loads(json_str)
-                print("✅ json5 parseó la expansión exitosamente.")
-            except Exception as e5:
-                print(f"⚠️ json5 en expansión falló: {e5}. Intentando con json.loads(strict=False)...")
+                data = json.loads(json_str, strict=False)
+                print("✅ json.loads en expansión parseó exitosamente.")
+            except json.JSONDecodeError as e:
+                print(f"⚠️ json.loads en expansión falló: {e}. Intentando con json5...")
                 try:
-                    data = json.loads(json_str, strict=False)
-                    print("✅ json.loads(strict=False) parseó la expansión.")
-                except json.JSONDecodeError as e:
-                    print(f"❌ Ambos parsers fallaron en expansión: {e}")
+                    data = json5.loads(json_str)
+                    print("✅ json5 parseó la expansión exitosamente.")
+                except Exception as e5:
+                    print(f"❌ json5 también falló en expansión: {e5}")
                     raise
 
             if "segmentos_extra" in data and len(data["segmentos_extra"]) > 0:
@@ -603,7 +600,7 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
 # ================================================================
 def generar_audio(texto, index):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
-    texto_limpio = re.sub(r"prompt.*", "", texto_limpio, flags=re.IGNORECASE)
+    texto_limpio = re.sub(r"prompt.*", texto_limpio, flags=re.IGNORECASE)
     texto_limpio = re.sub(r'[\{\}\[\]"]', "", texto_limpio)
     texto_limpio = re.sub(r"\s+", " ", texto_limpio).strip()
 
@@ -762,19 +759,19 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
             print(f"⚠️ Error al subir miniatura: {e}")
 
 # ================================================================
-# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA
+# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA (CORREGIDAS)
 # ================================================================
 def verificar_publicacion_hoy():
     estado = cargar_estado_musica()
     ultima = estado.get("ultima_publicacion_exitosa")
     if not ultima:
         return False
-    hoy = date.today(ZoneInfo("America/Mexico_City")).isoformat()
+    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()  # ✅ CORREGIDO
     return ultima == hoy
 
 def marcar_publicacion_exitosa():
     estado = cargar_estado_musica()
-    hoy = date.today(ZoneInfo("America/Mexico_City")).isoformat()
+    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()  # ✅ CORREGIDO
     estado["ultima_publicacion_exitosa"] = hoy
     guardar_estado_musica(estado)
     print(f"✅ Publicación exitosa marcada para hoy: {hoy}")
