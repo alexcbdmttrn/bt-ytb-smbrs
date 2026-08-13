@@ -40,11 +40,11 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 ESTADO_FILE = "estado_shorts.json"
-TITULOS_FILE = "titulos_publicados.json"  # 🆕 Archivo para títulos publicados
+TITULOS_FILE = "titulos_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 
 # ================================================================
-# 🎤 SOLO 4 VOCES MASCULINAS (aleatorias, sin prioridad)
+# 🎤 SOLO 4 VOCES MASCULINAS - SE SELECCIONA UNA AL INICIO
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
@@ -52,6 +52,7 @@ VOCES_DISPONIBLES = [
     {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz"},
     {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
 ]
+# ✅ Se selecciona UNA voz al inicio y se usa para TODO el video
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
@@ -268,7 +269,6 @@ def guardar_estado(estado):
 # 🆕 GESTIÓN DE TÍTULOS PUBLICADOS (sin repetir jamás)
 # ================================================================
 def cargar_titulos_publicados():
-    """Carga la lista de títulos ya publicados."""
     try:
         with open(TITULOS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -276,7 +276,6 @@ def cargar_titulos_publicados():
         return {"titulos": []}
 
 def guardar_titulo_publicado(titulo):
-    """Guarda un título nuevo en la lista de publicados."""
     data = cargar_titulos_publicados()
     if titulo not in data["titulos"]:
         data["titulos"].append(titulo)
@@ -285,9 +284,20 @@ def guardar_titulo_publicado(titulo):
         print(f"✅ Título guardado en registro: '{titulo}'")
 
 def titulo_ya_publicado(titulo):
-    """Verifica si un título ya fue publicado."""
     data = cargar_titulos_publicados()
-    return titulo.lower().strip() in [t.lower().strip() for t in data["titulos"]]
+    titulo_norm = titulo.lower().strip()
+    for t in data["titulos"]:
+        t_norm = t.lower().strip()
+        if titulo_norm == t_norm:
+            return True
+        palabras1 = set(re.findall(r'\w+', titulo_norm))
+        palabras2 = set(re.findall(r'\w+', t_norm))
+        if len(palabras1) > 3 and len(palabras2) > 3:
+            interseccion = palabras1.intersection(palabras2)
+            similitud = len(interseccion) / min(len(palabras1), len(palabras2))
+            if similitud > 0.7:
+                return True
+    return False
 
 # ================================================================
 # 📊 FUNCIONES DE CONTEO DIARIO
@@ -408,8 +418,7 @@ def generar_historia_completa():
     hashtags_elegidos = random.sample(hashtags_disponibles, 3)
     hashtags_descripcion_base = "#Shorts " + " ".join(hashtags_elegidos)
 
-    # 🆕 Cargar títulos publicados para pasarlos al prompt como referencia
-    titulos_pub = cargar_titulos_publicados()["titulos"][-10:]  # Últimos 10 para contexto
+    titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
     prompt = f"""Eres un MAESTRO DEL MICRO-RELATO DE TERROR, especializado en historias virales para YouTube Shorts.
@@ -512,7 +521,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
 
-            # ---- VALIDACIÓN DE TÍTULO ----
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
@@ -523,12 +531,10 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 titulo = recorte + "..."
             data["titulo"] = titulo
 
-            # 🆕 VERIFICAR SI EL TÍTULO YA FUE PUBLICADO
             if titulo_ya_publicado(titulo):
                 print(f"   ⚠️ Título YA PUBLICADO: '{titulo}'. Regenerando...")
                 raise ValueError("Título duplicado")
 
-            # ---- VALIDACIÓN DE GANCHO Y CONTEXTO DE DESCRIPCIÓN ----
             gancho = data.get("gancho_descripcion", "").strip()
             if not gancho or len(gancho) > 110:
                 gancho = f"Esto fue lo que viví en {ESTADO_HISTORIA_SHORTS} y nunca pude explicar"[:100]
@@ -539,7 +545,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 contexto = f"Un testimonio real de fenómenos paranormales ocurrido en {ESTADO_HISTORIA_SHORTS}, México."
             data["contexto_descripcion"] = contexto
 
-            # ---- VALIDACIÓN DE TAGS LONG-TAIL ----
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             tags_list = tags_list[:15]
@@ -569,7 +574,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
 
-            # ---- HASHTAGS DE DESCRIPCIÓN ----
             data["hashtags_descripcion"] = hashtags_descripcion_base
 
             return data
@@ -588,8 +592,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
 # 🆕 DIVIDIR TEXTO POR ORACIONES (sin cortes antinaturales)
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
-    """Divide el texto respetando límites de oración para evitar cortes."""
-    # Dividir por oraciones (punto, exclamación, interrogación)
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
     oraciones = [o.strip() for o in oraciones if o.strip()]
     
@@ -603,7 +605,6 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     for oracion in oraciones:
         palabras_oracion = len(oracion.split())
         
-        # Si agregar esta oración excede el límite y ya tenemos contenido
         if palabras_actuales + palabras_oracion > max_palabras_por_segmento and segmento_actual:
             segmentos.append(" ".join(segmento_actual))
             segmento_actual = [oracion]
@@ -612,7 +613,6 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
             segmento_actual.append(oracion)
             palabras_actuales += palabras_oracion
     
-    # Agregar el último segmento
     if segmento_actual:
         segmentos.append(" ".join(segmento_actual))
     
@@ -770,7 +770,7 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
     return resultados_temporales
 
 # ================================================================
-# GENERAR AUDIO (4 VOCES MASCULINAS ALEATORIAS)
+# ✅ GENERAR AUDIO - UNA SOLA VOZ PARA TODO EL VIDEO (CORREGIDO)
 # ================================================================
 def generar_audio(texto, index, intentos=4):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -786,16 +786,14 @@ def generar_audio(texto, index, intentos=4):
 
     filename = f"audio_short_{index}.mp3"
 
-    print(f"🔊 Generando audio para segmento {index}...")
+    # ✅ USAR SIEMPRE LA MISMA VOZ (CONFIG_VOZ_ACTUAL seleccionada al inicio)
+    voz = CONFIG_VOZ_ACTUAL["voz"]
+    rate = CONFIG_VOZ_ACTUAL["velocidad"]
+    pitch = CONFIG_VOZ_ACTUAL["tono"]
 
-    # Mezclar las voces para intentar en orden aleatorio
-    voces_mezcladas = VOCES_DISPONIBLES.copy()
-    random.shuffle(voces_mezcladas)
+    print(f"🔊 Generando audio para segmento {index} con voz: {voz}")
 
-    for intento, config_voz in enumerate(voces_mezcladas[:intentos]):
-        voz = config_voz["voz"]
-        rate = config_voz["velocidad"]
-        pitch = config_voz["tono"]
+    for intento in range(intentos):
         print(f"🎤 Intento {intento+1}/{intentos} con voz: {voz}")
 
         async def _generar():
@@ -826,32 +824,30 @@ def generar_audio(texto, index, intentos=4):
         return None
 
 # ================================================================
-# GENERAR AUDIO CTA FINAL
+# GENERAR AUDIO CTA FINAL (misma voz que el relato)
 # ================================================================
 def generar_audio_cta_final():
-    """Genera un audio corto de CTA para el final del video."""
     cta_texto = "Relatos completos en el canal. Visítanos."
     filename = "audio_cta_final.mp3"
     
+    voz = CONFIG_VOZ_ACTUAL["voz"]
+    rate = CONFIG_VOZ_ACTUAL["velocidad"]
+    pitch = CONFIG_VOZ_ACTUAL["tono"]
+    
     async def _generar():
-        communicate = edge_tts.Communicate(
-            cta_texto,
-            CONFIG_VOZ_ACTUAL["voz"],
-            rate="+10%",
-            pitch=CONFIG_VOZ_ACTUAL["tono"]
-        )
+        communicate = edge_tts.Communicate(cta_texto, voz, rate=rate, pitch=pitch)
         await communicate.save(filename)
     
     try:
         asyncio.run(_generar())
-        print("✅ Audio CTA final generado")
+        print(f"✅ Audio CTA final generado con voz: {voz}")
         return filename
     except Exception as e:
         print(f"⚠️ Error generando audio CTA: {e}")
         return None
 
 # ================================================================
-# 🆕 MONTAR VIDEO CON TRANSICIONES SUAVES (sin cortes bruscos)
+# MONTAR VIDEO CON TRANSICIONES SUAVES
 # ================================================================
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
@@ -903,14 +899,13 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
 
-    # 🆕 Agregar pequeña pausa entre segmentos para transición natural
-    PAUSA_ENTRE_SEGMENTOS = 0.3  # 300ms de pausa
+    PAUSA_ENTRE_SEGMENTOS = 0.3
     
     if len(clips_audio) > 1:
         audio_con_pausas = []
         for i, audio in enumerate(clips_audio):
             audio_con_pausas.append(audio)
-            if i < len(clips_audio) - 1:  # No agregar pausa después del último
+            if i < len(clips_audio) - 1:
                 silencio = AudioClip(lambda t: 0, duration=PAUSA_ENTRE_SEGMENTOS)
                 audio_con_pausas.append(silencio)
         audio_narracion = concatenate_audioclips(audio_con_pausas)
@@ -919,16 +914,13 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
 
     video = concatenate_videoclips(clips_video, method="compose")
     
-    # 🆕 AGREGAR CTA FINAL
     cta_audio_path = generar_audio_cta_final()
     if cta_audio_path and os.path.exists(cta_audio_path):
         try:
             cta_clip = AudioFileClip(cta_audio_path)
-            # Agregar 0.5s de silencio antes del CTA
             silencio_antes_cta = AudioClip(lambda t: 0, duration=0.5)
             audio_narracion = concatenate_audioclips([audio_narracion, silencio_antes_cta, cta_clip])
             
-            # Extender el último clip de video para cubrir el CTA
             duracion_cta = cta_clip.duration + 0.5
             ultimo_clip = clips_video[-1]
             ultimo_clip = ultimo_clip.set_duration(ultimo_clip.duration + duracion_cta)
@@ -980,7 +972,6 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
 # PUBLICAR COMENTARIO FIJADO
 # ================================================================
 def publicar_comentario_fijado(video_id):
-    """Publica un comentario fijado con link al canal."""
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -1065,7 +1056,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         video_id = response["id"]
         print(f"✅ Short subido: https://youtu.be/{video_id}")
         
-        # 🆕 Publicar comentario fijado
         time.sleep(3)
         publicar_comentario_fijado(video_id)
         
@@ -1097,7 +1087,7 @@ def limpiar_temporales_shorts():
 def main():
     print("🎬 Iniciando Bot de SHORTS (Micro-relatos virales +10% velocidad)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎤 Voz seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎤 Voz seleccionada para TODO el video: {CONFIG_VOZ_ACTUAL['voz']}")
 
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
@@ -1142,7 +1132,6 @@ def main():
     print(f"🏷️ Título SEO ({len(historia_raw['titulo'])} chars): {historia_raw['titulo']}")
     print(f"🏷️ Tags: {historia_raw['tags']}")
 
-    # 🆕 Dividir por oraciones (sin cortes antinaturales)
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
     print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
 
@@ -1179,7 +1168,6 @@ def main():
         hashtags_descripcion=historia_raw["hashtags_descripcion"]
     )
 
-    # 🆕 Guardar título publicado
     guardar_titulo_publicado(historia_raw["titulo"])
 
     incrementar_publicaciones_hoy()
