@@ -382,71 +382,140 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR GUION CON ETAPAS VISUALES
+# 🎬 GENERAR GUION CON SEO EXPERTO + CONTINUIDAD VISUAL
 # ================================================================
 def generar_guion(contexto_extra=""):
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
     
-    prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO especializado en continuidad visual.
+    # 🎯 PROMPT MEJORADO CON SEO EXPERTO
+    prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO PARA YOUTUBE 2026.
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
 
-Escribe un relato de eventos paranormales en primera persona en español, 1.600-1.850 palabras, ambientado en {UBICACION_HISTORIA}, México.
+Escribe un relato paranormal en primera persona en español, 1.600-1.850 palabras, ambientado en {UBICACION_HISTORIA}, México.
 Divide la historia en 28 a 34 segmentos de 45-55 palabras cada uno.
 
 PERSONAJE PRINCIPAL (FIJO):
 "{PERFIL_PERSONAJE}"
 
-🎯 REGLA CRÍTICA: CONTINUIDAD VISUAL NARRATIVA
-Cada segmento debe tener una "etapa_visual" que indique dónde está la escena y cómo progresa:
-- Las escenas deben tener TRAYECTORIA LÓGICA (si el personaje sale de su casa, la siguiente escena debe mostrarlo en la calle, no de vuelta en casa).
-- El entorno debe mantenerse coherente durante varios segmentos consecutivos (si está en una carretera, varios segmentos muestran la misma carretera desde ángulos diferentes).
-- Si el personaje cambia de ubicación, debe mencionarse claramente el desplazamiento.
+🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR (lo más importante)
 
-🎬 ESTRUCTURA DE ETAPAS VISUALES (usa estas 5 etapas):
-- "inicio_casa": El personaje en su hogar/espacio seguro
-- "desplazamiento": En movimiento (caminando, en auto, en transporte)
-- "lugar_destino": Ha llegado al lugar donde ocurren los hechos
-- "climax_evento": El evento paranormal ocurre en este lugar
-- "resolucion": El personaje regresa o concluye la experiencia
+El título DEBE seguir esta FÓRMULA GANADORA:
+[VERBO EN 1RA PERSONA] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
 
-REGLAS DE GENERACIÓN VISUAL:
-1. PERSONAJE FIJO: Usa "{PERFIL_PERSONAJE}" en TODOS los segmentos donde aparezca.
-2. UN SOLO PERSONAJE: Nunca menciones múltiples personas en el mismo encuadre.
-3. PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
-4. AMBIENTACIÓN MODERNA 2026: tecnología actual, vehículos actuales, ropa moderna.
-5. "imagen_prompt": PROMPT EN INGLÉS con:
-   - Escena específica que continúa la escena anterior
-   - Ubicación exacta coherente con el segmento anterior
-   - Acción del personaje lógica dentro de la trayectoria
-   - Ángulo de cámara variado (wide, medium, over-the-shoulder)
+✅ EJEMPLOS DE TÍTULOS GANADORES (usa este estilo):
+- "Fui velador en Oaxaca y vi algo que no debí ver"
+- "Trabajé de noche en un manicomio de Puebla. Nunca volví."
+- "Escuché llorar a mi hija muerta hace 3 años en el lago"
+- "El GPS me llevó a un cenote que no existe en ningún mapa"
+- "Pasé la noche en un hotel de Guanajuato. No estaba solo."
+- "Mi abuela me contó esto antes de morir. Hoy lo confirmé."
+
+❌ TÍTULOS PROHIBIDOS (no los uses):
+- "El misterio de..." / "La leyenda de..." / "Relato de..."
+- "Una noche en..." / "La casa de..." / "El fantasma de..."
+- Títulos que suenen a documental o libro
+- Títulos con más de 65 caracteres
+
+REGLAS DEL TÍTULO:
+- Longitud EXACTA: 50-65 caracteres
+- DEBE estar en primera persona (yo, mi, me, fui, vi, escuché)
+- DEBE tener un lugar específico de {UBICACION_HISTORIA}
+- DEBE generar curiosidad inmediata
+- DEBE sonar a testimonio REAL, no a ficción
+
+🎯 REGLA CRÍTICA 2: DESCRIPCIÓN CON SEO EXPERTO
+
+La descripción DEBE tener esta ESTRUCTURA EXACTA (con saltos de línea reales):
+
+Línea 1 (GANCHO SEO - las primeras 150 chars son críticas):
+"[Frase impactante de 1 línea con keyword principal + lugar + fenómeno]"
+
+Línea 2-3 (CONTEXTO con keywords long-tail):
+"[2-3 oraciones con palabras clave naturales: 'terror en {UBICACION_HISTORIA}', 'testimonio real', 'experiencia paranormal real', etc.]"
+
+Línea 4 (LLAMADA A LA ACCIÓN):
+"🔴 SUSCRÍBETE para más relatos reales: {CANAL_LINK}"
+
+Línea 5 (CAPÍTULOS/TIMESTAMPS - MUY IMPORTANTE PARA SEO):
+"⏰ Capítulos del relato:"
+"00:00 - [Título del capítulo 1]"
+"02:15 - [Título del capítulo 2]"
+"04:30 - [Título del capítulo 3]"
+"06:45 - [Título del capítulo 4]"
+"[Genera 4-6 capítulos según el flujo de la historia]"
+
+Línea 6 (CRÉDITOS Y DISCLAIMER):
+"📱 Facebook: {FACEBOOK_LINK}"
+"🤖 Contenido narrado con IA. Relato basado en testimonios reales de internet."
+
+Línea 7 (HASHTAGS - máximo 5, los más relevantes):
+"#TerrorEn{UBICACION_HISTORIA.replace(' ', '')} #RelatosReales #Paranormal #Testimonios #MiedoReal"
+
+🎯 REGLA CRÍTICA 3: TAGS SEO (15-20 tags, máximo 500 caracteres)
+
+Los tags DEBEN incluir:
+- 3-5 tags ESPECÍFICOS del relato (lugar + fenómeno)
+- 5-7 tags LONG-TAIL (búsquedas comunes en YouTube)
+- 3-5 tags de TENDENCIA (terror, paranormal, miedo, suspenso)
+- 2-3 tags GEOGRÁFICOS (México, {UBICACION_HISTORIA})
+
+EJEMPLOS DE TAGS CORRECTOS:
+"terror en {UBICACION_HISTORIA.lower()}, testimonio real de terror, experiencia paranormal real en México, historias de miedo reales, relatos de terror mexicanos, leyendas urbanas de {UBICACION_HISTORIA.lower()}, casos paranormales reales, miedo real, historias reales de terror, terror nocturno, experiencias sobrenaturales reales, historias de fantasmas reales en México, casos sin resolver México, relatos de veladores, historias de traileros terror"
+
+🎯 REGLA CRÍTICA 4: PALABRAS CLAVE PRINCIPALES
+
+Define 2-3 palabras clave principales que usarás en:
+- Título
+- Primera línea de descripción
+- Tags
+- Primeros 30 segundos del relato
+
+Ejemplos: "terror en Oaxaca", "experiencia paranormal real", "testimonio de miedo"
+
+🎯 REGLA CRÍTICA 5: TÍTULO ALTERNATIVO (para A/B testing)
+
+Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángulo emocional (uno con miedo, otro con curiosidad, otro con misterio).
+
+🎬 CONTINUIDAD VISUAL (igual que antes):
+- Etapas: inicio_casa, desplazamiento, lugar_destino, climax_evento, resolucion
+- Trayectoria lógica entre segmentos
+- Personaje fijo: {PERFIL_PERSONAJE}
+- Ambientación moderna 2026
 
 📐 ESTRUCTURA JSON OBLIGATORIA:
 {{
-  "titulo": "Título descriptivo 50-80 caracteres",
+  "titulo": "Título SEO en 1ra persona, 50-65 caracteres",
+  "titulo_alternativo": "Segundo título con ángulo diferente",
+  "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
   "palabras_portada": "CASO REAL",
-  "descripcion": "Sinopsis completa... {FACEBOOK_LINK} #leyendasurbanas #Paranormal",
-  "tags": "tag1, tag2, tag3, tag4, tag5",
+  "descripcion": "Descripción completa con estructura SEO (gancho + contexto + CTA + capítulos + créditos + hashtags)",
+  "tags": "15-20 tags separados por coma (máximo 500 caracteres)",
   "miniatura_descripcion": "1-2 oraciones de la escena más impactante",
   "miniatura_prompt": "Dramatic cinematic photo in {UBICACION_HISTORIA}, {PALETA_COLOR_ACTUAL}, modern 2026 era",
+  "capitulos": [
+    {{"tiempo": "00:00", "titulo": "Título corto del capítulo 1"}},
+    {{"tiempo": "02:15", "titulo": "Título corto del capítulo 2"}},
+    {{"tiempo": "04:30", "titulo": "Título corto del capítulo 3"}},
+    {{"tiempo": "06:45", "titulo": "Título corto del capítulo 4"}}
+  ],
   "segmentos": [
     {{
       "texto": "Narración en español de 45-55 palabras...",
       "etapa_visual": "inicio_casa|desplazamiento|lugar_destino|climax_evento|resolucion",
-      "ubicacion_escena": "Descripción breve del lugar específico (ej: 'sala del departamento moderno en CDMX')",
+      "ubicacion_escena": "Descripción breve del lugar específico",
       "imagen_prompt": "Prompt detallado en inglés para esta escena específica"
     }}
   ]
 }}
 
 🚨 REGLA DE ORO PARA IMAGEN_PROMPT:
-Cada imagen_prompt DEBE incluir:
-1. El mismo tipo de escenario que el segmento anterior (si estaba en la carretera, sigue en la carretera)
+1. Mismo tipo de escenario que el segmento anterior
 2. El personaje exacto: {PERFIL_PERSONAJE}
 3. Una acción que tenga sentido después de la acción anterior
-4. Un ángulo de cámara diferente al segmento anterior para variar visualmente
+4. Un ángulo de cámara diferente al segmento anterior
 
 {contexto_extra}
 """
@@ -508,8 +577,15 @@ Cada imagen_prompt DEBE incluir:
                     if "ubicacion_escena" not in seg:
                         seg["ubicacion_escena"] = UBICACION_HISTORIA
                 
+                # 🆕 Log SEO
                 print(f"✅ Guion con {len(data['segmentos'])} segmentos y continuidad visual.")
-                print(f"🏷️ Título: {titulo_generado}")
+                print(f"🏷️ Título SEO: {titulo_generado}")
+                print(f"🔑 Keywords: {data.get('palabras_clave', [])}")
+                print(f"📝 Título alternativo: {data.get('titulo_alternativo', 'N/A')}")
+                tags_count = len(data.get("tags", "").split(","))
+                print(f"🏷️ Tags generados: {tags_count}")
+                print(f"📑 Capítulos: {len(data.get('capitulos', []))}")
+                
                 return data
             else:
                 num_segmentos = len(data.get('segmentos', [])) if data else 0
@@ -887,13 +963,26 @@ def limpiar_archivos_temporales():
                 pass
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (con capítulos automáticos en descripción)
 # ================================================================
-def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
+def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, capitulos=None):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
+    
+    # 🆕 Si la descripción no tiene capítulos y tenemos datos de capítulos, agregarlos
+    if capitulos and "⏰ Capítulos" not in descripcion:
+        capitulos_texto = "\n\n⏰ Capítulos del relato:\n"
+        for cap in capitulos:
+            capitulos_texto += f"{cap['tiempo']} - {cap['titulo']}\n"
+        # Insertar antes de los hashtags
+        if "#" in descripcion:
+            partes = descripcion.rsplit("#", 1)
+            descripcion = partes[0] + capitulos_texto + "#" + partes[1]
+        else:
+            descripcion += capitulos_texto
+    
     body = {
         "snippet": {
             "title": titulo[:100],
@@ -919,6 +1008,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
             youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
+            print("✅ Miniatura subida correctamente")
         except Exception as e:
             print(f"⚠️ Error miniatura: {e}")
 
@@ -964,16 +1054,26 @@ def main():
 
     guion_data = generar_guion()
     titulo_video = guion_data.get("titulo", "Relato Paranormal Real")
+    titulo_alternativo = guion_data.get("titulo_alternativo", "")
+    palabras_clave = guion_data.get("palabras_clave", [])
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
     descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\n{FACEBOOK_LINK}")
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
+    capitulos_video = guion_data.get("capitulos", [])
     segmentos = guion_data.get("segmentos", [])
+
+    # 🆕 Log SEO info
+    print(f"\n📊 SEO GENERADO:")
+    print(f"   🏷️ Título: {titulo_video}")
+    print(f"   🔄 Alternativo: {titulo_alternativo}")
+    print(f"   🔑 Keywords: {palabras_clave}")
+    print(f"   📑 Capítulos: {len(capitulos_video)}")
 
     elementos_validos = []
     imagen_ultimo_recurso = None
 
     # 🎬 GENERACIÓN CON MEMORIA VISUAL
-    print(f"🎨 Generando {len(segmentos)} imágenes con continuidad narrativa...")
+    print(f"\n🎨 Generando {len(segmentos)} imágenes con continuidad narrativa...")
     
     for i, seg in enumerate(segmentos):
         print(f"\n📍 Segmento {i+1}/{len(segmentos)} - Etapa: {seg.get('etapa_visual', '?')}")
@@ -1070,12 +1170,24 @@ def main():
     print(f"⏱️ Duración final: {duracion_final/60:.1f} minutos")
 
     print("⬆️ Subiendo a YouTube...")
-    subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
+    subir_a_youtube(
+        video_path=video_path,
+        miniatura_path=miniatura_path,
+        titulo=titulo_video,
+        descripcion=descripcion_video,
+        etiquetas=tags_video,
+        capitulos=capitulos_video  # 🆕 Pasamos capítulos
+    )
 
     guardar_titulo_largo(titulo_video)
+    
+    # 🆕 Guardar también el título alternativo para futuras referencias
+    if titulo_alternativo and titulo_alternativo != titulo_video:
+        print(f"💡 Título alternativo guardado como referencia: {titulo_alternativo}")
+    
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado.")
+    print("🎉 Proceso completado con SEO experto.")
 
 if __name__ == "__main__":
     try:
