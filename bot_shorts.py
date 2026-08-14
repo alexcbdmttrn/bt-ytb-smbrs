@@ -230,7 +230,7 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
         r"\bdeteriorated\b", r"\bemaciated\b", r"\bgaunt\b", r"\bcorpselike\b",
         r"\bzombielike\b", r"\bskeletal\b", r"\bdecompos(?:ed|ing)\b",
         r"\bmoldy\b", r"\bmouldy\b", r"\bmusty\b", r"\bdusty\b",
-        r"\bcobwebs?\", r"\bspiders?\s?webs?\b",
+        r"\bcobwebs?\b", r"\bspiders?\s?webs?\b",
         r"\b19[5-9]\d(?:s)?\b", r"\bold[- ]?(?:fashioned|timer)\b",
         r"\bclassic(?:al)?\b", r"\bantique\b", r"\bhistoric(?:al)?\b",
     ]
