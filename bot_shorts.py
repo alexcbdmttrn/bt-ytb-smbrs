@@ -43,7 +43,7 @@ TITULOS_FILE = "titulos_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 
 # ================================================================
-# 🎤 VOCES NEURALES VÁLIDAS (solo las que SÍ existen en Edge TTS)
+# 🎤 VOCES NEURALES VÁLIDAS (fallback automático, sin gTTS)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
@@ -61,7 +61,6 @@ VOCES_DISPONIBLES = [
     {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
     {"voz": "es-CL-CatalinaNeural", "velocidad": "+10%", "tono": "+1Hz"},
 ]
-
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
@@ -231,7 +230,7 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
         r"\bdeteriorated\b", r"\bemaciated\b", r"\bgaunt\b", r"\bcorpselike\b",
         r"\bzombielike\b", r"\bskeletal\b", r"\bdecompos(?:ed|ing)\b",
         r"\bmoldy\b", r"\bmouldy\b", r"\bmusty\b", r"\bdusty\b",
-        r"\bcobwebs?\b", r"\bspiders?\s?webs?\b",
+        r"\bcobwebs?\", r"\bspiders?\s?webs?\b",
         r"\b19[5-9]\d(?:s)?\b", r"\bold[- ]?(?:fashioned|timer)\b",
         r"\bclassic(?:al)?\b", r"\bantique\b", r"\bhistoric(?:al)?\b",
     ]
@@ -396,18 +395,18 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
 # 🆕 EXPANDIR TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
-    print("🔄 Expandiendo texto corto (manteniendo estilo de testimonio real)...")
+    print("🔄 Expandiendo texto corto...")
     prompt = f"""Eres un editor de testimonios paranormales reales. Expande el siguiente
-relato (basado en una historia real contada en internet) para que tenga entre 150 y 170 palabras.
+relato para que tenga entre 150 y 170 palabras.
 Añade más detalles sensoriales y específicos (sonidos, olores, lugares reales de {ubicacion},
 horas, objetos) como los que incluiría una persona contando su experiencia real.
-Mantén la trama y el tono coloquial exactamente iguales, solo añade contenido donde sea natural.
-NO agregues ningún llamado a suscribirse ni CTA — solo la narración pura.
+Mantén la trama y el tono coloquial exactamente iguales.
+NO agregues ningún llamado a suscribirse ni CTA.
 
-RELATO ORIGINAL (debe expandirse):
+RELATO ORIGINAL:
 {texto_corto}
 
-Devuelve SOLO el relato expandido (150-170 palabras), sin títulos ni comentarios adicionales.
+Devuelve SOLO el relato expandido (150-170 palabras).
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -442,7 +441,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🆕 GENERAR HISTORIA
+# 🎬 GENERAR HISTORIA CON ETAPAS VISUALES (continuidad)
 # ================================================================
 def generar_historia_completa():
     hashtags_disponibles = [
@@ -457,69 +456,56 @@ def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet.
-Tu trabajo es tomar testimonios y relatos que PERSONAS REALES han contado y publicado
-en Facebook, YouTube, Reddit (r/nosleep, r/LetsNotMeet), foros de terror, blogs de
-misterio y páginas de leyendas, y adaptarlos como micro-relatos para YouTube Shorts.
+    prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica.
 
 🚨 REGLA DE ORO:
-La historia DEBE estar basada en un relato que REALMENTE alguien contó o escribió
-en internet. NO inventes tramas de cero: adapta, condensa y reescribe en primera
-persona un testimonio real existente. Puedes cambiar nombres por privacidad, pero
-conserva los hechos centrales del relato original.
+La historia DEBE estar basada en un relato que REALMENTE alguien contó en internet.
+Adáptalo en primera persona, tono coloquial, ambientado en {ESTADO_HISTORIA_SHORTS}, México.
 
-📚 FUENTES VÁLIDAS DE INSPIRACIÓN:
-- Testimonios reales publicados en foros, redes y secciones de comentarios.
-- Leyendas urbanas mexicanas documentadas, contadas por supuestos testigos.
-- Casos paranormales reales reportados en medios, blogs y videos de YouTube.
-- Experiencias personales reales de veladores, traileros, mineros, enfermeras,
-  taxistas, policías, velorios, velas de difuntos, caminos y pueblos.
+🎯 REGLA CRÍTICA: CONTINUIDAD VISUAL NARRATIVA
+El relato se dividirá en 4-5 segmentos visuales. Cada segmento DEBE tener:
+- "etapa_visual": una de estas 5 etapas:
+  * "inicio_casa" (el personaje en su espacio seguro)
+  * "desplazamiento" (en movimiento: caminando, en auto, en moto)
+  * "lugar_destino" (llega al lugar de los hechos)
+  * "climax_evento" (ocurre el evento paranormal)
+  * "resolucion" (conclusión o regreso)
+- "ubicacion_escena": el lugar específico donde ocurre ese fragmento
+- Las escenas deben tener TRAYECTORIA LÓGICA: si sale de casa, la siguiente escena lo muestra en la calle o el vehículo, NO de vuelta en casa.
+- El entorno se mantiene coherente durante segmentos consecutivos.
 
-🎯 INSTRUCCIONES DE ADAPTACIÓN:
-1. Elige un relato/caso REAL conocido o un testimonio real publicado en internet,
-   ambientado o adaptable al estado de {ESTADO_HISTORIA_SHORTS}, México.
-2. Cuéntalo en PRIMERA PERSONA, como si tú fueras la persona que lo vivió y lo
-   estuviera contando en un post de Facebook o en un video de YouTube.
-3. Usa detalles específicos y creíbles: nombres reales de pueblos, carreteras o
-   lugares de {ESTADO_HISTORIA_SHORTS}, años, horas, oficios y objetos concretos.
-4. Tono NATURAL Y COLOQUIAL, como alguien contando su experiencia real,
-   NO como novela literaria. Frases cortas y directas.
-5. PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-6. AMBIENTACIÓN ACTUAL: La historia ocurre en el PRESENTE (año 2026). Usa tecnología
-   moderna (celulares, autos actuales, apps) y evita describir todo como viejo o
-   abandonado a menos que sea esencial para la trama.
+PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
+AMBIENTACIÓN ACTUAL 2026: tecnología moderna, vehículos actuales, ropa moderna.
 
 🎯 REGLA CRÍTICA DE LONGITUD:
-- EXACTAMENTE entre 150 y 170 palabras (NO más de 170, NO menos de 150).
+- EXACTAMENTE entre 150 y 170 palabras.
 - Duración narrada: 50-65 segundos a velocidad +10%.
 
 📐 ESTRUCTURA:
-1. GANCHO (5-10 palabras): Frase inicial impactante.
-2. CONTEXTO (20-30 palabras): Lugar y situación reales rápidamente.
-3. TENSIÓN (80-90 palabras): Detalles sensoriales y hechos del testimonio.
-4. TWIST FINAL (30-40 palabras): El remate real del relato, inesperado pero lógico.
+1. GANCHO (5-10 palabras)
+2. CONTEXTO (20-30 palabras)
+3. TENSIÓN (80-90 palabras)
+4. TWIST FINAL (30-40 palabras)
 
 REGLAS DEL TÍTULO (SEO 2026):
 - Entre 55 y 75 caracteres, palabra clave al inicio.
-- Debe sonar a testimonio real, no a ficción.
-- NO debe parecerse a ningún título ya publicado listado abajo.
+- NO debe parecerse a ningún título ya publicado.
 
 REGLAS DE DESCRIPCIÓN:
-- "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres que genere curiosidad.
-- "contexto_descripcion": 1 oración con contexto y palabras clave naturales.
+- "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres.
+- "contexto_descripcion": 1 oración con contexto.
 - "fuente_relato": 1 línea indicando el tipo de fuente real.
 
-REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres):
-- Mezcla etiquetas de relatos reales + lugar + fenómeno.
+REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres).
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
 REGLAS GENERALES:
 - PRIMERA FRASE = GANCHO IMPACTANTE de máximo 5 palabras.
 - Ortografía perfecta. NO repitas frases.
 - PALETA: {PALETA_COLOR_ACTUAL}
-- El campo "texto_completo" NO debe incluir CTA de suscripción.
+- "texto_completo" NO debe incluir CTA de suscripción.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
@@ -527,9 +513,9 @@ Devuelve ESTRICTAMENTE este JSON válido:
   "gancho_descripcion": "Gancho de máx 90 caracteres",
   "contexto_descripcion": "1 oración con contexto",
   "fuente_relato": "Basado en un testimonio/leyenda real de ...",
-  "texto_completo": "Micro-relato REAL adaptado, 150-170 palabras, primera persona, tono coloquial",
+  "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
   "palabras_portada": "2-3 PALABRAS CLAVE",
-  "tags": "tag long-tail 1, tag long-tail 2, ... (10-15 tags)"
+  "tags": "tag1, tag2, ... (10-15 tags)"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -566,7 +552,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
                     data = json5.loads(json_str)
                     print("   ✅ JSON parseado correctamente con json5 (fallback)")
                 except ImportError:
-                    print("   ❌ json5 no está instalado. Instálalo con: pip install json5")
+                    print("   ❌ json5 no está instalado.")
                     raise
                 except Exception as e2:
                     print(f"   ❌ json5 también falló: {e2}")
@@ -682,34 +668,98 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     return segmentos
 
 # ================================================================
-# 🆕 GENERAR PROMPT DE IMAGEN POR SEGMENTO
+# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS (continuidad narrativa)
 # ================================================================
-def generar_prompt_imagen_segmento(segmento_texto, perfil, ubicacion, estilo_visual, paleta_color):
-    prompt = f"""Eres un director de fotografía experto en composición cinematográfica.
-Interpreta el siguiente fragmento de un relato de terror y genera un PROMPT DE IMAGEN EN INGLÉS para una foto vertical (9:16) que represente la escena exacta.
+def asignar_etapas_visuales(segmentos, ubicacion):
+    """
+    Asigna una etapa visual lógica a cada segmento según su posición
+    en la narrativa, para mantener trayectoria coherente.
+    """
+    n = len(segmentos)
+    etapas = []
+    ubicaciones = []
+    
+    for i in range(n):
+        progreso = i / max(n - 1, 1)  # 0.0 a 1.0
+        
+        if progreso < 0.2:
+            etapa = "inicio_casa"
+            ubic = f"interior del hogar moderno en {ubicacion}"
+        elif progreso < 0.4:
+            etapa = "desplazamiento"
+            ubic = f"calle o vehículo moderno en movimiento, {ubicacion}"
+        elif progreso < 0.65:
+            etapa = "lugar_destino"
+            ubic = f"lugar específico del suceso en {ubicacion}"
+        elif progreso < 0.85:
+            etapa = "climax_evento"
+            ubic = f"mismo lugar del suceso en {ubicacion}, momento del evento"
+        else:
+            etapa = "resolucion"
+            ubic = f"salida o regreso desde el lugar, {ubicacion}"
+        
+        etapas.append(etapa)
+        ubicaciones.append(ubic)
+    
+    return etapas, ubicaciones
 
-Fragmento del relato:
+# ================================================================
+# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL
+# ================================================================
+def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, perfil=None, estilo_visual=None, paleta_color=None):
+    """
+    Genera un prompt de imagen enriquecido con contexto de continuidad narrativa.
+    """
+    estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
+    paleta = paleta_color or PALETA_COLOR_ACTUAL
+    perfil = perfil or PERFIL_PERSONAJE_SHORTS
+    
+    # Contexto del segmento anterior
+    contexto_previo = ""
+    if segmento_anterior_texto:
+        contexto_previo = f"\nPREVIOUS SCENE: The character was just in the previous moment: '{segmento_anterior_texto[:120]}'"
+    
+    # Instrucciones según etapa
+    instrucciones_etapa = {
+        "inicio_casa": "Show the character in a modern home interior, establishing shot, calm atmosphere before the events begin.",
+        "desplazamiento": "Show the character in movement (walking or driving), same route continuing from the previous scene, different camera angle.",
+        "lugar_destino": "Show the character arriving at or exploring the specific location, maintaining architectural consistency.",
+        "climax_evento": "Show the paranormal event happening in this exact location, character reacting but NOT in close-up face.",
+        "resolucion": "Show the aftermath or the character leaving, calmer atmosphere, conclusion."
+    }
+    instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
+    
+    prompt = f"""Eres un director de fotografía experto en composición cinematográfica y continuidad narrativa.
+
+Fragmento del relato actual:
 \"\"\"
 {segmento_texto}
 \"\"\"
+{contexto_previo}
+
+Genera un PROMPT DE IMAGEN EN INGLÉS para una foto vertical (9:16) que represente esta escena.
+
+SCENE CONTINUITY INSTRUCTIONS:
+- Current narrative stage: {etapa}
+- Current location: {ubicacion_escena}
+- DIRECTIVE: {instruccion}
 
 Reglas estrictas de composición:
 - PLANO: Wide shot o extreme wide shot. PROHIBIDO close-up, portrait, headshot.
-- Enfoque principal: el ENTORNO, ARQUITECTURA u OBJETOS mencionados.
-- Si el fragmento menciona al personaje, inclúyelo ocupando como MÁXIMO el 20% del área, a distancia.
+- Enfoque principal: el ENTORNO y la acción del momento.
+- Personaje: {perfil}, ocupando como MÁXIMO el 20% del área, a distancia.
 - Si solo describe ambiente, NO incluyas personas.
 - Estilo: professional hyperrealistic photography, 4k, ultra-detailed, natural lighting.
-- Paleta de color: {paleta_color}
-- Personaje (si aparece): apariencia normal y agradable, piel sana.
-- ERA MODERNA 2026: Aunque el relato mencione lugares antiguos, representa el entorno
-  como CONTEMPORÁNEO: edificios modernos, vehículos 2020-2026, iluminación LED, ropa actual.
-- PROHIBIDO usar en el prompt estas palabras: abandoned, decaying, rusty, rusted,
-  crumbling, cracked, peeling, weathered, dilapidated, vintage, antique, sepia,
-  emaciated, gaunt, corpse-like, zombie-like, rotting, moldy, cobwebs.
-- Si la escena requiere un lugar "abandonado", descríbelo como un edificio moderno
-  RECIENTEMENTE cerrado (concreto limpio, ventanas modernas, luces LED de emergencia),
-  NO como ruinas decadentes.
-- Restricciones explícitas: "no close-up face, no portrait, no face filling frame, person occupies max 20% of frame, environment as main focus, no gore, no blood"
+- Paleta de color: {paleta}
+- ERA MODERNA 2026: edificios modernos, vehículos 2020-2026, iluminación LED, ropa actual.
+- PROHIBIDO: abandoned, decaying, rusty, rusted, crumbling, cracked, peeling, weathered, dilapidated, vintage, antique, sepia, emaciated, gaunt, corpse-like, zombie-like, rotting, moldy, cobwebs.
+- Si la escena requiere un lugar "abandonado", descríbelo como un edificio moderno RECIENTEMENTE cerrado (concreto limpio, ventanas modernas, luces LED de emergencia).
+
+VISUAL CONSISTENCY RULES:
+- EXACTLY ONE PERSON (the main character)
+- NO cut-off bodies, NO partial bodies, NO limbs outside frame
+- NO multiple people, NO duplicate figures
+- NO floating objects, NO illogical elements
 
 Devuelve SOLO el prompt en inglés, sin explicaciones.
 """
@@ -725,38 +775,45 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         prompt_imagen = r.json()["choices"][0]["message"]["content"].strip()
-        prompt_imagen += f", {estilo_visual}, vertical 9:16, wide establishing shot, person occupies max 20% of frame, environment as main subject, no close-up face, no portrait, no blood, no gore, modern 2026 era, contemporary setting, no rusty, no vintage, no decayed"
+        prompt_imagen += f", {estilo}, vertical 9:16, wide establishing shot, person occupies max 20% of frame, environment as main subject, no close-up face, no portrait, no blood, no gore, modern 2026 era, contemporary setting, no rusty, no vintage, no decayed, single person only, no cut off body"
         return prompt_imagen
     except Exception as e:
         print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Wide establishing shot of modern {ubicacion} in 2026, depicting: {segmento_texto[:100]}, {estilo_visual}, vertical 9:16, no close-up face, environment as main subject, contemporary era"
+        return f"Wide establishing shot of modern {ubicacion_escena} in 2026, depicting: {segmento_texto[:100]}, {estilo}, vertical 9:16, no close-up face, environment as main subject, contemporary era, single person, no cut off body"
 
 # ================================================================
-# 🆕 GENERAR IMAGEN VERTICAL
+# 🖼️ GENERAR IMAGEN VERTICAL (negative prompt anti-defectos)
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+    
+    negative = (
+        "multiple people, duplicate people, cloned faces, two people, three people, crowd, "
+        "cut off body, cropped body, partial body, limbs outside frame, truncated person, "
+        "deformed, mutated, bad anatomy, extra limbs, extra fingers, missing limbs, missing fingers, "
+        "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
+        "close-up face, portrait, headshot, person filling frame, face occupying more than 20% of image, "
+        "centered subject, camera pointed directly at face, "
+        "gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, "
+        "sickly, decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, unattractive, "
+        "rusty, rusted, oxidized, weathered, aged, vintage, retro, antique, old-fashioned, "
+        "dilapidated, decrepit, run-down, crumbling, cracked walls, peeling paint, eroded, "
+        "deteriorated, abandoned ruins, moldy, mouldy, musty, dusty, cobwebs, spiderwebs, "
+        "classic car, old car, vintage car, retro car, horse carriage, "
+        "1950s, 1960s, 1970s, 1980s, 1990s, ancient, medieval, historical, "
+        "sepia tone, monochrome, black and white, film grain, "
+        "floating objects, illogical elements, impossible physics, "
+        "ghost doubles, transparent figures, multiple versions of same person, "
+        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo, "
+        "broken, shattered, destroyed, post-apocalyptic, dystopian ruins"
+    )
+    
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
-        "negative_prompt": (
-            "close-up face, portrait, headshot, person filling frame, face occupying more than 20% of image, "
-            "centered subject, camera pointed directly at face, deformed face, disfigured, mutated, bad anatomy, "
-            "extra limbs, missing limbs, extra fingers, fused fingers, asymmetrical eyes, cross-eyed, malformed features, "
-            "uncanny valley, plastic skin, waxy skin, gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, "
-            "sickly, decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, unattractive, monstrous features, "
-            "cloned faces, duplicate people, multiple subjects, over-saturated, oversharpened, low quality, blurry, "
-            "grainy, vhs, chiaroscuro, dirt, grime, blemishes, spots, text, watermark, logo, "
-            "rusty, rusted, oxidized, weathered, aged, vintage, retro, antique, old-fashioned, "
-            "dilapidated, decrepit, run-down, crumbling, cracked walls, peeling paint, eroded, "
-            "deteriorated, abandoned ruins, moldy, mouldy, musty, dusty, cobwebs, spiderwebs, "
-            "classic car, old car, vintage car, retro car, horse carriage, "
-            "1950s, 1960s, 1970s, 1980s, 1990s, ancient, medieval, historical, "
-            "sepia tone, monochrome, black and white, film grain, "
-            "broken, shattered, destroyed, post-apocalyptic, dystopian ruins"
-        ),
+        "negative_prompt": negative,
         "width": 1080,
         "height": 1920,
         "num_images": 1
@@ -772,15 +829,30 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR RECURSOS POR SEGMENTO
+# 🎬 GENERAR RECURSOS POR SEGMENTO (con memoria visual)
 # ================================================================
-def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
+def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
 
     for idx, seg in enumerate(segmentos):
-        print(f"  🎬 Procesando segmento {idx+1}/{len(segmentos)} ({len(seg.split())} palabras)...")
+        etapa = etapas[idx] if idx < len(etapas) else "lugar_destino"
+        ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ubicacion
+        
+        print(f"  🎬 Segmento {idx+1}/{len(segmentos)} ({len(seg.split())} palabras) - Etapa: {etapa}")
+        print(f"     📍 Ubicación: {ubic_escena}")
 
-        prompt_imagen = generar_prompt_imagen_segmento(seg, perfil, ubicacion, estilo, paleta)
+        # Obtener texto del segmento anterior para continuidad
+        seg_anterior = segmentos[idx-1] if idx > 0 else None
+        
+        prompt_imagen = generar_prompt_con_contexto(
+            segmento_texto=seg,
+            etapa=etapa,
+            ubicacion_escena=ubic_escena,
+            segmento_anterior_texto=seg_anterior,
+            perfil=perfil,
+            estilo_visual=estilo,
+            paleta_color=paleta
+        )
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
 
         img_url = None
@@ -851,10 +923,6 @@ def generar_recursos_por_segmento(segmentos, perfil, ubicacion, estilo, paleta, 
 # ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES (SIN gTTS)
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
-    """
-    Intenta generar audio con la voz actual. Si falla, prueba con otras voces
-    de la lista hasta que una funcione. NUNCA usa gTTS.
-    """
     global CONFIG_VOZ_ACTUAL
     
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
@@ -870,7 +938,6 @@ def generar_audio(texto, index, intentos_por_voz=2):
 
     filename = f"audio_short_{index}.mp3"
 
-    # Lista de voces a probar: primero la actual, luego las demás
     voces_a_probar = [CONFIG_VOZ_ACTUAL]
     for voz_config in VOCES_DISPONIBLES:
         if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
@@ -895,7 +962,6 @@ def generar_audio(texto, index, intentos_por_voz=2):
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
                     print(f"✅ Audio segmento {index} generado con {voz}")
                     
-                    # Si la voz actual falló pero otra funcionó, actualizarla
                     if voz != CONFIG_VOZ_ACTUAL["voz"]:
                         print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
                         CONFIG_VOZ_ACTUAL = voz_config
@@ -908,14 +974,12 @@ def generar_audio(texto, index, intentos_por_voz=2):
                     print(f"⏳ Esperando {espera}s antes de reintentar con la misma voz...")
                     time.sleep(espera)
         
-        # Si esta voz falló en todos sus intentos, limpiar archivo si existe
         if os.path.exists(filename):
             try:
                 os.remove(filename)
             except:
                 pass
     
-    # Si TODAS las voces neurales fallaron, abortar (nunca usar gTTS)
     print("❌ TODAS las voces neurales de Edge TTS fallaron. Abortando generación de audio.")
     return None
 
@@ -923,7 +987,6 @@ def generar_audio(texto, index, intentos_por_voz=2):
 # ✅ GENERAR AUDIO CTA FINAL (mismo sistema de fallback)
 # ================================================================
 def generar_audio_cta_final():
-    """Genera el CTA final con el mismo sistema de fallback entre voces neurales."""
     global CONFIG_VOZ_ACTUAL
     
     cta_texto = "Relatos completos en el canal. Visítanos."
@@ -1141,17 +1204,19 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
         response = request.execute()
         video_id = response["id"]
-        print(f"✅ Short subido: https://youtu.be/{video_id}")
+        print(f"✅ Short sub
+    ido: https://youtu.be/{video_id}")
         return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
         sys.exit(1)
 
 # ================================================================
-# 🆕 SUBIR VIDEO A HOST TEMPORAL
+# 🆕 SUBIR VIDEO A HOST TEMPORAL (para Facebook)
 # ================================================================
 def subir_video_temporal(video_path, intentos=2):
     """Sube el video a un host temporal y devuelve la URL directa."""
+    # 1) litterbox.catbox.moe (dura 72 horas)
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1169,6 +1234,7 @@ def subir_video_temporal(video_path, intentos=2):
             print(f"⚠️ litterbox falló: {e}")
         time.sleep(3)
 
+    # 2) tmpfiles.org (dura 60 minutos)
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1186,6 +1252,7 @@ def subir_video_temporal(video_path, intentos=2):
             print(f"⚠️ tmpfiles falló: {e}")
         time.sleep(3)
 
+    # 3) 0x0.st (último recurso)
     try:
         with open(video_path, "rb") as f:
             r = requests.post("https://0x0.st", files={"file": f}, timeout=180)
@@ -1245,7 +1312,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES de internet)")
+    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con continuidad visual)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1293,11 +1360,18 @@ def main():
     print(f"📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"🏷️ Tags: {historia_raw['tags']}")
 
+    # 🎬 Dividir en segmentos y asignar ETAPAS VISUALES (continuidad)
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
-    print(f"🖼️ Generando imágenes y audios para {len(segmentos)} segmentos...")
+    etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
+    
+    print(f"🖼️ Generando {len(segmentos)} imágenes con continuidad narrativa...")
+    for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
+        print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
 
     recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
+        etapas=etapas,
+        ubicaciones=ubicaciones,
         perfil=perfil,
         ubicacion=ubicacion,
         estilo=estilo,
@@ -1332,6 +1406,7 @@ def main():
 
     guardar_titulo_publicado(historia_raw["titulo"])
 
+    # 🆕 ENVIAR A FACEBOOK VÍA MAKE (solo los 2 primeros Reels del día)
     publicaciones_antes = obtener_publicaciones_hoy()
     if publicaciones_antes < 2:
         print(f"\n📘 Reel #{publicaciones_antes + 1} del día: enviando a Facebook vía Make...")
