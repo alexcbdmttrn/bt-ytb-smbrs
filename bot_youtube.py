@@ -22,7 +22,7 @@ import requests
 import edge_tts
 
 # ================================================================
-# CONFIGURACIÓN (GitHub Secrets)
+# CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 AGNES_API_KEY = os.getenv("AGNES_API_KEY")
@@ -42,7 +42,7 @@ DURACION_MINIMA_SEGUNDOS = 480
 MAX_INTENTOS_EXPANSION = 2
 
 # ================================================================
-# 🎤 VOCES NEURALES VÁLIDAS (solo las que SÍ existen en Edge TTS)
+# 🎤 VOCES NEURALES VÁLIDAS
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
@@ -293,7 +293,7 @@ def limpiar_prompt(prompt):
     return prompt_base + modificadores_calidad
 
 # ================================================================
-# 🖼️ MINIATURA CON DEGRADADO DINÁMICO
+# 🖼️ MINIATURA
 # ================================================================
 DEGRADADOS_MINIATURA = [
     {"top": (255, 30, 0), "bottom": (255, 140, 0)},
@@ -382,67 +382,73 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK
+# 🎬 GENERAR GUION CON ETAPAS VISUALES
 # ================================================================
 def generar_guion(contexto_extra=""):
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
     
-    prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO.
+    prompt_base = f"""Eres un GUIONISTA Y DIRECTOR DE CINE DE MISTERIO especializado en continuidad visual.
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE A ESTOS):
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
-Escribe un relato de eventos paranormales o misterio real en primera persona en español de aproximadamente 9.500 a 11.000 caracteres (1.600-1.850 palabras), ambientado en {UBICACION_HISTORIA}, México.
-Divide la historia en 28 a 34 segmentos, CADA UNO de 45 a 55 palabras (esto asegura que cada segmento se narre en ~18-22 segundos a velocidad normal de TTS).
+Escribe un relato de eventos paranormales en primera persona en español, 1.600-1.850 palabras, ambientado en {UBICACION_HISTORIA}, México.
+Divide la historia en 28 a 34 segmentos de 45-55 palabras cada uno.
 
-PERSONAJE PRINCIPAL (ÚNICO PARA ESTE VIDEO):
+PERSONAJE PRINCIPAL (FIJO):
 "{PERFIL_PERSONAJE}"
 
-REGLAS DE TÍTULO:
-- Debe ser DESCRIPTIVO y DIRECTO (50-80 caracteres).
-- NO debe parecerse a ningún título ya publicado listado arriba.
-- El tema/lugar/fenómeno debe ser ORIGINAL (no repitas minas, casonas, espejos, carreteras si ya aparecieron recientemente).
-- Ejemplo: "El misterio de la casona abandonada en {UBICACION_HISTORIA}"
+🎯 REGLA CRÍTICA: CONTINUIDAD VISUAL NARRATIVA
+Cada segmento debe tener una "etapa_visual" que indique dónde está la escena y cómo progresa:
+- Las escenas deben tener TRAYECTORIA LÓGICA (si el personaje sale de su casa, la siguiente escena debe mostrarlo en la calle, no de vuelta en casa).
+- El entorno debe mantenerse coherente durante varios segmentos consecutivos (si está en una carretera, varios segmentos muestran la misma carretera desde ángulos diferentes).
+- Si el personaje cambia de ubicación, debe mencionarse claramente el desplazamiento.
 
-REGLAS DE INICIO:
-- La PRIMERA FRASE del relato debe ser un GANCHO IMPACTANTE.
+🎬 ESTRUCTURA DE ETAPAS VISUALES (usa estas 5 etapas):
+- "inicio_casa": El personaje en su hogar/espacio seguro
+- "desplazamiento": En movimiento (caminando, en auto, en transporte)
+- "lugar_destino": Ha llegado al lugar donde ocurren los hechos
+- "climax_evento": El evento paranormal ocurre en este lugar
+- "resolucion": El personaje regresa o concluye la experiencia
 
 REGLAS DE GENERACIÓN VISUAL:
-1. PERSONAJE PRINCIPAL FIJO: En todos los segmentos usa la descripción exacta: "{PERFIL_PERSONAJE}".
-2. CERO PERSONAJES CLONADOS: Escribe prompts pidiendo "single person".
-3. PALETA DE COLOR: {PALETA_COLOR_ACTUAL}.
-4. TEXTO ÚNICO EN ESPAÑOL: En el campo "texto" solo escribe la narración del relato en español.
-5. IMAGEN_PROMPT: El campo 'imagen_prompt' debe ser un prompt fotográfico detallado EN INGLÉS que describa visualmente EXACTAMENTE lo que ocurre en el 'texto' de ese segmento. Incluye la ubicación, la hora, el personaje principal (si aparece), la acción y la atmósfera. Sé específico y evita descripciones genéricas.
-   - La persona debe ocupar como máximo el 20-25% del encuadre (plano general o medio, nunca primer plano).
-   - La persona debe ser descrita como de apariencia natural y agradable, sana, sin rasgos de sufrimiento ni deformidades.
-   - PROHIBIDO usar palabras como: abandoned, decaying, rusty, rusted, crumbling, cracked, peeling, weathered, dilapidated, vintage, antique, sepia, emaciated, gaunt, corpse-like, zombie-like, rotting, moldy, cobwebs.
-6. ESTRUCTURA NARRATIVA: presentación, desarrollo con varios puntos de tensión, clímax, resolución — repartida en los segmentos.
-7. MINIATURA: Debes generar también un campo 'miniatura_descripcion' (1-2 oraciones en español describiendo la escena o momento MÁS IMPACTANTE Y VISUAL del relato) y un 'miniatura_prompt' en inglés específico para esa escena, con composición dramática y atractiva para captar clics.
-8. AMBIENTACIÓN ACTUAL (2026): La historia ocurre en el PRESENTE. Usa tecnología moderna
-   (celulares, autos 2020-2026, apps, iluminación LED). Evita describir todos los lugares
-   como viejos, abandonados o decadentes; si un lugar es antiguo, que sea la excepción
-   justificada por la trama, no la regla. Si la escena requiere un lugar "abandonado",
-   descríbelo como un edificio moderno RECIENTEMENTE cerrado (concreto limpio, ventanas
-   modernas, luces LED de emergencia), NO como ruinas decadentes.
+1. PERSONAJE FIJO: Usa "{PERFIL_PERSONAJE}" en TODOS los segmentos donde aparezca.
+2. UN SOLO PERSONAJE: Nunca menciones múltiples personas en el mismo encuadre.
+3. PALETA DE COLOR: {PALETA_COLOR_ACTUAL}
+4. AMBIENTACIÓN MODERNA 2026: tecnología actual, vehículos actuales, ropa moderna.
+5. "imagen_prompt": PROMPT EN INGLÉS con:
+   - Escena específica que continúa la escena anterior
+   - Ubicación exacta coherente con el segmento anterior
+   - Acción del personaje lógica dentro de la trayectoria
+   - Ángulo de cámara variado (wide, medium, over-the-shoulder)
 
-{contexto_extra}
-
-Responde únicamente en formato JSON con esta estructura exacta:
+📐 ESTRUCTURA JSON OBLIGATORIA:
 {{
-  "titulo": "Título descriptivo y directo, ORIGINAL, sin parecerse a publicados",
+  "titulo": "Título descriptivo 50-80 caracteres",
   "palabras_portada": "CASO REAL",
-  "descripcion": "Sinopsis completa... Síguenos en Facebook: {FACEBOOK_LINK} #leyendasurbanas #Paranormal #Misterio",
+  "descripcion": "Sinopsis completa... {FACEBOOK_LINK} #leyendasurbanas #Paranormal",
   "tags": "tag1, tag2, tag3, tag4, tag5",
-  "miniatura_descripcion": "Breve descripción en español de la escena o momento más impactante y visual del relato (1-2 oraciones).",
-  "miniatura_prompt": "Dramatic cinematic photo of [escena específica] in {UBICACION_HISTORIA}, [paleta de color], striking composition, professional thumbnail photography, high visual impact, dramatic lighting, sharp focus, no text, no watermark, modern 2026 era, no rusty, no vintage, no decayed",
+  "miniatura_descripcion": "1-2 oraciones de la escena más impactante",
+  "miniatura_prompt": "Dramatic cinematic photo in {UBICACION_HISTORIA}, {PALETA_COLOR_ACTUAL}, modern 2026 era",
   "segmentos": [
     {{
-      "texto": "Texto narrativo único en español para ser locutado por voz en off...",
-      "imagen_prompt": "Detailed cinematic prompt in English for this specific scene. Include {PERFIL_PERSONAJE} if present. Single subject, medium shot, bright well-lit, 16:9, no text, no gore, modern 2026 era, contemporary setting, no rusty, no vintage, no decayed"
+      "texto": "Narración en español de 45-55 palabras...",
+      "etapa_visual": "inicio_casa|desplazamiento|lugar_destino|climax_evento|resolucion",
+      "ubicacion_escena": "Descripción breve del lugar específico (ej: 'sala del departamento moderno en CDMX')",
+      "imagen_prompt": "Prompt detallado en inglés para esta escena específica"
     }}
   ]
 }}
+
+🚨 REGLA DE ORO PARA IMAGEN_PROMPT:
+Cada imagen_prompt DEBE incluir:
+1. El mismo tipo de escenario que el segmento anterior (si estaba en la carretera, sigue en la carretera)
+2. El personaje exacto: {PERFIL_PERSONAJE}
+3. Una acción que tenga sentido después de la acción anterior
+4. Un ángulo de cámara diferente al segmento anterior para variar visualmente
+
+{contexto_extra}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -484,42 +490,57 @@ Responde únicamente en formato JSON con esta estructura exacta:
             if "segmentos" in data and len(data["segmentos"]) >= 20:
                 titulo_generado = data.get("titulo", "")
                 if titulo_largo_ya_publicado(titulo_generado):
-                    print(f"⚠️ Título YA PUBLICADO o muy similar: '{titulo_generado}'. Regenerando...")
-                    raise ValueError("Título duplicado o muy similar a uno ya publicado")
+                    print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
+                    raise ValueError("Título duplicado")
                 
-                for seg in data["segmentos"]:
+                # Validar y limpiar prompts de imagen con continuidad
+                for i, seg in enumerate(data["segmentos"]):
                     if "imagen_prompt" in seg:
                         seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
-                print(f"✅ Guion generado exitosamente con {len(data['segmentos'])} segmentos.")
-                print(f"🏷️ Título nuevo: {titulo_generado}")
+                    # Asegurar campos de continuidad
+                    if "etapa_visual" not in seg:
+                        if i < 3:
+                            seg["etapa_visual"] = "inicio_casa"
+                        elif i < len(data["segmentos"]) - 3:
+                            seg["etapa_visual"] = "lugar_destino"
+                        else:
+                            seg["etapa_visual"] = "resolucion"
+                    if "ubicacion_escena" not in seg:
+                        seg["ubicacion_escena"] = UBICACION_HISTORIA
+                
+                print(f"✅ Guion con {len(data['segmentos'])} segmentos y continuidad visual.")
+                print(f"🏷️ Título: {titulo_generado}")
                 return data
             else:
                 num_segmentos = len(data.get('segmentos', [])) if data else 0
-                print(f"⚠️ Número insuficiente de segmentos ({num_segmentos}, mínimo requerido: 20). Reintentando...")
-                raise ValueError("Número insuficiente de segmentos")
+                print(f"⚠️ Segmentos insuficientes ({num_segmentos}). Reintentando...")
+                raise ValueError("Segmentos insuficientes")
 
         except Exception as e:
-            print(f"❌ Intento {intento+1}/3 falló al procesar JSON de DeepSeek: {e}")
+            print(f"❌ Intento {intento+1}/3 falló: {e}")
             time.sleep(5)
 
-    print("❌ No se pudo generar un guion válido después de 3 intentos.")
+    print("❌ No se pudo generar guion válido.")
     sys.exit(1)
 
 # ================================================================
 # EXPANSIÓN DE GUION
 # ================================================================
-def expandir_guion(titulo, ultimos_segmentos_texto, intento_actual):
+def expandir_guion(titulo, ultimos_segmentos, intento_actual):
     contexto = f"""
-La historia ya tiene un título: "{titulo}".
-Los últimos segmentos generados son (texto únicamente):
-{" --- ".join(ultimos_segmentos_texto[-3:])}
+Historia: "{titulo}"
+Últimos 3 segmentos:
+{json.dumps(ultimos_segmentos[-3:], ensure_ascii=False, indent=2)}
 
-Continúa la historia de forma coherente a partir de ese punto. Genera aproximadamente 10 segmentos adicionales (cada uno de 45-55 palabras) que sigan el mismo estilo y temática. Incluye en cada segmento el campo "imagen_prompt" siguiendo las mismas reglas visuales (ambientación moderna 2026, sin palabras de decadencia u óxido).
-Devuelve únicamente un array JSON llamado "segmentos_extra" con la misma estructura de objetos que en el guion original.
+Continúa la historia con ~10 segmentos adicionales de 45-55 palabras, manteniendo:
+- La misma ubicación física del último segmento
+- El mismo personaje: {PERFIL_PERSONAJE}
+- La trayectoria lógica de la escena
+- Campos: texto, etapa_visual, ubicacion_escena, imagen_prompt
 """
     prompt = f"""Eres el mismo guionista. {contexto}
 
-Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un array de objetos con "texto" e "imagen_prompt".
+Devuelve JSON con clave "segmentos_extra" (array de objetos con texto, etapa_visual, ubicacion_escena, imagen_prompt).
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -535,98 +556,154 @@ Responde únicamente con un JSON que contenga la clave "segmentos_extra" y un ar
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=120)
             r.raise_for_status()
-            respuesta_json = r.json()
-            respuesta = respuesta_json["choices"][0]["message"]["content"].strip()
-            finish_reason = respuesta_json["choices"][0].get("finish_reason", "desconocido")
-
-            print(f"📝 Respuesta expansión (primeros 300 chars): {respuesta[:300]}")
-            print(f"🏁 Finish reason expansión: {finish_reason}")
-
+            respuesta = r.json()["choices"][0]["message"]["content"].strip()
             json_str = limpiar_respuesta_json(respuesta)
 
             data = None
             try:
                 data = json.loads(json_str, strict=False)
-                print("✅ json.loads en expansión parseó exitosamente.")
-            except json.JSONDecodeError as e:
-                print(f"⚠️ json.loads en expansión falló: {e}. Intentando con json5...")
-                try:
-                    import json5
-                    data = json5.loads(json_str)
-                    print("✅ json5 parseó la expansión exitosamente.")
-                except Exception as e5:
-                    print(f"❌ json5 también falló en expansión: {e5}")
-                    raise
+            except json.JSONDecodeError:
+                import json5
+                data = json5.loads(json_str)
 
             if "segmentos_extra" in data and len(data["segmentos_extra"]) > 0:
                 for seg in data["segmentos_extra"]:
-                    seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
-                print(f"✅ Expansión generada: {len(data['segmentos_extra'])} segmentos adicionales.")
+                    if "imagen_prompt" in seg:
+                        seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
+                print(f"✅ Expansión: {len(data['segmentos_extra'])} segmentos adicionales.")
                 return data["segmentos_extra"]
             else:
-                print("⚠️ La expansión no devolvió segmentos válidos.")
                 raise ValueError("Expansión vacía")
         except Exception as e:
-            print(f"❌ Intento de expansión {intento+1}/2 falló: {e}")
+            print(f"❌ Expansión intento {intento+1}/2 falló: {e}")
             time.sleep(5)
 
-    print("❌ No se pudo generar expansión después de 2 intentos.")
     return []
 
 # ================================================================
-# 🆕 GENERAR IMAGEN (negative prompt anti-vintage)
+# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL
+# ================================================================
+def generar_prompt_con_contexto(segmento_actual, segmento_anterior=None, segmento_siguiente=None):
+    """
+    Genera un prompt de imagen enriquecido con contexto de continuidad narrativa.
+    """
+    etapa = segmento_actual.get("etapa_visual", "lugar_destino")
+    ubicacion = segmento_actual.get("ubicacion_escena", UBICACION_HISTORIA)
+    texto_seg = segmento_actual.get("texto", "")
+    prompt_base = segmento_actual.get("imagen_prompt", "")
+    
+    # Contexto del segmento anterior (de dónde viene)
+    contexto_previo = ""
+    if segmento_anterior:
+        ubicacion_prev = segmento_anterior.get("ubicacion_escena", "")
+        etapa_prev = segmento_anterior.get("etapa_visual", "")
+        contexto_previo = f"\nPREVIOUS SCENE CONTEXT: The character was just in '{ubicacion_prev}' during the '{etapa_prev}' stage."
+    
+    # Contexto del siguiente (hacia dónde va)
+    contexto_siguiente = ""
+    if segmento_siguiente:
+        ubicacion_next = segmento_siguiente.get("ubicacion_escena", "")
+        contexto_siguiente = f"\nNEXT SCENE: The story continues toward '{ubicacion_next}'."
+    
+    # Instrucciones de continuidad según etapa
+    instrucciones_etapa = {
+        "inicio_casa": "Show the character in a modern home interior, establishing shot, calm before the events.",
+        "desplazamiento": "Show the character in movement (walking, driving), same route as previous scene, different camera angle.",
+        "lugar_destino": "Show the character arriving at or exploring the main location, maintaining architectural consistency with previous segments.",
+        "climax_evento": "Show the paranormal event happening in this specific location, character reacting but NOT in close-up face.",
+        "resolucion": "Show the aftermath or the character leaving/returning, calmer atmosphere."
+    }
+    
+    instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
+    
+    prompt_final = f"""{prompt_base}
+
+SCENE CONTINUITY INSTRUCTIONS:
+- Current stage: {etapa}
+- Current location: {ubicacion}
+- Story moment: {texto_seg[:150]}
+{contexto_previo}{contexto_siguiente}
+- DIRECTIVE: {instruccion}
+
+VISUAL CONSISTENCY RULES:
+- EXACTLY ONE PERSON (the main character): {PERFIL_PERSONAJE}
+- The character must occupy maximum 20-25% of the frame
+- Modern 2026 setting, contemporary clothing and architecture
+- Maintain color palette: {PALETA_COLOR_ACTUAL}
+- Style: {ESTILO_VISUAL_ACTUAL}
+- Camera angle different from previous scene for visual variety
+
+ABSOLUTE PROHIBITIONS:
+- NO multiple people, NO duplicate figures, NO ghostly doubles
+- NO cut-off bodies, NO partial bodies, NO limbs outside frame
+- NO faces in close-up, NO portraits, NO headshots
+- NO floating objects, NO illogical elements, NO surreal impossibilities
+- NO vintage elements, NO rusty objects, NO abandoned ruins
+- NO gore, NO blood, NO wounds, NO deformities
+- NO text, NO watermarks, NO logos
+"""
+    return prompt_final
+
+# ================================================================
+# 🖼️ GENERAR IMAGEN CON NEGATIVE PROMPT MEJORADO
 # ================================================================
 def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
-    if texto_segmento:
-        prompt = f"{prompt}, scene depicting: {texto_segmento[:150]}"
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+    
+    # Negative prompt mejorado para evitar defectos
     negative = (
-        "oscuro, dark, underexposed, low light, heavy shadows, too dark, "
-        "over-saturated reds, over-saturated oranges, manchas, textura fea, "
-        "deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, "
-        "demacrado, freckles, blemishes, skin spots, imperfections, "
-        "close-up face, portrait, headshot, person filling frame, "
-        "deformed face, disfigured, mutated, bad anatomy, extra limbs, "
-        "extra fingers, asymmetrical eyes, malformed features, uncanny valley, "
-        "gaunt, emaciated, ugly, grotesque, "
+        "multiple people, duplicate people, cloned faces, two people, three people, crowd, "
+        "cut off body, cropped body, partial body, limbs outside frame, truncated person, "
+        "deformed, mutated, bad anatomy, extra limbs, extra fingers, missing limbs, missing fingers, "
+        "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
+        "close-up face, portrait, headshot, person filling frame, face occupying more than 25% of image, "
+        "gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, sickly, "
+        "decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, "
         "rusty, rusted, oxidized, weathered, aged, vintage, retro, antique, old-fashioned, "
-        "dilapidated, decrepit, run-down, crumbling, cracked walls, peeling paint, eroded, "
+        "dilapidated, decrepit, run-down, crumbling, cracked walls, peeling paint, "
         "deteriorated, abandoned ruins, moldy, mouldy, musty, dusty, cobwebs, spiderwebs, "
         "classic car, old car, vintage car, retro car, horse carriage, "
         "1950s, 1960s, 1970s, 1980s, 1990s, ancient, medieval, historical, "
         "sepia tone, monochrome, black and white, film grain, "
+        "floating objects, illogical elements, impossible physics, surreal impossibilities, "
+        "ghost doubles, transparent figures, multiple versions of same person, "
+        "dark, underexposed, low light, heavy shadows, too dark, "
+        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo, "
         "broken, shattered, destroyed, post-apocalyptic, dystopian ruins"
     )
+    
     payload = {
         "model": "agnes-image-2.1-flash",
-        "prompt": prompt_limpio,
+        "prompt": prompt_limpio[:800],
         "negative_prompt": negative,
         "width": width,
         "height": height,
         "num_images": 1
     }
+    
     for intento in range(intentos):
         try:
-            print(f"🖼️ Intentando generar imagen (intento {intento+1}/{intentos})...")
+            print(f"🖼️ Intento {intento+1}/{intentos} generando imagen con continuidad...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 url_img = r.json()["data"][0]["url"]
-                print(f"✅ Imagen generada exitosamente en intento {intento+1}")
+                print(f"✅ Imagen generada (intento {intento+1})")
                 return url_img
             else:
-                print(f"⚠️ Respuesta no exitosa: {r.status_code} - {r.text[:100]}")
+                print(f"⚠️ Error: {r.status_code} - {r.text[:100]}")
         except Exception as e:
-            print(f"⚠️ Error en intento {intento+1}: {e}")
+            print(f"⚠️ Error conexión: {e}")
+        
         if intento < intentos - 1:
-            print(f"⏳ Esperando 10s antes de reintentar...")
+            print(f"⏳ Esperando 10s...")
             time.sleep(10)
-    print("❌ No se pudo generar la imagen después de 3 intentos.")
+    
     return None
 
 # ================================================================
-# 🆕 GENERAR MINIATURA
+# 🖼️ GENERAR MINIATURA
 # ================================================================
 def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     prompt_limpio = limpiar_prompt(prompt)
@@ -634,25 +711,16 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     
     negative = (
-        "oscuro, dark, underexposed, low light, heavy shadows, too dark, "
-        "over-saturated reds, over-saturated oranges, manchas, textura fea, "
-        "deforme, clonado, duplicado, gore, sangre, horror, terror, monstruo, "
-        "demacrado, freckles, blemishes, skin spots, imperfections, "
-        "close-up face, portrait, headshot, person filling frame, "
-        "deformed face, disfigured, mutated, bad anatomy, extra limbs, "
-        "extra fingers, asymmetrical eyes, malformed features, uncanny valley, "
-        "gaunt, emaciated, ugly, grotesque, "
-        "rusty, rusted, oxidized, weathered, aged, vintage, retro, antique, old-fashioned, "
-        "dilapidated, decrepit, run-down, crumbling, cracked walls, peeling paint, eroded, "
-        "deteriorated, abandoned ruins, moldy, mouldy, musty, dusty, cobwebs, spiderwebs, "
-        "classic car, old car, vintage car, retro car, horse carriage, "
-        "1950s, 1960s, 1970s, 1980s, 1990s, ancient, medieval, historical, "
-        "sepia tone, monochrome, black and white, film grain, "
-        "broken, shattered, destroyed, post-apocalyptic, dystopian ruins, "
-        "low quality, low resolution, boring composition, flat lighting, "
-        "dull colors, amateur photography, plain background, empty background, "
-        "poorly lit, washed out colors"
+        "multiple people, duplicate people, cloned faces, "
+        "cut off body, cropped body, partial body, "
+        "deformed, mutated, bad anatomy, extra limbs, "
+        "close-up face, portrait, headshot, "
+        "gore, blood, wounds, gaunt, emaciated, "
+        "rusty, vintage, retro, antique, dilapidated, "
+        "1950s, 1960s, 1970s, 1980s, 1990s, sepia, monochrome, "
+        "low quality, blurry, text, watermark, logo"
     )
+    
     payload = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt_limpio,
@@ -664,34 +732,23 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
 
     backoff = [5, 10, 15, 20, 25]
     for intento in range(intentos):
-        print(f"🖼️ Intento {intento+1}/{intentos} generando miniatura...")
+        print(f"🖼️ Intento {intento+1}/{intentos} miniatura...")
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
-                url_imagen = r.json()["data"][0]["url"]
-                print(f"✅ Miniatura generada exitosamente (intento {intento+1}).")
-                return url_imagen
-            else:
-                print(f"⚠️ Respuesta no exitosa: {r.status_code} - {r.text[:100]}")
+                return r.json()["data"][0]["url"]
         except Exception as e:
-            print(f"⚠️ Error en intento {intento+1}: {e}")
+            print(f"⚠️ Error: {e}")
         
         if intento < intentos - 1:
-            espera = backoff[intento] if intento < len(backoff) else 30
-            print(f"⏳ Esperando {espera}s antes de reintentar...")
-            time.sleep(espera)
+            time.sleep(backoff[intento] if intento < len(backoff) else 30)
     
-    print("❌ No se pudo generar la miniatura después de 5 intentos. El video se subirá sin miniatura personalizada.")
     return None
 
 # ================================================================
-# ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES (SIN gTTS)
+# ✅ GENERAR AUDIO CON FALLBACK ENTRE VOCES
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
-    """
-    Intenta generar audio con la voz actual. Si falla, prueba con otras voces
-    de la lista hasta que una funcione. NUNCA usa gTTS.
-    """
     global CONFIG_VOZ_ACTUAL
     
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
@@ -700,25 +757,19 @@ def generar_audio(texto, index, intentos_por_voz=2):
     texto_limpio = re.sub(r"\s+", " ", texto_limpio).strip()
 
     if len(texto_limpio) < 10:
-        print(f"⚠️ Texto de audio {index} demasiado corto, se omite.")
         return None
 
     filename = f"audio_{index}.mp3"
 
-    # Lista de voces a probar: primero la actual, luego las demás
     voces_a_probar = [CONFIG_VOZ_ACTUAL]
     for voz_config in VOCES_DISPONIBLES:
         if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
             voces_a_probar.append(voz_config)
     
-    print(f"🔊 Generando audio {index}. Probando hasta {len(voces_a_probar)} voces neurales...")
-
     for intento_voz, voz_config in enumerate(voces_a_probar):
         voz = voz_config["voz"]
         rate = voz_config["velocidad"]
         pitch = voz_config["tono"]
-        
-        print(f"🎤 Intento {intento_voz+1}/{len(voces_a_probar)} con voz: {voz}")
         
         for intento in range(intentos_por_voz):
             async def _generar():
@@ -728,44 +779,35 @@ def generar_audio(texto, index, intentos_por_voz=2):
             try:
                 asyncio.run(_generar())
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    print(f"✅ Audio {index} generado con {voz}")
-                    
-                    # Si la voz actual falló pero otra funcionó, actualizarla
                     if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
+                        print(f"🔄 Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
                         CONFIG_VOZ_ACTUAL = voz_config
-                    
                     return filename
             except Exception as e:
-                print(f"❌ Falló con {voz}: {e}")
+                print(f"❌ Falló {voz}: {e}")
                 if intento < intentos_por_voz - 1:
-                    espera = 3 * (intento + 1)
-                    print(f"⏳ Esperando {espera}s antes de reintentar...")
-                    time.sleep(espera)
+                    time.sleep(3 * (intento + 1))
         
-        # Si esta voz falló, limpiar archivo si existe
         if os.path.exists(filename):
             try:
                 os.remove(filename)
             except:
                 pass
     
-    print("❌ TODAS las voces neurales fallaron. Abortando generación de audio.")
+    print("❌ Todas las voces fallaron.")
     return None
 
 # ================================================================
-# MONTAR VIDEO
+# 🎬 MONTAR VIDEO
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
     clips_audio = []
-    duracion_total = 0.0
 
     for i, elem in enumerate(elementos):
         try:
             audio_clip = AudioFileClip(elem["audio_path"])
             duracion = audio_clip.duration
-            duracion_total += duracion
 
             r = requests.get(elem["imagen_url"], timeout=30)
             r.raise_for_status()
@@ -784,7 +826,6 @@ def montar_video(elementos, salida="video_final.mp4"):
                 audio_mitad = audio_clip.subclip(0, duracion_mitad)
                 audio_mitad2 = audio_clip.subclip(duracion_mitad, duracion)
                 clips_audio.extend([audio_mitad, audio_mitad2])
-                print(f"🔹 Segmento {i} de {duracion:.1f}s dividido en 2 partes.")
             else:
                 video_clip = ImageClip(img_path, duration=duracion)
                 clips_video.append(video_clip)
@@ -795,7 +836,7 @@ def montar_video(elementos, salida="video_final.mp4"):
             continue
 
     if not clips_video or not clips_audio:
-        raise ValueError("No se pudieron procesar los clips para el montaje.")
+        raise ValueError("No se pudieron procesar los clips.")
 
     video = concatenate_videoclips(clips_video, method="compose")
     audio_narracion = concatenate_audioclips(clips_audio)
@@ -810,9 +851,8 @@ def montar_video(elementos, salida="video_final.mp4"):
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
             fondo_clip = fondo_clip.audio_fadein(2).audio_fadeout(2)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print(f"🎵 Audio de fondo mezclado al 8%: {FONDO_AUDIO_FILE}")
         except Exception as e:
-            print(f"⚠️ Error en audio de fondo: {e}")
+            print(f"⚠️ Error en audio fondo: {e}")
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
@@ -827,7 +867,6 @@ def montar_video(elementos, salida="video_final.mp4"):
     for a in clips_audio:
         a.close()
 
-    print(f"✅ Video creado exitosamente: {salida}")
     return salida, duracion_total
 
 # ================================================================
@@ -846,7 +885,6 @@ def limpiar_archivos_temporales():
                 os.remove(aux)
             except Exception:
                 pass
-    print("🧹 Archivos temporales eliminados correctamente.")
 
 # ================================================================
 # SUBIR A YOUTUBE
@@ -875,18 +913,17 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas):
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = request.execute()
     video_id = response["id"]
-    print(f"✅ Video subido exitosamente: https://youtu.be/{video_id}")
+    print(f"✅ Video subido: https://youtu.be/{video_id}")
 
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
             youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-            print("✅ Miniatura subida con éxito")
         except Exception as e:
-            print(f"⚠️ Error al subir miniatura: {e}")
+            print(f"⚠️ Error miniatura: {e}")
 
 # ================================================================
-# FUNCIONES DE VERIFICACIÓN DE PUBLICACIÓN DIARIA
+# PUBLICACIÓN DIARIA
 # ================================================================
 def verificar_publicacion_hoy():
     estado = cargar_estado_musica()
@@ -901,7 +938,6 @@ def marcar_publicacion_exitosa():
     hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()
     estado["ultima_publicacion_exitosa"] = hoy
     guardar_estado_musica(estado)
-    print(f"✅ Publicación exitosa marcada para hoy: {hoy}")
 
 # ================================================================
 # MAIN
@@ -910,44 +946,53 @@ def verificar_envs():
     required = ["DEEPSEEK_API_KEY", "AGNES_API_KEY", "YOUTUBE_USER_TOKEN"]
     missing = [var for var in required if not os.getenv(var)]
     if missing:
-        print(f"❌ Faltan variables de entorno: {', '.join(missing)}")
+        print(f"❌ Faltan variables: {', '.join(missing)}")
         sys.exit(1)
 
 def main():
     verificar_envs()
 
     if verificar_publicacion_hoy():
-        print("✅ Ya se publicó un video hoy. Esta es la ejecución de respaldo, no se necesita generar otro. Saliendo.")
+        print("✅ Ya se publicó hoy. Saliendo.")
         sys.exit(0)
 
-    print(f"🎬 Bot YouTube | Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
+    print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
-    print(f"📍 Historia ambientada en: {UBICACION_HISTORIA}")
-    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
-    print(f"🎵 Fondo musical: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
+    print(f"📍 Ubicación: {UBICACION_HISTORIA}")
+    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:60]}...")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     guion_data = generar_guion()
     titulo_video = guion_data.get("titulo", "Relato Paranormal Real")
     palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
-    descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\nSíguenos en Facebook: {FACEBOOK_LINK}")
+    descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\n{FACEBOOK_LINK}")
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
     segmentos = guion_data.get("segmentos", [])
 
-    textos_registrados = set()
     elementos_validos = []
     imagen_ultimo_recurso = None
 
+    # 🎬 GENERACIÓN CON MEMORIA VISUAL
+    print(f"🎨 Generando {len(segmentos)} imágenes con continuidad narrativa...")
+    
     for i, seg in enumerate(segmentos):
-        texto_limpio = seg["texto"].strip().lower()
-        if texto_limpio in textos_registrados:
-            print(f"⚠️ Segmento {i} repetido, se genera de todas formas (puede afectar duración).")
-        textos_registrados.add(texto_limpio)
-
+        print(f"\n📍 Segmento {i+1}/{len(segmentos)} - Etapa: {seg.get('etapa_visual', '?')}")
+        print(f"   📍 Ubicación: {seg.get('ubicacion_escena', 'N/A')}")
+        print(f"   📝 Texto: {seg.get('texto', '')[:80]}...")
+        
+        # Obtener segmentos anterior y siguiente para continuidad
+        seg_anterior = segmentos[i-1] if i > 0 else None
+        seg_siguiente = segmentos[i+1] if i < len(segmentos) - 1 else None
+        
+        # Generar prompt con contexto de continuidad
+        prompt_con_contexto = generar_prompt_con_contexto(seg, seg_anterior, seg_siguiente)
+        
+        # Generar imagen
         if i > 0:
             time.sleep(3)
-
-        url_img = generar_imagen(seg.get("imagen_prompt", ""), texto_segmento=seg["texto"], width=2048, height=1152)
+        
+        url_img = generar_imagen(prompt_con_contexto, texto_segmento=seg.get("texto", ""), width=2048, height=1152)
+        
         if url_img:
             imagen_ultimo_recurso = url_img
         else:
@@ -955,55 +1000,51 @@ def main():
                 print(f"⚠️ Reutilizando imagen anterior para segmento {i}.")
                 url_img = imagen_ultimo_recurso
             else:
-                print(f"❌ No se pudo generar ni reutilizar imagen para segmento {i}. Saltando...")
+                print(f"❌ Sin imagen para segmento {i}. Saltando...")
                 continue
-
-        audio_file = generar_audio(seg["texto"], i)
+        
+        audio_file = generar_audio(seg.get("texto", ""), i)
         if not audio_file:
             continue
 
         elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
 
     if not elementos_validos:
-        print("❌ No hay elementos válidos para crear el video.")
+        print("❌ No hay elementos válidos.")
         sys.exit(1)
 
     duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
-    print(f"⏱️ Duración estimada del video (solo narración): {duracion_actual/60:.1f} minutos")
+    print(f"⏱️ Duración: {duracion_actual/60:.1f} minutos")
 
     intentos_expansion = 0
     while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
-        print(f"⚠️ Duración {duracion_actual:.1f}s < {DURACION_MINIMA_SEGUNDOS}s. Intentando expansión {intentos_expansion+1}...")
-        ultimos_textos = [seg["texto"] for seg in segmentos[-3:]] if len(segmentos) >= 3 else [seg["texto"] for seg in segmentos]
-        nuevos_segmentos = expandir_guion(titulo_video, ultimos_textos, intentos_expansion+1)
+        print(f"⚠️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
+        nuevos_segmentos = expandir_guion(titulo_video, segmentos[-3:], intentos_expansion+1)
         if nuevos_segmentos:
             for j, seg in enumerate(nuevos_segmentos):
-                url_img = generar_imagen(seg.get("imagen_prompt", ""), texto_segmento=seg["texto"], width=2048, height=1152)
+                seg_anterior = segmentos[-1] if segmentos else None
+                prompt_ctx = generar_prompt_con_contexto(seg, seg_anterior, None)
+                url_img = generar_imagen(prompt_ctx, texto_segmento=seg.get("texto", ""), width=2048, height=1152)
                 if url_img:
                     imagen_ultimo_recurso = url_img
                 else:
-                    if imagen_ultimo_recurso:
-                        print(f"⚠️ Reutilizando imagen anterior para expansión {j}.")
-                        url_img = imagen_ultimo_recurso
-                    else:
-                        print(f"❌ No se pudo generar imagen para expansión {j}. Saltando...")
-                        continue
-                audio_file = generar_audio(seg["texto"], len(elementos_validos) + j)
+                    url_img = imagen_ultimo_recurso
+                if not url_img:
+                    continue
+                audio_file = generar_audio(seg.get("texto", ""), len(elementos_validos) + j)
                 if audio_file:
                     elementos_validos.append({"imagen_url": url_img, "audio_path": audio_file})
                     segmentos.append(seg)
             duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
-            print(f"⏱️ Duración después de expansión: {duracion_actual/60:.1f} minutos")
             intentos_expansion += 1
         else:
-            print("❌ No se pudo generar expansión. Abortando.")
-            sys.exit(1)
+            break
 
     if duracion_actual < DURACION_MINIMA_SEGUNDOS:
-        print(f"❌ Duración final ({duracion_actual/60:.1f} min) insuficiente después de {MAX_INTENTOS_EXPANSION} expansiones. Abortando.")
+        print(f"❌ Duración final insuficiente. Abortando.")
         sys.exit(1)
 
-    print(f"✅ Duración final aceptable: {duracion_actual/60:.1f} minutos.")
+    print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
     print("🖼️ Generando miniatura...")
     miniatura_path = "miniatura.jpg"
@@ -1018,26 +1059,23 @@ def main():
             with Image.open(miniatura_path) as img:
                 ImageOps.fit(img, (1280, 720), Image.LANCZOS).save(miniatura_path)
             agregar_texto_miniatura(miniatura_path, palabras_portada)
-            print("✅ Miniatura procesada y guardada.")
         except Exception as e:
-            print(f"⚠️ Error al descargar o procesar la miniatura: {e}")
+            print(f"⚠️ Error miniatura: {e}")
             miniatura_path = None
     else:
-        print("⚠️ No se generó URL de miniatura. El video se subirá sin miniatura personalizada.")
         miniatura_path = None
 
     print("🎬 Montando video...")
     video_path, duracion_final = montar_video(elementos_validos)
-    print(f"⏱️ Duración final del video generado: {duracion_final/60:.1f} minutos")
+    print(f"⏱️ Duración final: {duracion_final/60:.1f} minutos")
 
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
 
     guardar_titulo_largo(titulo_video)
     marcar_publicacion_exitosa()
-
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado exitosamente.")
+    print("🎉 Proceso completado.")
 
 if __name__ == "__main__":
     try:
