@@ -1204,8 +1204,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
         response = request.execute()
         video_id = response["id"]
-        print(f"✅ Short sub
-    ido: https://youtu.be/{video_id}")
+        print(f"✅ Short subido: https://youtu.be/{video_id}")
         return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
