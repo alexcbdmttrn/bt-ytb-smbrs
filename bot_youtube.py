@@ -293,31 +293,27 @@ def limpiar_prompt(prompt):
     return prompt_base + modificadores_calidad
 
 # ================================================================
-# 🖼️ MINIATURA
+# 🖼️ MINIATURA (ESTILO HORROR DE ALTO CTR)
 # ================================================================
-DEGRADADOS_MINIATURA = [
-    {"top": (255, 30, 0), "bottom": (255, 140, 0)},
-    {"top": (0, 255, 200), "bottom": (0, 100, 255)},
-    {"top": (255, 215, 0), "bottom": (200, 50, 0)},
-    {"top": (200, 0, 255), "bottom": (80, 0, 150)},
-    {"top": (255, 255, 255), "bottom": (120, 120, 120)},
-    {"top": (255, 0, 150), "bottom": (0, 200, 255)},
-    {"top": (255, 200, 0), "bottom": (0, 0, 0)},
-    {"top": (0, 200, 100), "bottom": (0, 50, 150)},
-    {"top": (255, 100, 0), "bottom": (150, 0, 200)},
-    {"top": (200, 0, 0), "bottom": (80, 0, 0)},
-]
-DEGRADADO_ACTUAL = random.choice(DEGRADADOS_MINIATURA)
-
 def agregar_texto_miniatura(img_path, texto_portada):
     if not texto_portada:
-        texto_portada = "CASO REAL"
+        texto_portada = "LO VI"
     texto_portada = texto_portada.upper().strip()
     try:
         with Image.open(img_path) as img:
             img = img.convert("RGBA")
             w, h = img.size
-            font_size = int(h * 0.13)
+
+            # Dividir en máx 2 líneas si es largo
+            palabras = texto_portada.split()
+            if len(palabras) > 2:
+                mid = len(palabras) // 2
+                lineas = [" ".join(palabras[:mid]), " ".join(palabras[mid:])]
+            else:
+                lineas = [texto_portada]
+
+            # Fuente GRANDE (16% de la altura)
+            font_size = int(h * 0.16)
             try:
                 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
             except Exception:
@@ -325,41 +321,40 @@ def agregar_texto_miniatura(img_path, texto_portada):
                     font = ImageFont.truetype("arial.ttf", font_size)
                 except Exception:
                     font = ImageFont.load_default()
-            dummy_draw = ImageDraw.Draw(img)
-            bbox = dummy_draw.textbbox((0, 0), texto_portada, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
-            x = (w - text_w) / 2
-            y = h - text_h - int(h * 0.08)
-            overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-            draw_overlay = ImageDraw.Draw(overlay)
-            pad_x, pad_y = 35, 20
-            draw_overlay.rectangle(
-                [x - pad_x, y - pad_y, x + text_w + pad_x, y + text_h + pad_y * 2],
-                fill=(0, 0, 0, 180)
-            )
-            img = Image.alpha_composite(img, overlay)
-            mask = Image.new("L", (w, h), 0)
-            draw_mask = ImageDraw.Draw(mask)
-            draw_mask.text((x, y), texto_portada, font=font, fill=255)
-            gradient = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-            draw_grad = ImageDraw.Draw(gradient)
-            c_top = DEGRADADO_ACTUAL["top"]
-            c_bot = DEGRADADO_ACTUAL["bottom"]
-            for i in range(h):
-                factor = i / h
-                r = int(c_top[0] + factor * (c_bot[0] - c_top[0]))
-                g = int(c_top[1] + factor * (c_bot[1] - c_top[1]))
-                b = int(c_top[2] + factor * (c_bot[2] - c_top[2]))
-                draw_grad.line([(0, i), (w, i)], fill=(r, g, b, 255))
-            draw_final = ImageDraw.Draw(img)
-            stroke_w = 8
-            for ox in range(-stroke_w, stroke_w + 1):
-                for oy in range(-stroke_w, stroke_w + 1):
-                    draw_final.text((x + ox, y + oy), texto_portada, font=font, fill=(0, 0, 0, 255))
-            img.paste(gradient, (0, 0), mask)
+
+            # Calcular dimensiones de cada línea
+            dummy = ImageDraw.Draw(img)
+            line_dims = []
+            max_w = 0
+            total_h = 0
+            for linea in lineas:
+                bbox = dummy.textbbox((0, 0), linea, font=font)
+                lw = bbox[2] - bbox[0]
+                lh = bbox[3] - bbox[1]
+                line_dims.append((lw, lh))
+                max_w = max(max_w, lw)
+                total_h += lh
+            spacing = int(font_size * 0.15)
+            total_h += spacing * (len(lineas) - 1)
+
+            # Posición: lado DERECHO, centrado vertical (no tapa el rostro)
+            draw = ImageDraw.Draw(img)
+            stroke_w = max(6, int(font_size * 0.12))
+            cy = (h - total_h) // 2
+
+            for i, linea in enumerate(lineas):
+                lw, lh = line_dims[i]
+                lx = w - lw - int(w * 0.06)  # alineado a la derecha
+                # Contorno NEGRO grueso
+                for ox in range(-stroke_w, stroke_w + 1):
+                    for oy in range(-stroke_w, stroke_w + 1):
+                        draw.text((lx + ox, cy + oy), linea, font=font, fill=(0, 0, 0, 255))
+                # Texto AMARILLO brillante
+                draw.text((lx, cy), linea, font=font, fill=(255, 215, 0, 255))
+                cy += lh + spacing
+
             img.convert("RGB").save(img_path)
-            print(f"✅ Texto '{texto_portada}' impreso en miniatura.")
+            print(f"✅ Texto '{texto_portada}' impreso en miniatura (estilo horror).")
     except Exception as e:
         print(f"⚠️ Error en miniatura: {e}")
 
@@ -382,14 +377,13 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR GUION CON SEO EXPERTO + CONTINUIDAD VISUAL
+# 🎬 GENERAR GUION CON SEO EXPERTO + MINIATURA DE ALTO CTR
 # ================================================================
 def generar_guion(contexto_extra=""):
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
     
-    # 🎯 PROMPT MEJORADO CON SEO EXPERTO
-    prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO PARA YOUTUBE 2026.
+    prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO + MINIATURAS PARA YOUTUBE 2026.
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
@@ -400,86 +394,52 @@ Divide la historia en 28 a 34 segmentos de 45-55 palabras cada uno.
 PERSONAJE PRINCIPAL (FIJO):
 "{PERFIL_PERSONAJE}"
 
-🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR (lo más importante)
-
-El título DEBE seguir esta FÓRMULA GANADORA:
-[VERBO EN 1RA PERSONA] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
-
-✅ EJEMPLOS DE TÍTULOS GANADORES (usa este estilo):
+🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR
+FÓRMULA: [VERBO EN 1RA PERSONA] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
+✅ EJEMPLOS:
 - "Fui velador en Oaxaca y vi algo que no debí ver"
 - "Trabajé de noche en un manicomio de Puebla. Nunca volví."
-- "Escuché llorar a mi hija muerta hace 3 años en el lago"
 - "El GPS me llevó a un cenote que no existe en ningún mapa"
-- "Pasé la noche en un hotel de Guanajuato. No estaba solo."
-- "Mi abuela me contó esto antes de morir. Hoy lo confirmé."
+❌ PROHIBIDOS: "El misterio de...", "La leyenda de...", "Relato de..."
+Longitud: 50-65 caracteres, primera persona, lugar específico de {UBICACION_HISTORIA}.
 
-❌ TÍTULOS PROHIBIDOS (no los uses):
-- "El misterio de..." / "La leyenda de..." / "Relato de..."
-- "Una noche en..." / "La casa de..." / "El fantasma de..."
-- Títulos que suenen a documental o libro
-- Títulos con más de 65 caracteres
+🎯 REGLA CRÍTICA 2: MINIATURA DE ALTO CTR (muy importante)
 
-REGLAS DEL TÍTULO:
-- Longitud EXACTA: 50-65 caracteres
-- DEBE estar en primera persona (yo, mi, me, fui, vi, escuché)
-- DEBE tener un lugar específico de {UBICACION_HISTORIA}
-- DEBE generar curiosidad inmediata
-- DEBE sonar a testimonio REAL, no a ficción
+"palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
+✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ"
+❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
+El texto debe reflejar el momento MÁS impactante del relato.
 
-🎯 REGLA CRÍTICA 2: DESCRIPCIÓN CON SEO EXPERTO
+"miniatura_prompt": PROMPT EN INGLÉS para miniatura de terror de alto CTR:
+- Extreme close-up de un rostro mexicano aterrorizado con ojos muy abiertos y boca entreabierta
+- Detrás, una silueta fantasmal oscura con ojos brillantes (rojos o blancos)
+- Ambientado en el lugar específico del relato: {UBICACION_HISTORIA}
+- Alto contraste dramático, color grading rojo profundo y negro saturado
+- Estilo cinematográfico de horror, enfoque nítido
+- Espacio vacío en el LADO DERECHO para texto superpuesto
+- Sin texto, sin watermark
 
-La descripción DEBE tener esta ESTRUCTURA EXACTA (con saltos de línea reales):
+🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
+Línea 1 (GANCHO, 150 chars): frase impactante con keyword + lugar
+Línea 2-3 (CONTEXTO): keywords long-tail naturales
+Línea 4 (CTA): "🔴 SUSCRÍBETE: {CANAL_LINK}"
+Línea 5 (CAPÍTULOS): 4-6 timestamps "00:00 - Título"
+Línea 6 (CRÉDITOS): "📱 Facebook: {FACEBOOK_LINK}" + disclaimer IA
+Línea 7 (HASHTAGS): máx 5
 
-Línea 1 (GANCHO SEO - las primeras 150 chars son críticas):
-"[Frase impactante de 1 línea con keyword principal + lugar + fenómeno]"
+🎯 REGLA CRÍTICA 4: TAGS SEO (15-20, máx 500 chars)
+- 3-5 específicos (lugar + fenómeno)
+- 5-7 long-tail
+- 3-5 tendencia
+- 2-3 geográficos
 
-Línea 2-3 (CONTEXTO con keywords long-tail):
-"[2-3 oraciones con palabras clave naturales: 'terror en {UBICACION_HISTORIA}', 'testimonio real', 'experiencia paranormal real', etc.]"
+🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3)
+Usar en título, primera línea de descripción, tags, primeros 30s.
 
-Línea 4 (LLAMADA A LA ACCIÓN):
-"🔴 SUSCRÍBETE para más relatos reales: {CANAL_LINK}"
+🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
+Segundo título con ángulo emocional diferente.
 
-Línea 5 (CAPÍTULOS/TIMESTAMPS - MUY IMPORTANTE PARA SEO):
-"⏰ Capítulos del relato:"
-"00:00 - [Título del capítulo 1]"
-"02:15 - [Título del capítulo 2]"
-"04:30 - [Título del capítulo 3]"
-"06:45 - [Título del capítulo 4]"
-"[Genera 4-6 capítulos según el flujo de la historia]"
-
-Línea 6 (CRÉDITOS Y DISCLAIMER):
-"📱 Facebook: {FACEBOOK_LINK}"
-"🤖 Contenido narrado con IA. Relato basado en testimonios reales de internet."
-
-Línea 7 (HASHTAGS - máximo 5, los más relevantes):
-"#TerrorEn{UBICACION_HISTORIA.replace(' ', '')} #RelatosReales #Paranormal #Testimonios #MiedoReal"
-
-🎯 REGLA CRÍTICA 3: TAGS SEO (15-20 tags, máximo 500 caracteres)
-
-Los tags DEBEN incluir:
-- 3-5 tags ESPECÍFICOS del relato (lugar + fenómeno)
-- 5-7 tags LONG-TAIL (búsquedas comunes en YouTube)
-- 3-5 tags de TENDENCIA (terror, paranormal, miedo, suspenso)
-- 2-3 tags GEOGRÁFICOS (México, {UBICACION_HISTORIA})
-
-EJEMPLOS DE TAGS CORRECTOS:
-"terror en {UBICACION_HISTORIA.lower()}, testimonio real de terror, experiencia paranormal real en México, historias de miedo reales, relatos de terror mexicanos, leyendas urbanas de {UBICACION_HISTORIA.lower()}, casos paranormales reales, miedo real, historias reales de terror, terror nocturno, experiencias sobrenaturales reales, historias de fantasmas reales en México, casos sin resolver México, relatos de veladores, historias de traileros terror"
-
-🎯 REGLA CRÍTICA 4: PALABRAS CLAVE PRINCIPALES
-
-Define 2-3 palabras clave principales que usarás en:
-- Título
-- Primera línea de descripción
-- Tags
-- Primeros 30 segundos del relato
-
-Ejemplos: "terror en Oaxaca", "experiencia paranormal real", "testimonio de miedo"
-
-🎯 REGLA CRÍTICA 5: TÍTULO ALTERNATIVO (para A/B testing)
-
-Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángulo emocional (uno con miedo, otro con curiosidad, otro con misterio).
-
-🎬 CONTINUIDAD VISUAL (igual que antes):
+🎬 CONTINUIDAD VISUAL:
 - Etapas: inicio_casa, desplazamiento, lugar_destino, climax_evento, resolucion
 - Trayectoria lógica entre segmentos
 - Personaje fijo: {PERFIL_PERSONAJE}
@@ -487,19 +447,19 @@ Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángul
 
 📐 ESTRUCTURA JSON OBLIGATORIA:
 {{
-  "titulo": "Título SEO en 1ra persona, 50-65 caracteres",
+  "titulo": "Título SEO 1ra persona, 50-65 caracteres",
   "titulo_alternativo": "Segundo título con ángulo diferente",
   "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
-  "palabras_portada": "CASO REAL",
-  "descripcion": "Descripción completa con estructura SEO (gancho + contexto + CTA + capítulos + créditos + hashtags)",
-  "tags": "15-20 tags separados por coma (máximo 500 caracteres)",
+  "palabras_portada": "TEXTO GANCHO 2-3 palabras específico del relato",
+  "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + créditos + hashtags)",
+  "tags": "15-20 tags separados por coma (máx 500 caracteres)",
   "miniatura_descripcion": "1-2 oraciones de la escena más impactante",
-  "miniatura_prompt": "Dramatic cinematic photo in {UBICACION_HISTORIA}, {PALETA_COLOR_ACTUAL}, modern 2026 era",
+  "miniatura_prompt": "YouTube horror thumbnail: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, space on right for text",
   "capitulos": [
-    {{"tiempo": "00:00", "titulo": "Título corto del capítulo 1"}},
-    {{"tiempo": "02:15", "titulo": "Título corto del capítulo 2"}},
-    {{"tiempo": "04:30", "titulo": "Título corto del capítulo 3"}},
-    {{"tiempo": "06:45", "titulo": "Título corto del capítulo 4"}}
+    {{"tiempo": "00:00", "titulo": "Capítulo 1"}},
+    {{"tiempo": "02:15", "titulo": "Capítulo 2"}},
+    {{"tiempo": "04:30", "titulo": "Capítulo 3"}},
+    {{"tiempo": "06:45", "titulo": "Capítulo 4"}}
   ],
   "segmentos": [
     {{
@@ -511,11 +471,11 @@ Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángul
   ]
 }}
 
-🚨 REGLA DE ORO PARA IMAGEN_PROMPT:
+🚨 REGLA DE ORO PARA IMAGEN_PROMPT (segmentos):
 1. Mismo tipo de escenario que el segmento anterior
 2. El personaje exacto: {PERFIL_PERSONAJE}
-3. Una acción que tenga sentido después de la acción anterior
-4. Un ángulo de cámara diferente al segmento anterior
+3. Acción lógica después de la anterior
+4. Ángulo de cámara diferente
 
 {contexto_extra}
 """
@@ -562,11 +522,9 @@ Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángul
                     print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
                     raise ValueError("Título duplicado")
                 
-                # Validar y limpiar prompts de imagen con continuidad
                 for i, seg in enumerate(data["segmentos"]):
                     if "imagen_prompt" in seg:
                         seg["imagen_prompt"] = limpiar_prompt(seg["imagen_prompt"])
-                    # Asegurar campos de continuidad
                     if "etapa_visual" not in seg:
                         if i < 3:
                             seg["etapa_visual"] = "inicio_casa"
@@ -577,14 +535,10 @@ Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángul
                     if "ubicacion_escena" not in seg:
                         seg["ubicacion_escena"] = UBICACION_HISTORIA
                 
-                # 🆕 Log SEO
-                print(f"✅ Guion con {len(data['segmentos'])} segmentos y continuidad visual.")
+                print(f"✅ Guion con {len(data['segmentos'])} segmentos.")
                 print(f"🏷️ Título SEO: {titulo_generado}")
+                print(f"🖼️ Texto miniatura: {data.get('palabras_portada', 'N/A')}")
                 print(f"🔑 Keywords: {data.get('palabras_clave', [])}")
-                print(f"📝 Título alternativo: {data.get('titulo_alternativo', 'N/A')}")
-                tags_count = len(data.get("tags", "").split(","))
-                print(f"🏷️ Tags generados: {tags_count}")
-                print(f"📑 Capítulos: {len(data.get('capitulos', []))}")
                 
                 return data
             else:
@@ -660,28 +614,22 @@ Devuelve JSON con clave "segmentos_extra" (array de objetos con texto, etapa_vis
 # 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL
 # ================================================================
 def generar_prompt_con_contexto(segmento_actual, segmento_anterior=None, segmento_siguiente=None):
-    """
-    Genera un prompt de imagen enriquecido con contexto de continuidad narrativa.
-    """
     etapa = segmento_actual.get("etapa_visual", "lugar_destino")
     ubicacion = segmento_actual.get("ubicacion_escena", UBICACION_HISTORIA)
     texto_seg = segmento_actual.get("texto", "")
     prompt_base = segmento_actual.get("imagen_prompt", "")
     
-    # Contexto del segmento anterior (de dónde viene)
     contexto_previo = ""
     if segmento_anterior:
         ubicacion_prev = segmento_anterior.get("ubicacion_escena", "")
         etapa_prev = segmento_anterior.get("etapa_visual", "")
         contexto_previo = f"\nPREVIOUS SCENE CONTEXT: The character was just in '{ubicacion_prev}' during the '{etapa_prev}' stage."
     
-    # Contexto del siguiente (hacia dónde va)
     contexto_siguiente = ""
     if segmento_siguiente:
         ubicacion_next = segmento_siguiente.get("ubicacion_escena", "")
         contexto_siguiente = f"\nNEXT SCENE: The story continues toward '{ubicacion_next}'."
     
-    # Instrucciones de continuidad según etapa
     instrucciones_etapa = {
         "inicio_casa": "Show the character in a modern home interior, establishing shot, calm before the events.",
         "desplazamiento": "Show the character in movement (walking, driving), same route as previous scene, different camera angle.",
@@ -721,14 +669,13 @@ ABSOLUTE PROHIBITIONS:
     return prompt_final
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN CON NEGATIVE PROMPT MEJORADO
+# 🖼️ GENERAR IMAGEN (segmentos)
 # ================================================================
 def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     
-    # Negative prompt mejorado para evitar defectos
     negative = (
         "multiple people, duplicate people, cloned faces, two people, three people, crowd, "
         "cut off body, cropped body, partial body, limbs outside frame, truncated person, "
@@ -779,19 +726,19 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
     return None
 
 # ================================================================
-# 🖼️ GENERAR MINIATURA
+# 🖼️ GENERAR MINIATURA (PERMITE ROSTROS EXPRESIVOS)
 # ================================================================
 def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     
+    # 🆕 Negative ajustado: PERMITE rostros aterrados (quita close-up prohibition)
     negative = (
         "multiple people, duplicate people, cloned faces, "
-        "cut off body, cropped body, partial body, "
         "deformed, mutated, bad anatomy, extra limbs, "
-        "close-up face, portrait, headshot, "
-        "gore, blood, wounds, gaunt, emaciated, "
+        "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
+        "gore, blood, wounds, gaunt, emaciated, zombie-like, corpse-like, "
         "rusty, vintage, retro, antique, dilapidated, "
         "1950s, 1960s, 1970s, 1980s, 1990s, sepia, monochrome, "
         "low quality, blurry, text, watermark, logo"
@@ -808,7 +755,7 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
 
     backoff = [5, 10, 15, 20, 25]
     for intento in range(intentos):
-        print(f"🖼️ Intento {intento+1}/{intentos} miniatura...")
+        print(f"🖼️ Intento {intento+1}/{intentos} miniatura horror...")
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
@@ -963,7 +910,7 @@ def limpiar_archivos_temporales():
                 pass
 
 # ================================================================
-# SUBIR A YOUTUBE (con capítulos automáticos en descripción)
+# SUBIR A YOUTUBE (con capítulos automáticos)
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, capitulos=None):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -971,12 +918,10 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, 
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
     
-    # 🆕 Si la descripción no tiene capítulos y tenemos datos de capítulos, agregarlos
     if capitulos and "⏰ Capítulos" not in descripcion:
         capitulos_texto = "\n\n⏰ Capítulos del relato:\n"
         for cap in capitulos:
             capitulos_texto += f"{cap['tiempo']} - {cap['titulo']}\n"
-        # Insertar antes de los hashtags
         if "#" in descripcion:
             partes = descripcion.rsplit("#", 1)
             descripcion = partes[0] + capitulos_texto + "#" + partes[1]
@@ -1056,38 +1001,30 @@ def main():
     titulo_video = guion_data.get("titulo", "Relato Paranormal Real")
     titulo_alternativo = guion_data.get("titulo_alternativo", "")
     palabras_clave = guion_data.get("palabras_clave", [])
-    palabras_portada = guion_data.get("palabras_portada", "CASO REAL")
+    palabras_portada = guion_data.get("palabras_portada", "LO VI")
     descripcion_video = guion_data.get("descripcion", f"Relato paranormal.\n\n{FACEBOOK_LINK}")
     tags_video = guion_data.get("tags", "relatos, leyendas, mexico")
     capitulos_video = guion_data.get("capitulos", [])
     segmentos = guion_data.get("segmentos", [])
 
-    # 🆕 Log SEO info
     print(f"\n📊 SEO GENERADO:")
     print(f"   🏷️ Título: {titulo_video}")
-    print(f"   🔄 Alternativo: {titulo_alternativo}")
+    print(f"   🖼️ Texto miniatura: {palabras_portada}")
     print(f"   🔑 Keywords: {palabras_clave}")
-    print(f"   📑 Capítulos: {len(capitulos_video)}")
 
     elementos_validos = []
     imagen_ultimo_recurso = None
 
-    # 🎬 GENERACIÓN CON MEMORIA VISUAL
     print(f"\n🎨 Generando {len(segmentos)} imágenes con continuidad narrativa...")
     
     for i, seg in enumerate(segmentos):
         print(f"\n📍 Segmento {i+1}/{len(segmentos)} - Etapa: {seg.get('etapa_visual', '?')}")
-        print(f"   📍 Ubicación: {seg.get('ubicacion_escena', 'N/A')}")
-        print(f"   📝 Texto: {seg.get('texto', '')[:80]}...")
         
-        # Obtener segmentos anterior y siguiente para continuidad
         seg_anterior = segmentos[i-1] if i > 0 else None
         seg_siguiente = segmentos[i+1] if i < len(segmentos) - 1 else None
         
-        # Generar prompt con contexto de continuidad
         prompt_con_contexto = generar_prompt_con_contexto(seg, seg_anterior, seg_siguiente)
         
-        # Generar imagen
         if i > 0:
             time.sleep(3)
         
@@ -1097,10 +1034,8 @@ def main():
             imagen_ultimo_recurso = url_img
         else:
             if imagen_ultimo_recurso:
-                print(f"⚠️ Reutilizando imagen anterior para segmento {i}.")
                 url_img = imagen_ultimo_recurso
             else:
-                print(f"❌ Sin imagen para segmento {i}. Saltando...")
                 continue
         
         audio_file = generar_audio(seg.get("texto", ""), i)
@@ -1146,9 +1081,9 @@ def main():
 
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    print("🖼️ Generando miniatura...")
+    print("🖼️ Generando miniatura horror de alto CTR...")
     miniatura_path = "miniatura.jpg"
-    miniatura_url = generar_miniatura(guion_data.get("miniatura_prompt", "Dark mysterious scene"))
+    miniatura_url = generar_miniatura(guion_data.get("miniatura_prompt", "Terrified face with ghostly silhouette"))
 
     if miniatura_url:
         try:
@@ -1176,18 +1111,13 @@ def main():
         titulo=titulo_video,
         descripcion=descripcion_video,
         etiquetas=tags_video,
-        capitulos=capitulos_video  # 🆕 Pasamos capítulos
+        capitulos=capitulos_video
     )
 
     guardar_titulo_largo(titulo_video)
-    
-    # 🆕 Guardar también el título alternativo para futuras referencias
-    if titulo_alternativo and titulo_alternativo != titulo_video:
-        print(f"💡 Título alternativo guardado como referencia: {titulo_alternativo}")
-    
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado con SEO experto.")
+    print("🎉 Proceso completado con SEO + miniatura de alto CTR.")
 
 if __name__ == "__main__":
     try:
