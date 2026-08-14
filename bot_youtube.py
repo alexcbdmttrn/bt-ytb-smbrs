@@ -38,31 +38,32 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 
-# Duración mínima aceptable para el video (8 minutos)
 DURACION_MINIMA_SEGUNDOS = 480
 MAX_INTENTOS_EXPANSION = 2
 
 # ================================================================
-# 🎤 BANCO DE 12 VOCES
+# 🎤 VOCES NEURALES VÁLIDAS (solo las que SÍ existen en Edge TTS)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
     {"voz": "es-MX-DaliaNeural", "velocidad": "+12%", "tono": "+0Hz"},
     {"voz": "es-ES-AlvaroNeural", "velocidad": "+12%", "tono": "-3Hz"},
     {"voz": "es-ES-ElviraNeural", "velocidad": "+12%", "tono": "+1Hz"},
+    {"voz": "es-CO-GonzaloNeural", "velocidad": "+12%", "tono": "-1Hz"},
     {"voz": "es-CO-SalomeNeural", "velocidad": "+12%", "tono": "-1Hz"},
     {"voz": "es-AR-ElenaNeural", "velocidad": "+12%", "tono": "+2Hz"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+12%", "tono": "-2Hz"},
-    {"voz": "es-PE-CamilaNeural", "velocidad": "+12%", "tono": "+0Hz"},
+    {"voz": "es-AR-DiegoNeural", "velocidad": "+12%", "tono": "-2Hz"},
+    {"voz": "es-US-AlonsoNeural", "velocidad": "+12%", "tono": "-1Hz"},
     {"voz": "es-US-PalomaNeural", "velocidad": "+12%", "tono": "-1Hz"},
-    {"voz": "es-ES-XimenaNeural", "velocidad": "+12%", "tono": "+1Hz"},
-    {"voz": "es-MX-CandelaNeural", "velocidad": "+12%", "tono": "-3Hz"},
-    {"voz": "es-ES-AbrilNeural", "velocidad": "+12%", "tono": "-2Hz"},
+    {"voz": "es-PE-CamilaNeural", "velocidad": "+12%", "tono": "+0Hz"},
+    {"voz": "es-PE-AlexNeural", "velocidad": "+12%", "tono": "-1Hz"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+12%", "tono": "-2Hz"},
+    {"voz": "es-CL-CatalinaNeural", "velocidad": "+12%", "tono": "+1Hz"},
 ]
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS MODERNAS 2026 (sin sepia/vintage/óxido)
+# 🎨 PALETAS MODERNAS 2026
 # ================================================================
 PALETAS_COLOR = [
     "Cold cyan blue LED fog, navy blue modern shadows, crisp white moonlight",
@@ -109,7 +110,7 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES (vestimenta y peinados modernos)
+# 🧑 GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -211,10 +212,9 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS (sin repetir jamás)
+# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS
 # ================================================================
 def cargar_titulos_largos():
-    """Carga la lista de títulos de videos largos ya publicados."""
     try:
         with open(TITULOS_LARGOS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -222,7 +222,6 @@ def cargar_titulos_largos():
         return {"titulos": []}
 
 def guardar_titulo_largo(titulo):
-    """Guarda un título nuevo en la lista de publicados."""
     data = cargar_titulos_largos()
     if titulo not in data["titulos"]:
         data["titulos"].append(titulo)
@@ -231,7 +230,6 @@ def guardar_titulo_largo(titulo):
         print(f"✅ Título largo guardado en registro: '{titulo}'")
 
 def titulo_largo_ya_publicado(titulo):
-    """Verifica si un título ya fue publicado (comparación flexible)."""
     data = cargar_titulos_largos()
     titulo_norm = titulo.lower().strip()
     for t in data["titulos"]:
@@ -257,7 +255,6 @@ def limpiar_prompt(prompt):
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
 
-    # 🆕 Eliminar palabras que causan el efecto "antiguo/oxidado/demacrado"
     palabras_antiguas = [
         r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
         r"\blemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
@@ -280,7 +277,6 @@ def limpiar_prompt(prompt):
 
     prompt_base = re.sub(r"\s+", " ", prompt).strip()[:220]
 
-    # 🆕 Modificadores de MODERNIDAD 2026
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
         "16:9 widescreen format, single solitary person in frame, exactly one person, "
@@ -386,7 +382,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR GUION CON DEEPSEEK (con títulos publicados + ambientación moderna)
+# GENERAR GUION CON DEEPSEEK
 # ================================================================
 def generar_guion(contexto_extra=""):
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
@@ -485,7 +481,6 @@ Responde únicamente en formato JSON con esta estructura exacta:
                     print(f"❌ json5 también falló: {e5}")
                     raise
 
-            # ✅ Mínimo de segmentos: 20 (relajado de 28)
             if "segmentos" in data and len(data["segmentos"]) >= 20:
                 titulo_generado = data.get("titulo", "")
                 if titulo_largo_ya_publicado(titulo_generado):
@@ -631,7 +626,7 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
     return None
 
 # ================================================================
-# 🆕 GENERAR MINIATURA (negative prompt anti-vintage)
+# 🆕 GENERAR MINIATURA
 # ================================================================
 def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     prompt_limpio = limpiar_prompt(prompt)
@@ -690,9 +685,15 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
     return None
 
 # ================================================================
-# GENERAR AUDIO
+# ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES (SIN gTTS)
 # ================================================================
-def generar_audio(texto, index):
+def generar_audio(texto, index, intentos_por_voz=2):
+    """
+    Intenta generar audio con la voz actual. Si falla, prueba con otras voces
+    de la lista hasta que una funcione. NUNCA usa gTTS.
+    """
+    global CONFIG_VOZ_ACTUAL
+    
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
     texto_limpio = re.sub(r"prompt.*", "", texto_limpio, flags=re.IGNORECASE)
     texto_limpio = re.sub(r'[\{\}\[\]"]', "", texto_limpio)
@@ -704,21 +705,53 @@ def generar_audio(texto, index):
 
     filename = f"audio_{index}.mp3"
 
-    async def _generar():
-        communicate = edge_tts.Communicate(
-            texto_limpio,
-            CONFIG_VOZ_ACTUAL["voz"],
-            rate=CONFIG_VOZ_ACTUAL["velocidad"],
-            pitch=CONFIG_VOZ_ACTUAL["tono"]
-        )
-        await communicate.save(filename)
+    # Lista de voces a probar: primero la actual, luego las demás
+    voces_a_probar = [CONFIG_VOZ_ACTUAL]
+    for voz_config in VOCES_DISPONIBLES:
+        if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
+            voces_a_probar.append(voz_config)
+    
+    print(f"🔊 Generando audio {index}. Probando hasta {len(voces_a_probar)} voces neurales...")
 
-    try:
-        asyncio.run(_generar())
-        return filename
-    except Exception as e:
-        print(f"❌ Error audio {index}: {e}")
-        return None
+    for intento_voz, voz_config in enumerate(voces_a_probar):
+        voz = voz_config["voz"]
+        rate = voz_config["velocidad"]
+        pitch = voz_config["tono"]
+        
+        print(f"🎤 Intento {intento_voz+1}/{len(voces_a_probar)} con voz: {voz}")
+        
+        for intento in range(intentos_por_voz):
+            async def _generar():
+                communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
+                await communicate.save(filename)
+
+            try:
+                asyncio.run(_generar())
+                if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                    print(f"✅ Audio {index} generado con {voz}")
+                    
+                    # Si la voz actual falló pero otra funcionó, actualizarla
+                    if voz != CONFIG_VOZ_ACTUAL["voz"]:
+                        print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
+                        CONFIG_VOZ_ACTUAL = voz_config
+                    
+                    return filename
+            except Exception as e:
+                print(f"❌ Falló con {voz}: {e}")
+                if intento < intentos_por_voz - 1:
+                    espera = 3 * (intento + 1)
+                    print(f"⏳ Esperando {espera}s antes de reintentar...")
+                    time.sleep(espera)
+        
+        # Si esta voz falló, limpiar archivo si existe
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except:
+                pass
+    
+    print("❌ TODAS las voces neurales fallaron. Abortando generación de audio.")
+    return None
 
 # ================================================================
 # MONTAR VIDEO
@@ -887,7 +920,7 @@ def main():
         print("✅ Ya se publicó un video hoy. Esta es la ejecución de respaldo, no se necesita generar otro. Saliendo.")
         sys.exit(0)
 
-    print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
+    print(f"🎬 Bot YouTube | Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Historia ambientada en: {UBICACION_HISTORIA}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
@@ -1001,7 +1034,6 @@ def main():
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video)
 
     guardar_titulo_largo(titulo_video)
-    
     marcar_publicacion_exitosa()
 
     limpiar_archivos_temporales()
