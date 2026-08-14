@@ -43,7 +43,7 @@ TITULOS_FILE = "titulos_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 
 # ================================================================
-# 🎤 VOCES NEURALES VÁLIDAS (fallback automático, sin gTTS)
+# 🎤 VOCES NEURALES VÁLIDAS
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
@@ -441,22 +441,14 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🎬 GENERAR HISTORIA CON ETAPAS VISUALES (continuidad)
+# 🎬 GENERAR HISTORIA CON SEO EXPERTO + ETAPAS VISUALES
 # ================================================================
 def generar_historia_completa():
-    hashtags_disponibles = [
-        "#paranormal", "#terror", "#misterio", "#suspenso", "#leyendasurbanas",
-        "#miedo", "#sobrenatural", "#oscuridad", "#fantasma", "#espanto",
-        "#escalofrio", "#noche", "#pueblo", "#casasembrujadas", "#relatos",
-        "#brujas", "#aparicion", "#almas", "#pena", "#real"
-    ]
-    hashtags_elegidos = random.sample(hashtags_disponibles, 3)
-    hashtags_descripcion_base = "#Shorts " + " ".join(hashtags_elegidos)
-
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica.
+    # 🎯 PROMPT MEJORADO CON SEO EXPERTO PARA SHORTS
+    prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
 
 🚨 REGLA DE ORO:
 La historia DEBE estar basada en un relato que REALMENTE alguien contó en internet.
@@ -471,8 +463,8 @@ El relato se dividirá en 4-5 segmentos visuales. Cada segmento DEBE tener:
   * "climax_evento" (ocurre el evento paranormal)
   * "resolucion" (conclusión o regreso)
 - "ubicacion_escena": el lugar específico donde ocurre ese fragmento
-- Las escenas deben tener TRAYECTORIA LÓGICA: si sale de casa, la siguiente escena lo muestra en la calle o el vehículo, NO de vuelta en casa.
-- El entorno se mantiene coherente durante segmentos consecutivos.
+- Las escenas deben tener TRAYECTORIA LÓGICA
+- El entorno se mantiene coherente durante segmentos consecutivos
 
 PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 AMBIENTACIÓN ACTUAL 2026: tecnología moderna, vehículos actuales, ropa moderna.
@@ -487,18 +479,82 @@ AMBIENTACIÓN ACTUAL 2026: tecnología moderna, vehículos actuales, ropa modern
 3. TENSIÓN (80-90 palabras)
 4. TWIST FINAL (30-40 palabras)
 
-REGLAS DEL TÍTULO (SEO 2026):
-- Entre 55 y 75 caracteres, palabra clave al inicio.
-- NO debe parecerse a ningún título ya publicado.
+🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR (lo más importante)
 
-REGLAS DE DESCRIPCIÓN:
-- "gancho_descripcion": 1 línea de MÁXIMO 90 caracteres.
-- "contexto_descripcion": 1 oración con contexto.
-- "fuente_relato": 1 línea indicando el tipo de fuente real.
+El título DEBE seguir esta FÓRMULA GANADORA:
+[VERBO EN 1RA PERSONA / PALABRA DE IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
 
-REGLAS DE ETIQUETAS (10-15 tags long-tail, máx 480 caracteres).
+✅ EJEMPLOS DE TÍTULOS GANADORES (usa este estilo):
+- "Vi algo en la carretera de Zacatecas que no era humano"
+- "Escuché mi nombre en un pueblo abandonado de Puebla"
+- "El Uber me dejó en un lugar que no existe en el mapa"
+- "Trabajé de velador 1 noche en Monterrey. No volví jamás."
+- "Encontré esto en el sótano de mi casa en Guadalajara"
+- "El GPS me llevó a una carretera que no existe en Querétaro"
+- "Fui trailero en Sonora y nunca más volví a esa ruta"
+- "Escuché a mi hija llamarme. Llevaba 3 años muerta."
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
+❌ TÍTULOS PROHIBIDOS (no los uses):
+- "La leyenda de..." / "El fantasma de..." / "Historia de..."
+- "Una noche en..." / "La casa de..." / "El misterio de..."
+- Títulos que suenen a documental o libro
+- Títulos con más de 75 caracteres
+
+REGLAS DEL TÍTULO:
+- Longitud EXACTA: 55-75 caracteres
+- DEBE estar en primera persona o empezar con palabra de impacto (Vi, Escuché, Encontré, Fui, Trabajé, No debí, Jamás)
+- DEBE tener un lugar específico de {ESTADO_HISTORIA_SHORTS}
+- DEBE generar curiosidad extrema en 3 segundos
+- DEBE sonar a testimonio REAL, no a ficción
+
+🎯 REGLA CRÍTICA 2: DESCRIPCIÓN CON SEO EXPERTO
+
+La descripción DEBE tener esta ESTRUCTURA EXACTA (con saltos de línea reales):
+
+Línea 1 (GANCHO SEO - las primeras 90 chars son críticas):
+"[Frase impactante corta con keyword principal + {ESTADO_HISTORIA_SHORTS}]"
+
+Línea 2 (CONTEXTO con keywords long-tail):
+"[1 oración con palabras clave naturales: 'terror en {ESTADO_HISTORIA_SHORTS}', 'testimonio real', 'experiencia paranormal real']"
+
+Línea 3 (CTA al canal):
+"🔴 RELATO COMPLETO en el canal: {CANAL_LINK}"
+
+Línea 4 (FUENTE):
+"📖 Basado en un testimonio real compartido en internet."
+
+Línea 5 (FACEBOOK):
+"📱 Síguenos: {FACEBOOK_LINK}"
+
+Línea 6 (HASHTAGS - máximo 5):
+"#Shorts #TerrorEn{ESTADO_HISTORIA_SHORTS.replace(' ', '')} #RelatosReales #Paranormal #MiedoReal"
+
+🎯 REGLA CRÍTICA 3: TAGS SEO (10-15 tags, máximo 480 caracteres)
+
+Los tags DEBEN incluir:
+- 2-3 tags específicos del lugar y fenómeno
+- 4-5 tags long-tail (búsquedas comunes en shorts de terror)
+- 3-4 tags de tendencia (shorts terror, miedo, suspenso)
+- 2-3 tags geográficos
+
+EJEMPLOS DE TAGS CORRECTOS:
+"shorts terror, terror en {ESTADO_HISTORIA_SHORTS.lower()}, relatos reales de terror, testimonios paranormales reales, miedo real, historias cortas de terror, suspenso real, miedo nocturno, leyendas urbanas México, casos paranormales reales, experiencias sobrenaturales, historias reales de fantasmas, terror mexicano"
+
+🎯 REGLA CRÍTICA 4: PALABRAS CLAVE PRINCIPALES
+
+Define 2-3 palabras clave principales que usarás en:
+- Título
+- Primera línea de descripción
+- Tags
+- Primeros 10 segundos del relato
+
+Ejemplos: "terror en {ESTADO_HISTORIA_SHORTS}", "testimonio paranormal real", "experiencia sobrenatural"
+
+🎯 REGLA CRÍTICA 5: TÍTULO ALTERNATIVO (para A/B testing)
+
+Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángulo emocional (uno con miedo, otro con curiosidad, otro con misterio).
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
 
 REGLAS GENERALES:
@@ -509,13 +565,15 @@ REGLAS GENERALES:
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-  "titulo": "Título 55-75 caracteres, estilo testimonio real",
-  "gancho_descripcion": "Gancho de máx 90 caracteres",
-  "contexto_descripcion": "1 oración con contexto",
+  "titulo": "Título SEO 1ra persona, 55-75 caracteres",
+  "titulo_alternativo": "Segundo título con ángulo diferente",
+  "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
+  "gancho_descripcion": "Gancho de máx 90 caracteres (primera línea de descripción)",
+  "contexto_descripcion": "1 oración con contexto y keywords",
   "fuente_relato": "Basado en un testimonio/leyenda real de ...",
   "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
   "palabras_portada": "2-3 PALABRAS CLAVE",
-  "tags": "tag1, tag2, ... (10-15 tags)"
+  "tags": "10-15 tags separados por coma (máximo 480 caracteres)"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -564,11 +622,14 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
 
+            # 🎯 Validación y mejora de título SEO
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
+            
+            # Verificar longitud SEO
             if len(titulo) < 40:
-                titulo = f"{titulo} - Testimonio real de terror en {ESTADO_HISTORIA_SHORTS}"
+                titulo = f"{titulo} - Testimonio real en {ESTADO_HISTORIA_SHORTS}"
             if len(titulo) > 95:
                 recorte = titulo[:92].rsplit(' ', 1)[0]
                 titulo = recorte + "..."
@@ -593,11 +654,13 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
 
+            # 🎯 Procesamiento SEO de tags
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             tags_list = tags_list[:15]
 
             extras_long_tail = [
+                f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
                 f"relatos reales de terror en {ESTADO_HISTORIA_SHORTS.lower()}",
                 "testimonios paranormales reales",
                 "historias reales contadas en primera persona",
@@ -605,6 +668,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 "relatos de internet reales",
                 "casos paranormales reales mexico",
                 "historias de fantasmas reales",
+                "shorts terror",
             ]
             i = 0
             while len(tags_list) < 10 and i < len(extras_long_tail):
@@ -622,9 +686,16 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
 
-            data["hashtags_descripcion"] = hashtags_descripcion_base
+            hashtags_descripcion = "#Shorts #TerrorEn" + ESTADO_HISTORIA_SHORTS.replace(" ", "") + " #RelatosReales #Paranormal #MiedoReal"
+            data["hashtags_descripcion"] = hashtags_descripcion
 
-            print(f"   📖 Fuente del relato: {data['fuente_relato']}")
+            # 🆕 Log SEO
+            print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
+            print(f"   🔄 Alternativo: {data.get('titulo_alternativo', 'N/A')}")
+            print(f"   🔑 Keywords: {data.get('palabras_clave', [])}")
+            print(f"   📖 Fuente: {data['fuente_relato']}")
+            print(f"   🏷️ Tags generados: {len(tags_final)}")
+            
             return data
 
         except Exception as e:
@@ -671,16 +742,12 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
 # 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS (continuidad narrativa)
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
-    """
-    Asigna una etapa visual lógica a cada segmento según su posición
-    en la narrativa, para mantener trayectoria coherente.
-    """
     n = len(segmentos)
     etapas = []
     ubicaciones = []
     
     for i in range(n):
-        progreso = i / max(n - 1, 1)  # 0.0 a 1.0
+        progreso = i / max(n - 1, 1)
         
         if progreso < 0.2:
             etapa = "inicio_casa"
@@ -707,19 +774,14 @@ def asignar_etapas_visuales(segmentos, ubicacion):
 # 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL
 # ================================================================
 def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, perfil=None, estilo_visual=None, paleta_color=None):
-    """
-    Genera un prompt de imagen enriquecido con contexto de continuidad narrativa.
-    """
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
     paleta = paleta_color or PALETA_COLOR_ACTUAL
     perfil = perfil or PERFIL_PERSONAJE_SHORTS
     
-    # Contexto del segmento anterior
     contexto_previo = ""
     if segmento_anterior_texto:
         contexto_previo = f"\nPREVIOUS SCENE: The character was just in the previous moment: '{segmento_anterior_texto[:120]}'"
     
-    # Instrucciones según etapa
     instrucciones_etapa = {
         "inicio_casa": "Show the character in a modern home interior, establishing shot, calm atmosphere before the events begin.",
         "desplazamiento": "Show the character in movement (walking or driving), same route continuing from the previous scene, different camera angle.",
@@ -841,7 +903,6 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         print(f"  🎬 Segmento {idx+1}/{len(segmentos)} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
 
-        # Obtener texto del segmento anterior para continuidad
         seg_anterior = segmentos[idx-1] if idx > 0 else None
         
         prompt_imagen = generar_prompt_con_contexto(
@@ -920,7 +981,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES (SIN gTTS)
+# ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -984,7 +1045,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# ✅ GENERAR AUDIO CTA FINAL (mismo sistema de fallback)
+# ✅ GENERAR AUDIO CTA FINAL
 # ================================================================
 def generar_audio_cta_final():
     global CONFIG_VOZ_ACTUAL
@@ -1154,7 +1215,7 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     return salida
 
 # ================================================================
-# 🆕 SUBIR A YOUTUBE (SIN comentario fijado)
+# 🆕 SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
@@ -1169,16 +1230,14 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
+    # 🆕 Descripción SEO estructurada
     descripcion = f"""{gancho_descripcion}
 
 {contexto_descripcion}
 
+🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
+
 📖 {fuente_relato}
-
-🔴 Relatos completos en el canal. Visítanos: {CANAL_LINK}
-
-👇 SUSCRÍBETE PARA MÁS RELATOS REALES 👇
-{CANAL_LINK}
 
 📱 Facebook: {FACEBOOK_LINK}
 
@@ -1211,11 +1270,9 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         sys.exit(1)
 
 # ================================================================
-# 🆕 SUBIR VIDEO A HOST TEMPORAL (para Facebook)
+# 🆕 SUBIR VIDEO A HOST TEMPORAL
 # ================================================================
 def subir_video_temporal(video_path, intentos=2):
-    """Sube el video a un host temporal y devuelve la URL directa."""
-    # 1) litterbox.catbox.moe (dura 72 horas)
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1233,7 +1290,6 @@ def subir_video_temporal(video_path, intentos=2):
             print(f"⚠️ litterbox falló: {e}")
         time.sleep(3)
 
-    # 2) tmpfiles.org (dura 60 minutos)
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1251,7 +1307,6 @@ def subir_video_temporal(video_path, intentos=2):
             print(f"⚠️ tmpfiles falló: {e}")
         time.sleep(3)
 
-    # 3) 0x0.st (último recurso)
     try:
         with open(video_path, "rb") as f:
             r = requests.post("https://0x0.st", files={"file": f}, timeout=180)
@@ -1266,10 +1321,9 @@ def subir_video_temporal(video_path, intentos=2):
     return None
 
 # ================================================================
-# 🆕 ENVIAR A MAKE (con url_youtube para el post)
+# 🆕 ENVIAR A MAKE
 # ================================================================
 def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
-    """Envía los datos del Reel al webhook de Make para publicarlo en Facebook."""
     webhook_url = os.getenv("MAKE_WEBHOOK_URL_REELS")
     if not webhook_url:
         print("⚠️ MAKE_WEBHOOK_URL_REELS no configurado. Saltando Facebook.")
@@ -1311,7 +1365,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con continuidad visual)")
+    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con SEO Experto)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1329,7 +1383,7 @@ def main():
 
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    print("🆕 Generando nueva historia REAL (basada en testimonios de internet)...")
+    print("🆕 Generando nueva historia REAL con SEO experto...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
@@ -1354,16 +1408,18 @@ def main():
     paleta = PALETA_COLOR_ACTUAL
     estilo = ESTILO_VISUAL_ACTUAL
 
-    print(f"📖 Procesando historia ({len(texto_completo.split())} palabras)...")
-    print(f"🏷️ Título SEO ({len(historia_raw['titulo'])} chars): {historia_raw['titulo']}")
-    print(f"📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
-    print(f"🏷️ Tags: {historia_raw['tags']}")
+    print(f"\n📊 RESUMEN SEO:")
+    print(f"   🏷️ Título: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
+    print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
+    print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
+    print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
+    print(f"   🏷️ Tags: {historia_raw['tags']}")
+    print(f"   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
 
-    # 🎬 Dividir en segmentos y asignar ETAPAS VISUALES (continuidad)
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
     
-    print(f"🖼️ Generando {len(segmentos)} imágenes con continuidad narrativa...")
+    print(f"\n🖼️ Generando {len(segmentos)} imágenes con continuidad narrativa...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
         print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
 
@@ -1392,7 +1448,7 @@ def main():
         print(f"❌ Error montando video: {e}")
         sys.exit(1)
 
-    print(f"🚀 Subiendo Short a YouTube...")
+    print(f"\n🚀 Subiendo Short a YouTube...")
     video_id_youtube = subir_a_youtube(
         video_path=video_final,
         titulo=historia_raw["titulo"],
@@ -1404,6 +1460,11 @@ def main():
     )
 
     guardar_titulo_publicado(historia_raw["titulo"])
+    
+    # 🆕 Guardar título alternativo como referencia
+    titulo_alternativo = historia_raw.get("titulo_alternativo", "")
+    if titulo_alternativo and titulo_alternativo != historia_raw["titulo"]:
+        print(f"💡 Título alternativo para A/B testing: {titulo_alternativo}")
 
     # 🆕 ENVIAR A FACEBOOK VÍA MAKE (solo los 2 primeros Reels del día)
     publicaciones_antes = obtener_publicaciones_hoy()
@@ -1415,9 +1476,11 @@ def main():
 
 {historia_raw['contexto_descripcion']}
 
+🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
+
 📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real compartido en internet.')}
 
-🔴 Relatos completos en el canal. Visítanos: {CANAL_LINK}
+📱 Síguenos: {FACEBOOK_LINK}
 
 {historia_raw['hashtags_descripcion']}"""
             enviar_a_make(
@@ -1435,7 +1498,7 @@ def main():
 
     guardar_estado(estado)
     limpiar_temporales_shorts()
-    print("✨ Ejecución del Bot finalizada con éxito.")
+    print("✨ Ejecución del Bot finalizada con SEO experto.")
 
 if __name__ == "__main__":
     try:
