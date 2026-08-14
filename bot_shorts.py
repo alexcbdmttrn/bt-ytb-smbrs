@@ -392,6 +392,107 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
+# 🖼️ PORTADA VERTICAL DE ALTO CTR (primer frame del Short)
+# ================================================================
+def generar_portada_shorts(historia_raw, intentos=4):
+    """Genera una portada vertical 9:16 llamativa (rostro aterrado + silueta)."""
+    ubicacion = ESTADO_HISTORIA_SHORTS
+    paleta = PALETA_COLOR_ACTUAL
+    prompt = (
+        f"YouTube Shorts horror cover, vertical 9:16: extreme close-up of a terrified Mexican face "
+        f"with wide scared eyes and open mouth screaming silently, behind a dark ghostly silhouette "
+        f"with glowing red eyes, set in {ubicacion} at night, high contrast dramatic lighting, "
+        f"saturated deep red and black color grading, cinematic horror style, sharp focus, "
+        f"empty space at the BOTTOM for text overlay, no text, no watermark, "
+        f"color palette of {paleta}, modern 2026 era"
+    )
+    # Limpieza ligera (NO usar limpiar_prompt_base porque forzaría plano abierto)
+    prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
+
+    url = "https://apihub.agnes-ai.com/v1/images/generations"
+    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+    negative = (
+        "multiple people, duplicate people, cloned faces, deformed, mutated, bad anatomy, "
+        "asymmetrical eyes, uncanny valley, gore, blood, wounds, zombie-like, corpse-like, "
+        "rusty, vintage, retro, antique, dilapidated, sepia, monochrome, "
+        "low quality, blurry, text, watermark, logo"
+    )
+    payload = {
+        "model": "agnes-image-2.1-flash",
+        "prompt": prompt[:800],
+        "negative_prompt": negative,
+        "width": 1080,
+        "height": 1920,
+        "num_images": 1
+    }
+    for intento in range(intentos):
+        try:
+            print(f"🖼️ Intento {intento+1}/{intentos} portada vertical...")
+            r = requests.post(url, headers=headers, json=payload, timeout=90)
+            if r.status_code == 200:
+                return r.json()["data"][0]["url"]
+        except Exception as e:
+            print(f"⚠️ Error portada: {e}")
+        time.sleep(6)
+    return None
+
+# ================================================================
+# ✍️ TEXTO GANCHO SOBRE LA PORTADA VERTICAL
+# ================================================================
+def agregar_texto_portada_vertical(img_path, texto):
+    if not texto:
+        texto = "LO VI"
+    texto = texto.upper().strip()
+    try:
+        with Image.open(img_path) as img:
+            img = img.convert("RGBA")
+            w, h = img.size
+
+            palabras = texto.split()
+            if len(palabras) > 2:
+                mid = len(palabras) // 2
+                lineas = [" ".join(palabras[:mid]), " ".join(palabras[mid:])]
+            else:
+                lineas = [texto]
+
+            font_size = int(h * 0.09)
+            try:
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+            except Exception:
+                try:
+                    font = ImageFont.truetype("arial.ttf", font_size)
+                except Exception:
+                    font = ImageFont.load_default()
+
+            draw = ImageDraw.Draw(img)
+            line_dims = []
+            total_h = 0
+            for linea in lineas:
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                lw = bbox[2] - bbox[0]; lh = bbox[3] - bbox[1]
+                line_dims.append((lw, lh)); total_h += lh
+            spacing = int(font_size * 0.2)
+            total_h += spacing * (len(lineas) - 1)
+
+            # Posición: zona INFERIOR (no tapa el rostro)
+            y = h - total_h - int(h * 0.12)
+            stroke_w = max(6, int(font_size * 0.12))
+
+            for i, linea in enumerate(lineas):
+                lw, lh = line_dims[i]
+                x = (w - lw) // 2
+                for ox in range(-stroke_w, stroke_w + 1):
+                    for oy in range(-stroke_w, stroke_w + 1):
+                        draw.text((x + ox, y + oy), linea, font=font, fill=(0, 0, 0, 255))
+                draw.text((x, y), linea, font=font, fill=(255, 215, 0, 255))
+                y += lh + spacing
+
+            img.convert("RGB").save(img_path)
+            print(f"✅ Texto portada vertical: '{texto}'")
+    except Exception as e:
+        print(f"⚠️ Error texto portada: {e}")
+
+# ================================================================
 # 🆕 EXPANDIR TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
@@ -447,7 +548,6 @@ def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # 🎯 PROMPT MEJORADO CON SEO EXPERTO PARA SHORTS
     prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
 
 🚨 REGLA DE ORO:
@@ -507,7 +607,14 @@ REGLAS DEL TÍTULO:
 - DEBE generar curiosidad extrema en 3 segundos
 - DEBE sonar a testimonio REAL, no a ficción
 
-🎯 REGLA CRÍTICA 2: DESCRIPCIÓN CON SEO EXPERTO
+🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA (texto gancho en primer frame)
+
+"palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
+✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ", "NO ERA MI HIJA"
+❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
+El texto debe reflejar el momento MÁS impactante del relato.
+
+🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
 
 La descripción DEBE tener esta ESTRUCTURA EXACTA (con saltos de línea reales):
 
@@ -529,7 +636,7 @@ Línea 5 (FACEBOOK):
 Línea 6 (HASHTAGS - máximo 5):
 "#Shorts #TerrorEn{ESTADO_HISTORIA_SHORTS.replace(' ', '')} #RelatosReales #Paranormal #MiedoReal"
 
-🎯 REGLA CRÍTICA 3: TAGS SEO (10-15 tags, máximo 480 caracteres)
+🎯 REGLA CRÍTICA 4: TAGS SEO (10-15 tags, máximo 480 caracteres)
 
 Los tags DEBEN incluir:
 - 2-3 tags específicos del lugar y fenómeno
@@ -540,7 +647,7 @@ Los tags DEBEN incluir:
 EJEMPLOS DE TAGS CORRECTOS:
 "shorts terror, terror en {ESTADO_HISTORIA_SHORTS.lower()}, relatos reales de terror, testimonios paranormales reales, miedo real, historias cortas de terror, suspenso real, miedo nocturno, leyendas urbanas México, casos paranormales reales, experiencias sobrenaturales, historias reales de fantasmas, terror mexicano"
 
-🎯 REGLA CRÍTICA 4: PALABRAS CLAVE PRINCIPALES
+🎯 REGLA CRÍTICA 5: PALABRAS CLAVE PRINCIPALES
 
 Define 2-3 palabras clave principales que usarás en:
 - Título
@@ -550,7 +657,7 @@ Define 2-3 palabras clave principales que usarás en:
 
 Ejemplos: "terror en {ESTADO_HISTORIA_SHORTS}", "testimonio paranormal real", "experiencia sobrenatural"
 
-🎯 REGLA CRÍTICA 5: TÍTULO ALTERNATIVO (para A/B testing)
+🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (para A/B testing)
 
 Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángulo emocional (uno con miedo, otro con curiosidad, otro con misterio).
 
@@ -572,7 +679,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
   "contexto_descripcion": "1 oración con contexto y keywords",
   "fuente_relato": "Basado en un testimonio/leyenda real de ...",
   "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
-  "palabras_portada": "2-3 PALABRAS CLAVE",
+  "palabras_portada": "TEXTO GANCHO 2-3 palabras específicas del relato",
   "tags": "10-15 tags separados por coma (máximo 480 caracteres)"
 }}
 """
@@ -622,12 +729,10 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
             data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
 
-            # 🎯 Validación y mejora de título SEO
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
             
-            # Verificar longitud SEO
             if len(titulo) < 40:
                 titulo = f"{titulo} - Testimonio real en {ESTADO_HISTORIA_SHORTS}"
             if len(titulo) > 95:
@@ -654,7 +759,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
 
-            # 🎯 Procesamiento SEO de tags
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             tags_list = tags_list[:15]
@@ -693,6 +797,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   🔄 Alternativo: {data.get('titulo_alternativo', 'N/A')}")
             print(f"   🔑 Keywords: {data.get('palabras_clave', [])}")
+            print(f"   🖼️ Portada: {data.get('palabras_portada', 'N/A')}")
             print(f"   📖 Fuente: {data['fuente_relato']}")
             print(f"   🏷️ Tags generados: {len(tags_final)}")
             
@@ -739,7 +844,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     return segmentos
 
 # ================================================================
-# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS (continuidad narrativa)
+# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -891,7 +996,7 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO (con memoria visual)
+# 🎬 GENERAR RECURSOS POR SEGMENTO
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
@@ -1230,7 +1335,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    # 🆕 Descripción SEO estructurada
     descripcion = f"""{gancho_descripcion}
 
 {contexto_descripcion}
@@ -1354,18 +1458,19 @@ def limpiar_temporales_shorts():
                 os.remove(f)
             except Exception:
                 pass
-    if os.path.exists("short_final.mp4"):
-        try:
-            os.remove("short_final.mp4")
-        except Exception:
-            pass
+    for aux in ["short_final.mp4", "portada_short.jpg"]:
+        if os.path.exists(aux):
+            try:
+                os.remove(aux)
+            except Exception:
+                pass
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con SEO Experto)")
+    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con Portada de Alto CTR)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1412,6 +1517,7 @@ def main():
     print(f"   🏷️ Título: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
+    print(f"   🖼️ Portada: {historia_raw.get('palabras_portada', 'LO VI')}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
     print(f"   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
@@ -1438,6 +1544,27 @@ def main():
         print("❌ Error generando recursos para los segmentos. Abortando.")
         sys.exit(1)
 
+    # 🆕 PORTADA: el primer frame del Short será la imagen llamativa
+    print("\n🖼️ Generando portada vertical de alto CTR (primer frame)...")
+    portada_url = generar_portada_shorts(historia_raw)
+    if portada_url and recursos:
+        try:
+            r = requests.get(portada_url, timeout=30)
+            r.raise_for_status()
+            portada_path = "portada_short.jpg"
+            with open(portada_path, "wb") as f:
+                f.write(r.content)
+            with Image.open(portada_path) as img:
+                ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS).save(portada_path)
+            agregar_texto_portada_vertical(portada_path, historia_raw.get("palabras_portada", "LO VI"))
+            # Reemplazar la imagen del PRIMER segmento por la portada
+            recursos[0]["imagen_url"] = portada_path
+            print("✅ Portada aplicada como PRIMER frame del Short.")
+        except Exception as e:
+            print(f"⚠️ Error aplicando portada: {e}")
+    else:
+        print("⚠️ No se generó portada; se usa la imagen del segmento 1.")
+
     try:
         video_final = montar_video_shorts(
             recursos_por_segmento=recursos,
@@ -1461,12 +1588,10 @@ def main():
 
     guardar_titulo_publicado(historia_raw["titulo"])
     
-    # 🆕 Guardar título alternativo como referencia
     titulo_alternativo = historia_raw.get("titulo_alternativo", "")
     if titulo_alternativo and titulo_alternativo != historia_raw["titulo"]:
         print(f"💡 Título alternativo para A/B testing: {titulo_alternativo}")
 
-    # 🆕 ENVIAR A FACEBOOK VÍA MAKE (solo los 2 primeros Reels del día)
     publicaciones_antes = obtener_publicaciones_hoy()
     if publicaciones_antes < 2:
         print(f"\n📘 Reel #{publicaciones_antes + 1} del día: enviando a Facebook vía Make...")
@@ -1498,7 +1623,7 @@ def main():
 
     guardar_estado(estado)
     limpiar_temporales_shorts()
-    print("✨ Ejecución del Bot finalizada con SEO experto.")
+    print("✨ Ejecución del Bot finalizada con portada de alto CTR.")
 
 if __name__ == "__main__":
     try:
