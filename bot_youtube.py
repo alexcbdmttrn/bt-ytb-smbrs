@@ -17,7 +17,7 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
 )
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageOps
 import requests
 import edge_tts
 
@@ -246,7 +246,7 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (MODERNIDAD 2026)
+# 🧼 LIMPIADOR DE PROMPTS (segmentos, sin texto)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -293,72 +293,6 @@ def limpiar_prompt(prompt):
     return prompt_base + modificadores_calidad
 
 # ================================================================
-# 🖼️ MINIATURA (ESTILO HORROR DE ALTO CTR)
-# ================================================================
-def agregar_texto_miniatura(img_path, texto_portada):
-    if not texto_portada:
-        texto_portada = "LO VI"
-    texto_portada = texto_portada.upper().strip()
-    try:
-        with Image.open(img_path) as img:
-            img = img.convert("RGBA")
-            w, h = img.size
-
-            # Dividir en máx 2 líneas si es largo
-            palabras = texto_portada.split()
-            if len(palabras) > 2:
-                mid = len(palabras) // 2
-                lineas = [" ".join(palabras[:mid]), " ".join(palabras[mid:])]
-            else:
-                lineas = [texto_portada]
-
-            # Fuente GRANDE (16% de la altura)
-            font_size = int(h * 0.16)
-            try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-            except Exception:
-                try:
-                    font = ImageFont.truetype("arial.ttf", font_size)
-                except Exception:
-                    font = ImageFont.load_default()
-
-            # Calcular dimensiones de cada línea
-            dummy = ImageDraw.Draw(img)
-            line_dims = []
-            max_w = 0
-            total_h = 0
-            for linea in lineas:
-                bbox = dummy.textbbox((0, 0), linea, font=font)
-                lw = bbox[2] - bbox[0]
-                lh = bbox[3] - bbox[1]
-                line_dims.append((lw, lh))
-                max_w = max(max_w, lw)
-                total_h += lh
-            spacing = int(font_size * 0.15)
-            total_h += spacing * (len(lineas) - 1)
-
-            # Posición: lado DERECHO, centrado vertical (no tapa el rostro)
-            draw = ImageDraw.Draw(img)
-            stroke_w = max(6, int(font_size * 0.12))
-            cy = (h - total_h) // 2
-
-            for i, linea in enumerate(lineas):
-                lw, lh = line_dims[i]
-                lx = w - lw - int(w * 0.06)  # alineado a la derecha
-                # Contorno NEGRO grueso
-                for ox in range(-stroke_w, stroke_w + 1):
-                    for oy in range(-stroke_w, stroke_w + 1):
-                        draw.text((lx + ox, cy + oy), linea, font=font, fill=(0, 0, 0, 255))
-                # Texto AMARILLO brillante
-                draw.text((lx, cy), linea, font=font, fill=(255, 215, 0, 255))
-                cy += lh + spacing
-
-            img.convert("RGB").save(img_path)
-            print(f"✅ Texto '{texto_portada}' impreso en miniatura (estilo horror).")
-    except Exception as e:
-        print(f"⚠️ Error en miniatura: {e}")
-
-# ================================================================
 # LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
@@ -377,7 +311,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR GUION CON SEO EXPERTO + MINIATURA DE ALTO CTR
+# 🎬 GENERAR GUION (FIX: 24-28 segmentos + prompts cortos)
 # ================================================================
 def generar_guion(contexto_extra=""):
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
@@ -388,8 +322,8 @@ def generar_guion(contexto_extra=""):
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
 
-Escribe un relato paranormal en primera persona en español, 1.600-1.850 palabras, ambientado en {UBICACION_HISTORIA}, México.
-Divide la historia en 28 a 34 segmentos de 45-55 palabras cada uno.
+Escribe un relato paranormal en primera persona en español, 1.400-1.600 palabras, ambientado en {UBICACION_HISTORIA}, México.
+Divide la historia en 24 a 28 segmentos de 45-55 palabras cada uno.
 
 PERSONAJE PRINCIPAL (FIJO):
 "{PERFIL_PERSONAJE}"
@@ -416,8 +350,8 @@ El texto debe reflejar el momento MÁS impactante del relato.
 - Ambientado en el lugar específico del relato: {UBICACION_HISTORIA}
 - Alto contraste dramático, color grading rojo profundo y negro saturado
 - Estilo cinematográfico de horror, enfoque nítido
-- Espacio vacío en el LADO DERECHO para texto superpuesto
-- Sin texto, sin watermark
+- Deja un área oscura y limpia en el LADO DERECHO para superponer texto
+- NO incluyas texto en este prompt (el texto se agrega después)
 
 🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
 Línea 1 (GANCHO, 150 chars): frase impactante con keyword + lugar
@@ -454,7 +388,7 @@ Segundo título con ángulo emocional diferente.
   "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + créditos + hashtags)",
   "tags": "15-20 tags separados por coma (máx 500 caracteres)",
   "miniatura_descripcion": "1-2 oraciones de la escena más impactante",
-  "miniatura_prompt": "YouTube horror thumbnail: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, space on right for text",
+  "miniatura_prompt": "YouTube horror thumbnail: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, dark clean area on the right side for text",
   "capitulos": [
     {{"tiempo": "00:00", "titulo": "Capítulo 1"}},
     {{"tiempo": "02:15", "titulo": "Capítulo 2"}},
@@ -466,7 +400,7 @@ Segundo título con ángulo emocional diferente.
       "texto": "Narración en español de 45-55 palabras...",
       "etapa_visual": "inicio_casa|desplazamiento|lugar_destino|climax_evento|resolucion",
       "ubicacion_escena": "Descripción breve del lugar específico",
-      "imagen_prompt": "Prompt detallado en inglés para esta escena específica"
+      "imagen_prompt": "Prompt CORTO en inglés (máx 25 palabras) para esta escena"
     }}
   ]
 }}
@@ -485,7 +419,7 @@ Segundo título con ángulo emocional diferente.
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt_base}],
         "temperature": 0.7,
-        "max_tokens": 7000,
+        "max_tokens": 8000,
         "response_format": {"type": "json_object"}
     }
 
@@ -516,7 +450,7 @@ Segundo título con ángulo emocional diferente.
                     print(f"❌ json5 también falló: {e5}")
                     raise
 
-            if "segmentos" in data and len(data["segmentos"]) >= 20:
+            if "segmentos" in data and len(data["segmentos"]) >= 16:
                 titulo_generado = data.get("titulo", "")
                 if titulo_largo_ya_publicado(titulo_generado):
                     print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
@@ -726,27 +660,51 @@ def generar_imagen(prompt, texto_segmento="", width=2048, height=1152, intentos=
     return None
 
 # ================================================================
-# 🖼️ GENERAR MINIATURA (PERMITE ROSTROS EXPRESIVOS)
+# 🖼️ MINIATURA CON TEXTO INTEGRADO (Agnes dibuja el texto) - CORREGIDA
 # ================================================================
-def generar_miniatura(prompt, width=1280, height=720, intentos=5):
-    prompt_limpio = limpiar_prompt(prompt)
-    url = "https://apihub.agnes-ai.com/v1/images/generations"
-    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+def generar_miniatura_con_texto(prompt_base, texto_portada, width=1280, height=720, intentos=5):
+    """Genera la miniatura y Agnes dibuja el texto gancho directamente en la imagen."""
+    texto_portada = (texto_portada or "LO VI").upper().strip()
+    palabras = texto_portada.split()
+    if len(palabras) > 3:
+        texto_portada = " ".join(palabras[:3])
     
-    # 🆕 Negative ajustado: PERMITE rostros aterrados (quita close-up prohibition)
+    # Limpieza ligera del prompt base
+    prompt_base = re.sub(r'"', "'", prompt_base or "")
+    prompt_base = re.sub(r"\n+", " ", prompt_base)
+
+    prompt_final = f"""{prompt_base}, {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, 16:9 widescreen YouTube thumbnail, cinematic horror style, high contrast dramatic lighting, sharp focus, modern 2026 era.
+
+TEXT OVERLAY (CRITICAL REQUIREMENT):
+- Render the EXACT Spanish text: "{texto_portada}"
+- Style: huge bold capital letters, bright yellow fill, thick black outline, subtle drop shadow
+- Position: right side of the frame, vertically centered, over a dark clean area
+- The text MUST fit entirely inside the frame with safe margins, never cut off or overflowing the edges
+- Spelling MUST be EXACT, character by character: "{texto_portada}". NO typos, NO extra letters, NO missing letters, NO distorted characters
+- Maximum 2 lines if needed
+
+NO other text, NO watermarks, NO logos."""
+
+    # Negative permite texto correcto pero prohíbe texto mal escrito o cortado
     negative = (
+        "misspelled text, wrong spelling, typo, distorted letters, garbled text, broken characters, "
+        "cut off text, text outside frame, text touching edges, overflowing text, oversized text, "
         "multiple people, duplicate people, cloned faces, "
         "deformed, mutated, bad anatomy, extra limbs, "
         "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
         "gore, blood, wounds, gaunt, emaciated, zombie-like, corpse-like, "
         "rusty, vintage, retro, antique, dilapidated, "
         "1950s, 1960s, 1970s, 1980s, 1990s, sepia, monochrome, "
-        "low quality, blurry, text, watermark, logo"
+        "low quality, blurry, watermark, logo"
     )
+    
+    # ✅ CORREGIDO: url y headers definidos correctamente
+    url = "https://apihub.agnes-ai.com/v1/images/generations"
+    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     
     payload = {
         "model": "agnes-image-2.1-flash",
-        "prompt": prompt_limpio,
+        "prompt": prompt_final[:1000],
         "negative_prompt": negative,
         "width": width,
         "height": height,
@@ -755,7 +713,7 @@ def generar_miniatura(prompt, width=1280, height=720, intentos=5):
 
     backoff = [5, 10, 15, 20, 25]
     for intento in range(intentos):
-        print(f"🖼️ Intento {intento+1}/{intentos} miniatura horror...")
+        print(f"🖼️ Intento {intento+1}/{intentos} miniatura con texto '{texto_portada}'...")
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
@@ -1081,9 +1039,13 @@ def main():
 
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    print("🖼️ Generando miniatura horror de alto CTR...")
+    # Miniatura con texto integrado por Agnes
+    print("🖼️ Generando miniatura horror con texto integrado (Agnes)...")
     miniatura_path = "miniatura.jpg"
-    miniatura_url = generar_miniatura(guion_data.get("miniatura_prompt", "Terrified face with ghostly silhouette"))
+    miniatura_url = generar_miniatura_con_texto(
+        guion_data.get("miniatura_prompt", "Terrified face with ghostly silhouette"),
+        palabras_portada
+    )
 
     if miniatura_url:
         try:
@@ -1093,11 +1055,12 @@ def main():
                 f.write(r.content)
             with Image.open(miniatura_path) as img:
                 ImageOps.fit(img, (1280, 720), Image.LANCZOS).save(miniatura_path)
-            agregar_texto_miniatura(miniatura_path, palabras_portada)
+            print(f"✅ Miniatura con texto '{palabras_portada}' lista.")
         except Exception as e:
             print(f"⚠️ Error miniatura: {e}")
             miniatura_path = None
     else:
+        print("⚠️ No se generó miniatura; el video se subirá sin miniatura personalizada.")
         miniatura_path = None
 
     print("🎬 Montando video...")
@@ -1117,7 +1080,7 @@ def main():
     guardar_titulo_largo(titulo_video)
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado con SEO + miniatura de alto CTR.")
+    print("🎉 Proceso completado con SEO + miniatura con texto integrado.")
 
 if __name__ == "__main__":
     try:
