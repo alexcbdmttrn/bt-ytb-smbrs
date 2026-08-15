@@ -42,6 +42,49 @@ DURACION_MINIMA_SEGUNDOS = 480
 MAX_INTENTOS_EXPANSION = 2
 
 # ================================================================
+# 🗓️ ÉPOCA DEL SUCESO (Dinámica según el relato)
+# ================================================================
+ANIO_SUCESO = None
+EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
+
+def construir_modificadores_epoca(anio):
+    if anio is None or anio >= 2015:
+        return (
+            "present day contemporary era (2020s), modern vehicles, modern architecture, "
+            "modern clothing, LED lighting, smartphones era"
+        )
+    elif anio >= 2000:
+        return (
+            f"early 2000s era (year {anio}): 2000s cars, CRT televisions, old flip cellphones, "
+            "2000s fashion and architecture, no smartphones"
+        )
+    elif anio >= 1990:
+        return (
+            f"1990s era (year {anio}): 90s cars, cassette players, CRT TVs, analog phones, "
+            "90s fashion, older architecture, no smartphones, no modern tech"
+        )
+    elif anio >= 1980:
+        return (
+            f"1980s era (year {anio}): 80s cars, analog rotary phones, vintage clothing, "
+            "older buildings, no modern technology"
+        )
+    else:
+        return (
+            f"past era (year {anio}): old classic cars, analog technology, period clothing, "
+            "aged architecture, no modern devices"
+        )
+
+def actualizar_epoca(anio):
+    global ANIO_SUCESO, EPOCA_MOD
+    try:
+        ANIO_SUCESO = int(anio)
+    except Exception:
+        # Si la IA no da año, inventamos uno al azar entre 1975 y 2005 para tono de leyenda
+        ANIO_SUCESO = random.choice([1975, 1982, 1988, 1993, 1998, 2004])
+    EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
+    print(f"🗓️ Época del suceso configurada: {ANIO_SUCESO}")
+
+# ================================================================
 # 🎤 VOCES NEURALES VÁLIDAS
 # ================================================================
 VOCES_DISPONIBLES = [
@@ -63,38 +106,34 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS MODERNAS 2026
+# 🎨 PALETAS DE COLOR (Adaptadas a cualquier época)
 # ================================================================
 PALETAS_COLOR = [
-    "Cold cyan blue LED fog, navy blue modern shadows, crisp white moonlight",
-    "Emerald green twilight, modern city haze, muted sage ambient lighting",
-    "Deep violet LED haze, electric purple ambient light, dark magenta shadows",
-    "Slate gray modern tones, freezing ice blue highlight, dim overcast ambient",
-    "Dark teal and deep blue, modern oceanic midnight, cold misty atmosphere",
-    "Stark black and white high contrast, silver moonlight, modern pitch shadows",
-    "Desaturated cold film look, moody cinematic lighting, 8k hyperrealistic",
-    "Neon purple and electric pink, deep violet shadows, cyberpunk modern lights",
-    "Electric yellow and charcoal black, stark contrast, dusty atmospheric haze",
-    "Deep crimson red, pitch black shadow, intense orange emergency LED lights",
-    "Blood red and burnt orange, modern charcoal shadows, hellish glow",
-    "Modern warm amber and dark mahogany, golden LED lighting, deep brown shadows",
-    "Fiery sunset orange, deep purple shadows, modern red highlights",
-    "Toxic lime green and pitch black, eerie chemical modern glow, radioactive haze",
-    "Clean modern daylight, neutral gray ambient, crisp shadows",
-    "Modern LED streetlight glow, cool white highlights, urban night atmosphere",
+    "Cold cyan blue fog, navy blue shadows, crisp white moonlight",
+    "Emerald green twilight, city haze, muted sage ambient lighting",
+    "Deep violet haze, electric purple ambient light, dark magenta shadows",
+    "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
+    "Dark teal and deep blue, oceanic midnight, cold misty atmosphere",
+    "Stark black and white high contrast, silver moonlight, pitch shadows",
+    "Desaturated cold film look, moody cinematic lighting, hyperrealistic",
+    "Warm amber and dark mahogany, golden lighting, deep brown shadows",
+    "Fiery sunset orange, deep purple shadows, red highlights",
+    "Deep crimson red, pitch black shadow, intense orange emergency lights",
+    "Muted sepia-toned film look, faded analog colors, nostalgic atmosphere",
+    "Warm tungsten indoor glow, soft yellow lamplight, aged shadows",
 ]
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
 # ================================================================
-# 📷 ESTILOS VISUALES MODERNOS 2026
+# 📷 ESTILOS VISUALES
 # ================================================================
 ESTILOS_VISUALES = [
-    "Modern 2026 cinematic photograph, bright contemporary lighting, well-lit scene, sharp focus, current era",
-    "Contemporary thriller photography 2026, soft modern ambient diffusion, bright highlights, present day",
-    "Modern documentary realistic photo 2026, natural crisp skin texture, current fashion and architecture",
-    "8k resolution modern cinematic frame, ultra clear facial details, bright exposure, contemporary era",
-    "Modern fashion photography style 2026, dramatic but well-lit, clean skin, current trends",
-    "Modern noir style 2026, high contrast but well-exposed, contemporary urban atmosphere",
+    "Cinematic photograph, dramatic lighting, sharp focus, film still",
+    "Thriller photography, soft ambient diffusion, high contrast",
+    "Documentary realistic photo, natural skin texture, authentic",
+    "8k resolution cinematic frame, ultra clear details",
+    "Noir style, high contrast, moody urban atmosphere",
+    "Analog film photograph, grain of the period, authentic era look",
 ]
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
@@ -110,24 +149,24 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES
+# 🧑 GENERADOR DE PERSONAJES (Sin forzar "moderno")
 # ================================================================
 def generar_perfil_personaje():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
     generos = ["man", "woman"]
     vestimentas = [
-        "wearing a modern denim jacket and grey t-shirt",
-        "wearing a contemporary dark green coat and wool scarf",
+        "wearing a denim jacket and grey t-shirt",
+        "wearing a dark green coat and wool scarf",
         "wearing a simple white shirt and leather belt",
-        "wearing a modern blue mechanic uniform",
-        "wearing a dark sweater and slim trousers",
-        "wearing a red flannel shirt and modern jeans",
-        "wearing a black leather jacket and modern boots",
+        "wearing a blue mechanic uniform",
+        "wearing a dark sweater and trousers",
+        "wearing a red flannel shirt and jeans",
+        "wearing a black leather jacket and boots",
         "wearing a traditional embroidered blouse and long skirt",
         "wearing a white guayabera shirt and dark pants",
-        "wearing a modern hoodie and baseball cap",
-        "wearing a contemporary polo shirt and dark pants",
-        "wearing a modern delivery uniform with reflective stripes",
+        "wearing a hoodie and baseball cap",
+        "wearing a polo shirt and dark pants",
+        "wearing a work uniform",
     ]
     cabellos = [
         "short curly dark hair",
@@ -138,8 +177,6 @@ def generar_perfil_personaje():
         "short spiky black hair",
         "chestnut brown curly hair",
         "short salt-and-pepper hair",
-        "modern fade haircut",
-        "contemporary undercut hairstyle",
     ]
     rasgos = [
         "with mestizo features and light olive skin",
@@ -246,49 +283,33 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (VERTICAL 9:16 para segmentos)
+# 🧼 LIMPIADOR DE PROMPTS (Enfoque en Entorno + Anti-Clones + Época)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
-        prompt = "A quiet modern night scene 2026, bright lighting"
+        prompt = "Night scene, dramatic lighting"
     prompt = re.sub(r"\n+", " ", prompt)
     prompt = re.sub(r'"', "'", prompt)
     prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
 
-    palabras_antiguas = [
-        r"\bgrainy\b", r"\bvhs\b", r"\bchiaroscuro\b", r"\bdirt\b", r"\bgrime\b",
-        r"\blemish\b", r"\bspots\b", r"\bterro\b", r"\bhorror\b", r"\bsangre\b",
-        r"\bblood\b", r"\bgore\b", r"\bdemacrad[oa]s?\b", r"\bzombies?\b",
-        r"\bdisfigured\b", r"\bwounds?\b", r"\bmonster\b",
-        r"\brushy\b", r"\brusted\b", r"\boxidized\b", r"\bweathered\b",
-        r"\bdecayed\b", r"\brotten\b", r"\brotting\b", r"\bancient\b",
-        r"\bvintage\b", r"\bretro\b", r"\bsepia\b", r"\baged\b",
-        r"\bdilapidated\b", r"\bdecrepit\b", r"\brundown\b", r"\bcrumbling\b",
-        r"\bcracked\b", r"\bpeeling\b", r"\bcrumpled\b", r"\beroded\b",
-        r"\bdeteriorated\b", r"\bemaciated\b", r"\bgaunt\b", r"\bcorpselike\b",
-        r"\bzombielike\b", r"\bskeletal\b", r"\bdecompos(?:ed|ing)\b",
-        r"\bmoldy\b", r"\bmouldy\b", r"\bmusty\b", r"\bdusty\b",
-        r"\bcobwebs?\b", r"\bspiders?\s?webs?\b",
-        r"\b19[5-9]\d(?:s)?\b", r"\bold[- ]?(?:fashioned|timer)\b",
-        r"\bclassic(?:al)?\b", r"\bantique\b", r"\bhistoric(?:al)?\b",
+    # Solo limpiamos defectos visuales y gore. NO tocamos palabras de época.
+    palabras_malas = [
+        r"\bgore\b", r"\bblood\b", r"\bbloody\b", r"\bwounds?\b", r"\bzombies?\b",
+        r"\bdisfigured\b", r"\bmonster\b", r"\bdemacrad[oa]s?\b",
     ]
-    for pattern in palabras_antiguas:
+    for pattern in palabras_malas:
         prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
 
     prompt_base = re.sub(r"\s+", " ", prompt).strip()[:220]
 
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
-        "VERTICAL 9:16 portrait format, single solitary person in frame, exactly one person, "
-        "person occupies at most 20-25% of the frame (medium or wide shot), "
-        "MODERN 2026 ERA, contemporary setting, present day, current decade, "
-        "modern vehicles from 2020-2026, modern architecture, modern clothing, "
-        "LED lighting, modern technology visible, smartphones era, "
-        "clean well-maintained environments, new or recent buildings, "
-        "clean smooth skin, natural facial complexion with light skin tone, "
-        "attractive features, healthy appearance, no blemishes, no cloned faces, no duplicate people, "
-        "sharp focus, bright well-lit scene, no dark underexposed areas, "
-        "no text, no watermark"
+        "VERTICAL 9:16 portrait format, WIDE environmental establishing shot, "
+        "the ENVIRONMENT, objects and location are the main focal point (cars, trees, houses, streets, buildings, forests), "
+        "if a person appears they occupy AT MOST 20% of the frame, small and at distance, "
+        "EXACTLY ONE single person, NO clones, NO duplicates, NO twins, NO double faces, NO mirror faces, "
+        f"{EPOCA_MOD}, period-accurate vehicles, architecture, clothing and technology, "
+        "sharp focus, natural lighting, no text, no watermark"
     )
     return prompt_base + modificadores_calidad
 
@@ -310,13 +331,13 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - sin segmentos en el JSON)
+# 🎬 GENERAR HISTORIA (TEXTO CONTINUO + AÑO DE SUCESO)
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO + MINIATURAS PARA YOUTUBE 2026.
+    prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO + MINIATURAS PARA YOUTUBE.
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
@@ -329,31 +350,22 @@ PERSONAJE PRINCIPAL (FIJO):
 
 🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR
 FÓRMULA: [VERBO EN 1RA PERSONA] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
-✅ EJEMPLOS:
-- "Fui velador en Oaxaca y vi algo que no debí ver"
-- "Trabajé de noche en un manicomio de Puebla. Nunca volví."
-- "El GPS me llevó a un cenote que no existe en ningún mapa"
-❌ PROHIBIDOS: "El misterio de...", "La leyenda de...", "Relato de..."
 Longitud: 50-65 caracteres, primera persona, lugar específico de {UBICACION_HISTORIA}.
 
 🎯 REGLA CRÍTICA 2: MINIATURA DE ALTO CTR (HORIZONTAL 16:9)
 "palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
-✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ"
-❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
-
 "miniatura_prompt": PROMPT EN INGLÉS para miniatura HORIZONTAL 16:9 de terror de alto CTR:
 - Extreme close-up de un rostro mexicano aterrorizado con ojos muy abiertos
 - Detrás, una silueta fantasmal oscura con ojos brillantes
 - Ambientado en {UBICACION_HISTORIA}, alto contraste rojo/negro
 - Deja un área oscura limpia en el LADO DERECHO para texto
-- NO incluyas texto (se agrega después)
 
 🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
 Línea 1 (GANCHO, 150 chars): frase impactante con keyword + lugar
 Línea 2-3 (CONTEXTO): keywords long-tail naturales
 Línea 4 (CTA): "🔴 SUSCRÍBETE: {CANAL_LINK}"
 Línea 5 (CAPÍTULOS): 4-6 timestamps "00:00 - Título"
-Línea 6 (CRÉDITOS): "📱 Facebook: {FACEBOOK_LINK}" + disclaimer IA
+Línea 6 (CRÉDITOS): "📱 Facebook: {FACEBOOK_LINK}"
 Línea 7 (HASHTAGS): máx 5
 
 🎯 REGLA CRÍTICA 4: TAGS SEO (15-20, máx 500 chars)
@@ -372,6 +384,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
 {{
   "titulo": "Título SEO 1ra persona, 50-65 caracteres",
   "titulo_alternativo": "Segundo título con ángulo diferente",
+  "anio_suceso": 1995,
   "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
   "palabras_portada": "TEXTO GANCHO 2-3 palabras específico del relato",
   "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + créditos + hashtags)",
@@ -483,9 +496,9 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     for i in range(n):
         progreso = i / max(n - 1, 1)
         if progreso < 0.2:
-            etapa = "inicio_casa"; ubic = f"interior del hogar moderno en {ubicacion}"
+            etapa = "inicio_casa"; ubic = f"interior del hogar en {ubicacion}"
         elif progreso < 0.4:
-            etapa = "desplazamiento"; ubic = f"calle o vehículo moderno en movimiento, {ubicacion}"
+            etapa = "desplazamiento"; ubic = f"calle o vehículo en movimiento, {ubicacion}"
         elif progreso < 0.65:
             etapa = "lugar_destino"; ubic = f"lugar específico del suceso en {ubicacion}"
         elif progreso < 0.85:
@@ -497,7 +510,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN POR SEGMENTO (VERTICAL 9:16)
+# 🎨 GENERAR PROMPT DE IMAGEN POR SEGMENTO (Entorno + Época)
 # ================================================================
 def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None):
     contexto_previo = ""
@@ -505,7 +518,7 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, segm
         contexto_previo = f"\nPREVIOUS SCENE: The character was just in: '{segmento_anterior_texto[:120]}'"
 
     instrucciones_etapa = {
-        "inicio_casa": "Show the character in a modern home interior, establishing shot, calm before the events.",
+        "inicio_casa": "Show the character in a home interior, establishing shot, calm before the events.",
         "desplazamiento": "Show the character in movement (walking, driving), same route as previous scene, different camera angle.",
         "lugar_destino": "Show the character arriving at or exploring the main location, maintaining architectural consistency.",
         "climax_evento": "Show the paranormal event happening in this specific location, character reacting but NOT in close-up face.",
@@ -527,15 +540,15 @@ SCENE CONTINUITY INSTRUCTIONS:
 - Current stage: {etapa}
 - Current location: {ubicacion_escena}
 - DIRECTIVE: {instruccion}
+- ERA: {EPOCA_MOD} (Ensure all cars, technology, clothing, and architecture strictly match this specific time period).
 
 Reglas:
 - FORMATO: VERTICAL 9:16 (portrait), composición alta.
-- PLANO: Wide o medium shot. PROHIBIDO close-up de caras.
-- Personaje: {PERFIL_PERSONAJE}, ocupando máx 20-25% del encuadre.
+- ENFOQUE: El ENTORNO (bosques, casas, carros, calles) es el protagonista. 
+- Personaje: Si el texto lo menciona, incluye a {PERFIL_PERSONAJE}, pero ocupando MÁXIMO 20% del encuadre, pequeño y a la distancia. Si el texto NO menciona a la persona, NO la incluyas, solo muestra el entorno y los objetos.
 - Estilo: hyperrealistic photography, 4k, ultra-detailed.
 - Paleta: {PALETA_COLOR_ACTUAL}
-- ERA MODERNA 2026.
-- PROHIBIDO: abandoned, rusty, vintage, decayed, gore, blood.
+- PROHIBIDO: clones, duplicate people, two faces, split faces, gore, blood, text, watermarks.
 
 Devuelve SOLO el prompt en inglés, sin explicaciones.
 """
@@ -553,7 +566,7 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         return r.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Vertical 9:16 wide shot of modern {ubicacion_escena} in 2026, depicting: {segmento_texto[:100]}, no close-up face, single person"
+        return f"Vertical 9:16 wide shot of {ubicacion_escena}, depicting: {segmento_texto[:100]}, no close-up face, single person"
 
 # ================================================================
 # 🆕 EXPANDIR TEXTO (continuación)
@@ -595,24 +608,22 @@ def generar_imagen(prompt, width=1080, height=1920, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+    
+    # Negative prompt: Bloquea clones, deformaciones y texto. NO bloquea épocas pasadas.
     negative = (
         "multiple people, duplicate people, cloned faces, two people, three people, crowd, "
+        "dual face, split face, two faces, double face, mirror face, two heads, "
         "cut off body, cropped body, partial body, limbs outside frame, truncated person, "
         "deformed, mutated, bad anatomy, extra limbs, extra fingers, missing limbs, missing fingers, "
         "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
         "close-up face, portrait, headshot, person filling frame, face occupying more than 25% of image, "
         "gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, sickly, "
         "decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, "
-        "rusty, rusted, oxidized, weathered, aged, vintage, retro, antique, old-fashioned, "
-        "dilapidated, decrepit, run-down, crumbling, cracked walls, peeling paint, "
-        "deteriorated, abandoned ruins, moldy, mouldy, musty, dusty, cobwebs, spiderwebs, "
-        "classic car, old car, vintage car, retro car, horse carriage, "
-        "1950s, 1960s, 1970s, 1980s, 1990s, ancient, medieval, historical, "
-        "sepia tone, monochrome, black and white, film grain, "
+        "text, letters, words, watermarks, logos, signatures, "
         "floating objects, illogical elements, impossible physics, surreal impossibilities, "
         "ghost doubles, transparent figures, multiple versions of same person, "
         "dark, underexposed, low light, heavy shadows, too dark, "
-        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo, "
+        "over-saturated, oversharpened, low quality, blurry, "
         "broken, shattered, destroyed, post-apocalyptic, dystopian ruins"
     )
     payload = {
@@ -648,28 +659,27 @@ def generar_miniatura_con_texto(prompt_base, texto_portada, width=1280, height=7
     prompt_base = re.sub(r'"', "'", prompt_base or "")
     prompt_base = re.sub(r"\n+", " ", prompt_base)
 
-    prompt_final = f"""{prompt_base}, {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, 16:9 widescreen HORIZONTAL YouTube thumbnail, cinematic horror style, high contrast dramatic lighting, sharp focus, modern 2026 era.
+    prompt_final = f"""{prompt_base}, {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, 16:9 widescreen HORIZONTAL YouTube thumbnail, cinematic horror style, high contrast dramatic lighting, sharp focus, {EPOCA_MOD}.
 
 TEXT OVERLAY (CRITICAL REQUIREMENT):
 - Render the EXACT Spanish text: "{texto_portada}"
-- Style: huge bold capital letters, bright yellow fill, thick black outline, subtle drop shadow
-- Position: right side of the frame, vertically centered, over a dark clean area
-- The text MUST fit entirely inside the frame with safe margins, never cut off or overflowing the edges
-- Spelling MUST be EXACT, character by character: "{texto_portada}". NO typos, NO extra letters, NO missing letters, NO distorted characters
-- Maximum 2 lines if needed
+- Style: bold, highly readable horror-themed typography, bright yellow or stark white fill, thick black outline, subtle drop shadow.
+- Size: Medium-large but strictly proportional. The text height must NOT exceed 25% of the image height.
+- Position: right side of the frame, vertically centered, over a dark clean area.
+- The text MUST fit entirely inside the frame with safe margins, never cut off, never overflowing, never touching the edges.
+- Spelling MUST be EXACT, character by character: "{texto_portada}". NO typos, NO extra letters.
+- Maximum 2 lines if needed.
 
 NO other text, NO watermarks, NO logos."""
 
     negative = (
         "misspelled text, wrong spelling, typo, distorted letters, garbled text, broken characters, "
-        "cut off text, text outside frame, text touching edges, overflowing text, oversized text, "
-        "multiple people, duplicate people, cloned faces, "
+        "cut off text, text outside frame, text touching edges, overflowing text, oversized text, giant letters, "
+        "multiple people, duplicate people, cloned faces, dual face, split face, "
         "deformed, mutated, bad anatomy, extra limbs, "
         "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
         "gore, blood, wounds, gaunt, emaciated, zombie-like, corpse-like, "
-        "rusty, vintage, retro, antique, dilapidated, "
-        "1950s, 1960s, 1970s, 1980s, 1990s, sepia, monochrome, "
-        "low quality, blurry, watermark, logo"
+        "low quality, blurry, watermark, logo, text other than the requested"
     )
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -911,6 +921,11 @@ def main():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     historia = generar_historia_completa()
+    
+    # 🆕 Extraer año y actualizar época visual antes de generar imágenes
+    anio = historia.get("anio_suceso", None)
+    actualizar_epoca(anio)
+
     titulo_video = historia.get("titulo", "Relato Paranormal Real")
     palabras_portada = historia.get("palabras_portada", "LO VI")
     descripcion_video = historia.get("descripcion", f"Relato paranormal.\n\n{FACEBOOK_LINK}")
