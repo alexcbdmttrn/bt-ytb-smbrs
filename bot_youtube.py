@@ -246,7 +246,7 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (segmentos, sin texto)
+# 🧼 LIMPIADOR DE PROMPTS (VERTICAL 9:16 para segmentos)
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -279,7 +279,7 @@ def limpiar_prompt(prompt):
 
     modificadores_calidad = (
         f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
-        "16:9 widescreen format, single solitary person in frame, exactly one person, "
+        "VERTICAL 9:16 portrait format, single solitary person in frame, exactly one person, "
         "person occupies at most 20-25% of the frame (medium or wide shot), "
         "MODERN 2026 ERA, contemporary setting, present day, current decade, "
         "modern vehicles from 2020-2026, modern architecture, modern clothing, "
@@ -336,12 +336,12 @@ FÓRMULA: [VERBO EN 1RA PERSONA] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
 ❌ PROHIBIDOS: "El misterio de...", "La leyenda de...", "Relato de..."
 Longitud: 50-65 caracteres, primera persona, lugar específico de {UBICACION_HISTORIA}.
 
-🎯 REGLA CRÍTICA 2: MINIATURA DE ALTO CTR
+🎯 REGLA CRÍTICA 2: MINIATURA DE ALTO CTR (HORIZONTAL 16:9)
 "palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
 ✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ"
 ❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
 
-"miniatura_prompt": PROMPT EN INGLÉS para miniatura de terror de alto CTR:
+"miniatura_prompt": PROMPT EN INGLÉS para miniatura HORIZONTAL 16:9 de terror de alto CTR:
 - Extreme close-up de un rostro mexicano aterrorizado con ojos muy abiertos
 - Detrás, una silueta fantasmal oscura con ojos brillantes
 - Ambientado en {UBICACION_HISTORIA}, alto contraste rojo/negro
@@ -376,7 +376,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
   "palabras_portada": "TEXTO GANCHO 2-3 palabras específico del relato",
   "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + créditos + hashtags)",
   "tags": "15-20 tags separados por coma (máx 500 caracteres)",
-  "miniatura_prompt": "YouTube horror thumbnail: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, dark clean area on the right side for text",
+  "miniatura_prompt": "YouTube horror thumbnail 16:9: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, dark clean area on the right side for text",
   "capitulos": [
     {{"tiempo": "00:00", "titulo": "Capítulo 1"}},
     {{"tiempo": "02:15", "titulo": "Capítulo 2"}},
@@ -450,7 +450,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     sys.exit(1)
 
 # ================================================================
-# 🆕 DIVIDIR TEXTO EN SEGMENTOS (por código, no por el modelo)
+# 🆕 DIVIDIR TEXTO EN SEGMENTOS (por código)
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -474,7 +474,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-#  ASIGNAR ETAPAS VISUALES A SEGMENTOS
+# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -497,7 +497,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN POR SEGMENTO (llama a DeepSeek)
+# 🎨 GENERAR PROMPT DE IMAGEN POR SEGMENTO (VERTICAL 9:16)
 # ================================================================
 def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None):
     contexto_previo = ""
@@ -521,7 +521,7 @@ Fragmento del relato:
 \"\"\"
 {contexto_previo}
 
-Genera un PROMPT DE IMAGEN EN INGLÉS para una foto 16:9 de esta escena.
+Genera un PROMPT DE IMAGEN EN INGLÉS para una foto VERTICAL (9:16) de esta escena.
 
 SCENE CONTINUITY INSTRUCTIONS:
 - Current stage: {etapa}
@@ -529,6 +529,7 @@ SCENE CONTINUITY INSTRUCTIONS:
 - DIRECTIVE: {instruccion}
 
 Reglas:
+- FORMATO: VERTICAL 9:16 (portrait), composición alta.
 - PLANO: Wide o medium shot. PROHIBIDO close-up de caras.
 - Personaje: {PERFIL_PERSONAJE}, ocupando máx 20-25% del encuadre.
 - Estilo: hyperrealistic photography, 4k, ultra-detailed.
@@ -552,7 +553,7 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         return r.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
         print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Wide shot of modern {ubicacion_escena} in 2026, depicting: {segmento_texto[:100]}, no close-up face, single person"
+        return f"Vertical 9:16 wide shot of modern {ubicacion_escena} in 2026, depicting: {segmento_texto[:100]}, no close-up face, single person"
 
 # ================================================================
 # 🆕 EXPANDIR TEXTO (continuación)
@@ -588,9 +589,9 @@ Devuelve SOLO el texto de continuación, sin título ni explicaciones.
     return ""
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN (segmentos)
+# 🖼️ GENERAR IMAGEN VERTICAL (segmentos 1080x1920)
 # ================================================================
-def generar_imagen(prompt, width=2048, height=1152, intentos=3):
+def generar_imagen(prompt, width=1080, height=1920, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -624,7 +625,7 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     }
     for intento in range(intentos):
         try:
-            print(f"🖼️ Intento {intento+1}/{intentos} generando imagen...")
+            print(f"🖼️ Intento {intento+1}/{intentos} generando imagen VERTICAL...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
@@ -637,7 +638,7 @@ def generar_imagen(prompt, width=2048, height=1152, intentos=3):
     return None
 
 # ================================================================
-# 🖼️ MINIATURA CON TEXTO INTEGRADO (Agnes dibuja el texto)
+# 🖼️ MINIATURA HORIZONTAL CON TEXTO INTEGRADO (1280x720)
 # ================================================================
 def generar_miniatura_con_texto(prompt_base, texto_portada, width=1280, height=720, intentos=5):
     texto_portada = (texto_portada or "LO VI").upper().strip()
@@ -647,7 +648,7 @@ def generar_miniatura_con_texto(prompt_base, texto_portada, width=1280, height=7
     prompt_base = re.sub(r'"', "'", prompt_base or "")
     prompt_base = re.sub(r"\n+", " ", prompt_base)
 
-    prompt_final = f"""{prompt_base}, {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, 16:9 widescreen YouTube thumbnail, cinematic horror style, high contrast dramatic lighting, sharp focus, modern 2026 era.
+    prompt_final = f"""{prompt_base}, {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, 16:9 widescreen HORIZONTAL YouTube thumbnail, cinematic horror style, high contrast dramatic lighting, sharp focus, modern 2026 era.
 
 TEXT OVERLAY (CRITICAL REQUIREMENT):
 - Render the EXACT Spanish text: "{texto_portada}"
@@ -682,7 +683,7 @@ NO other text, NO watermarks, NO logos."""
     }
     backoff = [5, 10, 15, 20, 25]
     for intento in range(intentos):
-        print(f"🖼️ Intento {intento+1}/{intentos} miniatura con texto '{texto_portada}'...")
+        print(f"🖼️ Intento {intento+1}/{intentos} miniatura HORIZONTAL con texto '{texto_portada}'...")
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
@@ -733,7 +734,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# 🎬 MONTAR VIDEO
+# 🎬 MONTAR VIDEO VERTICAL (1080x1920)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []; clips_audio = []
@@ -747,7 +748,7 @@ def montar_video(elementos, salida="video_final.mp4"):
             with open(img_path, "wb") as f:
                 f.write(r.content)
             with Image.open(img_path) as img:
-                ImageOps.fit(img, (1920, 1080), Image.LANCZOS).save(img_path)
+                ImageOps.fit(img, (1080, 1920), Image.LANCZOS).save(img_path)
             if duracion > 35:
                 duracion_mitad = duracion / 2
                 clips_video.extend([ImageClip(img_path, duration=duracion_mitad), ImageClip(img_path, duration=duracion_mitad)])
@@ -860,7 +861,7 @@ def marcar_publicacion_exitosa():
     guardar_estado_musica(estado)
 
 # ================================================================
-# 🎬 PROCESAR SEGMENTOS (imágenes + audio)
+# 🎬 PROCESAR SEGMENTOS (imágenes verticales + audio)
 # ================================================================
 def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
     elementos = []
@@ -904,7 +905,7 @@ def main():
         print("✅ Ya se publicó hoy. Saliendo.")
         sys.exit(0)
 
-    print(f"🎬 Bot YouTube | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎬 Bot YouTube VERTICAL | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -921,10 +922,9 @@ def main():
     print(f"   🏷️ Título: {titulo_video}")
     print(f"   🖼️ Texto miniatura: {palabras_portada}")
 
-    # Dividir en segmentos POR CÓDIGO (nunca falla por tokens)
     segmentos = dividir_en_segmentos(texto_completo, 55)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, UBICACION_HISTORIA)
-    print(f"\n🎨 {len(segmentos)} segmentos divididos por código.")
+    print(f"\n🎨 {len(segmentos)} segmentos divididos por código (imágenes VERTICALES).")
 
     elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, offset=0)
 
@@ -935,7 +935,6 @@ def main():
     duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
     print(f"⏱️ Duración: {duracion_actual/60:.1f} minutos")
 
-    # Expansión si falta duración
     intentos_expansion = 0
     while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
         print(f"⚠️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
@@ -956,7 +955,7 @@ def main():
         sys.exit(1)
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    print("🖼️ Generando miniatura con texto integrado (Agnes)...")
+    print("🖼️ Generando miniatura HORIZONTAL con texto integrado (Agnes)...")
     miniatura_path = "miniatura.jpg"
     miniatura_url = generar_miniatura_con_texto(historia.get("miniatura_prompt", "Terrified face with ghostly silhouette"), palabras_portada)
     if miniatura_url:
@@ -967,14 +966,14 @@ def main():
                 f.write(r.content)
             with Image.open(miniatura_path) as img:
                 ImageOps.fit(img, (1280, 720), Image.LANCZOS).save(miniatura_path)
-            print(f"✅ Miniatura con texto '{palabras_portada}' lista.")
+            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' lista.")
         except Exception as e:
             print(f"⚠️ Error miniatura: {e}")
             miniatura_path = None
     else:
         miniatura_path = None
 
-    print("🎬 Montando video...")
+    print("🎬 Montando video VERTICAL...")
     video_path, duracion_final = montar_video(elementos_validos)
     print(f"⏱️ Duración final: {duracion_final/60:.1f} minutos")
 
@@ -984,7 +983,7 @@ def main():
     guardar_titulo_largo(titulo_video)
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado.")
+    print("🎉 Proceso completado (video vertical + miniatura horizontal).")
 
 if __name__ == "__main__":
     try:
