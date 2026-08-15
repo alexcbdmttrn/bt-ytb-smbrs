@@ -398,14 +398,14 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🖼️ PORTADA VERTICAL CON TEXTO INTEGRADO (Agnes dibuja el texto)
+# 🖼️ PORTADA VERTICAL CON TEXTO CHICO Y CENTRADO (Agnes dibuja el texto)
 # ================================================================
 def generar_portada_shorts(texto_portada, intentos=4):
-    """Genera portada vertical 9:16 con el texto gancho dibujado por Agnes DENTRO del marco."""
+    """Genera portada vertical 9:16 con el texto gancho dibujado por Agnes, CHICO y CENTRADO."""
     texto_portada = (texto_portada or "LO VI").upper().strip()
     palabras = texto_portada.split()
-    if len(palabras) > 3:
-        texto_portada = " ".join(palabras[:3])
+    if len(palabras) > 2:
+        texto_portada = " ".join(palabras[:2])
     
     ubicacion = ESTADO_HISTORIA_SHORTS
     paleta = PALETA_COLOR_ACTUAL
@@ -414,17 +414,19 @@ def generar_portada_shorts(texto_portada, intentos=4):
 
 TEXT OVERLAY (CRITICAL REQUIREMENT):
 - Render the EXACT Spanish text: "{texto_portada}"
-- Style: huge bold capital letters, bright yellow fill, thick black outline, subtle drop shadow
-- Position: BOTTOM CENTER of the vertical frame, over a dark clean area, keeping the terrified face visible at the top
-- The text MUST fit entirely INSIDE the vertical frame with safe margins on all sides: never cut off, never overflowing, never touching the edges, never rotated
+- Style: bold capital letters, bright yellow fill, thin black outline, subtle drop shadow
+- Size: SMALL and compact, the text height must be only about 6-8% of the image height, so it fits with plenty of empty margin around it
+- Position: horizontally CENTERED, in the LOWER THIRD of the vertical frame, over a dark clean area, keeping the terrified face clearly visible at the top
+- The text MUST fit entirely INSIDE the vertical frame with LARGE safe margins on all sides: never cut off, never overflowing, never touching the edges, never rotated, never filling the frame
 - Spelling MUST be EXACT, character by character: "{texto_portada}". NO typos, NO extra letters, NO missing letters, NO distorted characters
-- Maximum 2 lines, centered horizontally
+- Keep it in ONE single short line if possible; otherwise maximum 2 short centered lines
 
 NO other text, NO watermarks, NO logos."""
     
     negative = (
+        "oversized text, huge text, giant letters, text filling the frame, "
         "misspelled text, wrong spelling, typo, distorted letters, garbled text, broken characters, "
-        "cut off text, text outside frame, text touching edges, overflowing text, oversized text, "
+        "cut off text, text outside frame, text touching edges, overflowing text, "
         "text rotated, text sideways, text at top covering face, "
         "multiple people, duplicate people, cloned faces, deformed, mutated, bad anatomy, "
         "asymmetrical eyes, uncanny valley, gore, blood, wounds, zombie-like, corpse-like, "
@@ -444,7 +446,7 @@ NO other text, NO watermarks, NO logos."""
     }
     for intento in range(intentos):
         try:
-            print(f"🖼️ Intento {intento+1}/{intentos} portada vertical con texto '{texto_portada}'...")
+            print(f"🖼️ Intento {intento+1}/{intentos} portada vertical texto chico '{texto_portada}'...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
@@ -551,8 +553,8 @@ FÓRMULA: [VERBO EN 1RA PERSONA / PALABRA DE IMPACTO] + [LUGAR ESPECÍFICO] + [G
 Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTORIA_SHORTS}.
 
 🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA (texto gancho del primer frame)
-"palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
-✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ"
+"palabras_portada": TEXTO GANCHO de MÁXIMO 2 palabras cortas (para que quepan en la imagen vertical chica).
+✅ EJEMPLOS: "LO VI", "ME SIGUIÓ", "NO ENTRES", "3:33 AM", "JAMÁS VOLVÍ", "NO ERA HUMANO", "NO ESTABA SOLO"
 ❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
 
 🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
@@ -590,7 +592,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
   "contexto_descripcion": "1 oración con contexto y keywords",
   "fuente_relato": "Basado en un testimonio/leyenda real de ...",
   "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
-  "palabras_portada": "TEXTO GANCHO 2-3 palabras específicas del relato",
+  "palabras_portada": "TEXTO GANCHO máximo 2 palabras cortas",
   "tags": "10-15 tags separados por coma (máximo 480 caracteres)"
 }}
 """
