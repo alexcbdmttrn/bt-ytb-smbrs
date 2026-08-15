@@ -43,6 +43,12 @@ TITULOS_FILE = "titulos_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 
 # ================================================================
+# 🤖 DISCLOSURE DE IA (transparencia)
+# ================================================================
+ACTIVAR_DISCLOSURE_IA = True
+DISCLOSURE_TEXT = "\n\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
+
+# ================================================================
 # 🎤 VOCES NEURALES VÁLIDAS
 # ================================================================
 VOCES_DISPONIBLES = [
@@ -392,34 +398,45 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🖼️ PORTADA VERTICAL DE ALTO CTR (primer frame del Short)
+# 🖼️ PORTADA VERTICAL CON TEXTO INTEGRADO (Agnes dibuja el texto)
 # ================================================================
-def generar_portada_shorts(historia_raw, intentos=4):
-    """Genera una portada vertical 9:16 llamativa (rostro aterrado + silueta)."""
+def generar_portada_shorts(texto_portada, intentos=4):
+    """Genera portada vertical 9:16 con el texto gancho dibujado por Agnes DENTRO del marco."""
+    texto_portada = (texto_portada or "LO VI").upper().strip()
+    palabras = texto_portada.split()
+    if len(palabras) > 3:
+        texto_portada = " ".join(palabras[:3])
+    
     ubicacion = ESTADO_HISTORIA_SHORTS
     paleta = PALETA_COLOR_ACTUAL
-    prompt = (
-        f"YouTube Shorts horror cover, vertical 9:16: extreme close-up of a terrified Mexican face "
-        f"with wide scared eyes and open mouth screaming silently, behind a dark ghostly silhouette "
-        f"with glowing red eyes, set in {ubicacion} at night, high contrast dramatic lighting, "
-        f"saturated deep red and black color grading, cinematic horror style, sharp focus, "
-        f"empty space at the BOTTOM for text overlay, no text, no watermark, "
-        f"color palette of {paleta}, modern 2026 era"
-    )
-    # Limpieza ligera (NO usar limpiar_prompt_base porque forzaría plano abierto)
-    prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
+    
+    prompt_final = f"""YouTube Shorts horror cover, vertical 9:16: extreme close-up of a terrified Mexican face with wide scared eyes and open mouth screaming silently, behind a dark ghostly silhouette with glowing red eyes, set in {ubicacion} at night, high contrast dramatic lighting, saturated deep red and black color grading, cinematic horror style, sharp focus, color palette of {paleta}, modern 2026 era.
 
-    url = "https://apihub.agnes-ai.com/v1/images/generations"
-    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
+TEXT OVERLAY (CRITICAL REQUIREMENT):
+- Render the EXACT Spanish text: "{texto_portada}"
+- Style: huge bold capital letters, bright yellow fill, thick black outline, subtle drop shadow
+- Position: BOTTOM CENTER of the vertical frame, over a dark clean area, keeping the terrified face visible at the top
+- The text MUST fit entirely INSIDE the vertical frame with safe margins on all sides: never cut off, never overflowing, never touching the edges, never rotated
+- Spelling MUST be EXACT, character by character: "{texto_portada}". NO typos, NO extra letters, NO missing letters, NO distorted characters
+- Maximum 2 lines, centered horizontally
+
+NO other text, NO watermarks, NO logos."""
+    
     negative = (
+        "misspelled text, wrong spelling, typo, distorted letters, garbled text, broken characters, "
+        "cut off text, text outside frame, text touching edges, overflowing text, oversized text, "
+        "text rotated, text sideways, text at top covering face, "
         "multiple people, duplicate people, cloned faces, deformed, mutated, bad anatomy, "
         "asymmetrical eyes, uncanny valley, gore, blood, wounds, zombie-like, corpse-like, "
         "rusty, vintage, retro, antique, dilapidated, sepia, monochrome, "
-        "low quality, blurry, text, watermark, logo"
+        "low quality, blurry, watermark, logo"
     )
+    
+    url = "https://apihub.agnes-ai.com/v1/images/generations"
+    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "agnes-image-2.1-flash",
-        "prompt": prompt[:800],
+        "prompt": prompt_final[:1000],
         "negative_prompt": negative,
         "width": 1080,
         "height": 1920,
@@ -427,7 +444,7 @@ def generar_portada_shorts(historia_raw, intentos=4):
     }
     for intento in range(intentos):
         try:
-            print(f"🖼️ Intento {intento+1}/{intentos} portada vertical...")
+            print(f"🖼️ Intento {intento+1}/{intentos} portada vertical con texto '{texto_portada}'...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
@@ -435,62 +452,6 @@ def generar_portada_shorts(historia_raw, intentos=4):
             print(f"⚠️ Error portada: {e}")
         time.sleep(6)
     return None
-
-# ================================================================
-# ✍️ TEXTO GANCHO SOBRE LA PORTADA VERTICAL
-# ================================================================
-def agregar_texto_portada_vertical(img_path, texto):
-    if not texto:
-        texto = "LO VI"
-    texto = texto.upper().strip()
-    try:
-        with Image.open(img_path) as img:
-            img = img.convert("RGBA")
-            w, h = img.size
-
-            palabras = texto.split()
-            if len(palabras) > 2:
-                mid = len(palabras) // 2
-                lineas = [" ".join(palabras[:mid]), " ".join(palabras[mid:])]
-            else:
-                lineas = [texto]
-
-            font_size = int(h * 0.09)
-            try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-            except Exception:
-                try:
-                    font = ImageFont.truetype("arial.ttf", font_size)
-                except Exception:
-                    font = ImageFont.load_default()
-
-            draw = ImageDraw.Draw(img)
-            line_dims = []
-            total_h = 0
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                lw = bbox[2] - bbox[0]; lh = bbox[3] - bbox[1]
-                line_dims.append((lw, lh)); total_h += lh
-            spacing = int(font_size * 0.2)
-            total_h += spacing * (len(lineas) - 1)
-
-            # Posición: zona INFERIOR (no tapa el rostro)
-            y = h - total_h - int(h * 0.12)
-            stroke_w = max(6, int(font_size * 0.12))
-
-            for i, linea in enumerate(lineas):
-                lw, lh = line_dims[i]
-                x = (w - lw) // 2
-                for ox in range(-stroke_w, stroke_w + 1):
-                    for oy in range(-stroke_w, stroke_w + 1):
-                        draw.text((x + ox, y + oy), linea, font=font, fill=(0, 0, 0, 255))
-                draw.text((x, y), linea, font=font, fill=(255, 215, 0, 255))
-                y += lh + spacing
-
-            img.convert("RGB").save(img_path)
-            print(f"✅ Texto portada vertical: '{texto}'")
-    except Exception as e:
-        print(f"⚠️ Error texto portada: {e}")
 
 # ================================================================
 # 🆕 EXPANDIR TEXTO CORTO
@@ -580,86 +541,36 @@ AMBIENTACIÓN ACTUAL 2026: tecnología moderna, vehículos actuales, ropa modern
 4. TWIST FINAL (30-40 palabras)
 
 🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR (lo más importante)
-
-El título DEBE seguir esta FÓRMULA GANADORA:
-[VERBO EN 1RA PERSONA / PALABRA DE IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
-
-✅ EJEMPLOS DE TÍTULOS GANADORES (usa este estilo):
+FÓRMULA: [VERBO EN 1RA PERSONA / PALABRA DE IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
+✅ EJEMPLOS:
 - "Vi algo en la carretera de Zacatecas que no era humano"
 - "Escuché mi nombre en un pueblo abandonado de Puebla"
 - "El Uber me dejó en un lugar que no existe en el mapa"
 - "Trabajé de velador 1 noche en Monterrey. No volví jamás."
-- "Encontré esto en el sótano de mi casa en Guadalajara"
-- "El GPS me llevó a una carretera que no existe en Querétaro"
-- "Fui trailero en Sonora y nunca más volví a esa ruta"
-- "Escuché a mi hija llamarme. Llevaba 3 años muerta."
+❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "Una noche en...", "El misterio de..."
+Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTORIA_SHORTS}.
 
-❌ TÍTULOS PROHIBIDOS (no los uses):
-- "La leyenda de..." / "El fantasma de..." / "Historia de..."
-- "Una noche en..." / "La casa de..." / "El misterio de..."
-- Títulos que suenen a documental o libro
-- Títulos con más de 75 caracteres
-
-REGLAS DEL TÍTULO:
-- Longitud EXACTA: 55-75 caracteres
-- DEBE estar en primera persona o empezar con palabra de impacto (Vi, Escuché, Encontré, Fui, Trabajé, No debí, Jamás)
-- DEBE tener un lugar específico de {ESTADO_HISTORIA_SHORTS}
-- DEBE generar curiosidad extrema en 3 segundos
-- DEBE sonar a testimonio REAL, no a ficción
-
-🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA (texto gancho en primer frame)
-
+🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA (texto gancho del primer frame)
 "palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
-✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ", "NO ERA MI HIJA"
+✅ EJEMPLOS: "LO VI EN EL ESPEJO", "NO ESTABA SOLO", "ME SIGUIÓ", "NO ERA HUMANO", "3:33 AM", "NO ENTRES", "JAMÁS VOLVÍ"
 ❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
-El texto debe reflejar el momento MÁS impactante del relato.
 
 🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
+Línea 1 (GANCHO, máx 90 chars): keyword principal + {ESTADO_HISTORIA_SHORTS}
+Línea 2 (CONTEXTO): keywords long-tail
+Línea 3 (CTA): "🔴 RELATO COMPLETO en el canal: {CANAL_LINK}"
+Línea 4 (FUENTE): "📖 Basado en un testimonio real compartido en internet."
+Línea 5 (FACEBOOK): "📱 Síguenos: {FACEBOOK_LINK}"
+Línea 6 (HASHTAGS): máx 5
 
-La descripción DEBE tener esta ESTRUCTURA EXACTA (con saltos de línea reales):
+🎯 REGLA CRÍTICA 4: TAGS SEO (10-15, máx 480 chars)
+- 2-3 específicos del lugar y fenómeno
+- 4-5 long-tail
+- 3-4 tendencia
+- 2-3 geográficos
 
-Línea 1 (GANCHO SEO - las primeras 90 chars son críticas):
-"[Frase impactante corta con keyword principal + {ESTADO_HISTORIA_SHORTS}]"
-
-Línea 2 (CONTEXTO con keywords long-tail):
-"[1 oración con palabras clave naturales: 'terror en {ESTADO_HISTORIA_SHORTS}', 'testimonio real', 'experiencia paranormal real']"
-
-Línea 3 (CTA al canal):
-"🔴 RELATO COMPLETO en el canal: {CANAL_LINK}"
-
-Línea 4 (FUENTE):
-"📖 Basado en un testimonio real compartido en internet."
-
-Línea 5 (FACEBOOK):
-"📱 Síguenos: {FACEBOOK_LINK}"
-
-Línea 6 (HASHTAGS - máximo 5):
-"#Shorts #TerrorEn{ESTADO_HISTORIA_SHORTS.replace(' ', '')} #RelatosReales #Paranormal #MiedoReal"
-
-🎯 REGLA CRÍTICA 4: TAGS SEO (10-15 tags, máximo 480 caracteres)
-
-Los tags DEBEN incluir:
-- 2-3 tags específicos del lugar y fenómeno
-- 4-5 tags long-tail (búsquedas comunes en shorts de terror)
-- 3-4 tags de tendencia (shorts terror, miedo, suspenso)
-- 2-3 tags geográficos
-
-EJEMPLOS DE TAGS CORRECTOS:
-"shorts terror, terror en {ESTADO_HISTORIA_SHORTS.lower()}, relatos reales de terror, testimonios paranormales reales, miedo real, historias cortas de terror, suspenso real, miedo nocturno, leyendas urbanas México, casos paranormales reales, experiencias sobrenaturales, historias reales de fantasmas, terror mexicano"
-
-🎯 REGLA CRÍTICA 5: PALABRAS CLAVE PRINCIPALES
-
-Define 2-3 palabras clave principales que usarás en:
-- Título
-- Primera línea de descripción
-- Tags
-- Primeros 10 segundos del relato
-
-Ejemplos: "terror en {ESTADO_HISTORIA_SHORTS}", "testimonio paranormal real", "experiencia sobrenatural"
-
-🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (para A/B testing)
-
-Genera un SEGUNDO título siguiendo las mismas reglas, pero con diferente ángulo emocional (uno con miedo, otro con curiosidad, otro con misterio).
+🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3)
+🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
@@ -793,11 +704,9 @@ Devuelve ESTRICTAMENTE este JSON válido:
             hashtags_descripcion = "#Shorts #TerrorEn" + ESTADO_HISTORIA_SHORTS.replace(" ", "") + " #RelatosReales #Paranormal #MiedoReal"
             data["hashtags_descripcion"] = hashtags_descripcion
 
-            # 🆕 Log SEO
             print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
-            print(f"   🔄 Alternativo: {data.get('titulo_alternativo', 'N/A')}")
-            print(f"   🔑 Keywords: {data.get('palabras_clave', [])}")
             print(f"   🖼️ Portada: {data.get('palabras_portada', 'N/A')}")
+            print(f"   🔑 Keywords: {data.get('palabras_clave', [])}")
             print(f"   📖 Fuente: {data['fuente_relato']}")
             print(f"   🏷️ Tags generados: {len(tags_final)}")
             
@@ -1347,6 +1256,10 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
 
 {hashtags_descripcion}"""
 
+    # 🆕 Agregar disclosure de IA si está activado
+    if ACTIVAR_DISCLOSURE_IA:
+        descripcion += DISCLOSURE_TEXT
+
     body = {
         "snippet": {
             "title": titulo,
@@ -1544,9 +1457,9 @@ def main():
         print("❌ Error generando recursos para los segmentos. Abortando.")
         sys.exit(1)
 
-    # 🆕 PORTADA: el primer frame del Short será la imagen llamativa
-    print("\n🖼️ Generando portada vertical de alto CTR (primer frame)...")
-    portada_url = generar_portada_shorts(historia_raw)
+    # 🆕 PORTADA: Agnes dibuja el texto DENTRO del marco vertical
+    print("\n🖼️ Generando portada vertical con texto integrado (Agnes)...")
+    portada_url = generar_portada_shorts(historia_raw.get("palabras_portada", "LO VI"))
     if portada_url and recursos:
         try:
             r = requests.get(portada_url, timeout=30)
@@ -1556,10 +1469,8 @@ def main():
                 f.write(r.content)
             with Image.open(portada_path) as img:
                 ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS).save(portada_path)
-            agregar_texto_portada_vertical(portada_path, historia_raw.get("palabras_portada", "LO VI"))
-            # Reemplazar la imagen del PRIMER segmento por la portada
             recursos[0]["imagen_url"] = portada_path
-            print("✅ Portada aplicada como PRIMER frame del Short.")
+            print("✅ Portada con texto integrada aplicada como PRIMER frame del Short.")
         except Exception as e:
             print(f"⚠️ Error aplicando portada: {e}")
     else:
