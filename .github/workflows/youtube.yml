@@ -50,6 +50,7 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           YOUTUBE_USER_TOKEN: ${{ secrets.YOUTUBE_USER_TOKEN }}
+          FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python bot_youtube.py
 
       - name: Commit y push del estado de música
