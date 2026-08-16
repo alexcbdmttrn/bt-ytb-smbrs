@@ -928,9 +928,15 @@ def verificar_envs():
 
 def main():
     verificar_envs()
-    if verificar_publicacion_hoy():
-        print("✅ Ya se publicó hoy. Saliendo.")
-        sys.exit(0)
+
+    # 🔥 NUEVO: si es ejecución manual (FORCE_PUBLISH=true), saltamos la verificación diaria
+    if os.getenv("FORCE_PUBLISH") == "true":
+        print("🚀 FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
+    else:
+        if verificar_publicacion_hoy():
+            print("✅ Ya se publicó hoy. Saliendo.")
+            sys.exit(0)
+
     print(f"🎬 Bot YouTube VERTICAL | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
