@@ -17,7 +17,7 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
 )
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
 
@@ -324,7 +324,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - fix error tokens)
+# 🎬 GENERAR HISTORIA (TEXTO CONTINUO)
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
@@ -358,11 +358,11 @@ Longitud: 50-65 caracteres, primera persona, lugar específico de {UBICACION_HIS
 "palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
 ✅ EJEMPLOS: "LO VI", "ME SIGUIÓ", "NO ENTRES", "3:33 AM", "JAMÁS VOLVÍ", "NO ERA HUMANO"
 ❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
-"miniatura_prompt": PROMPT EN INGLÉS para miniatura HORIZONTAL 16:9 de terror de alto CTR:
+"miniatura_prompt": PROMPT EN INGLÉS para la imagen BASE de la miniatura (SIN texto, solo la escena visual):
 - Rostro aterrorizado con ojos muy abiertos, detrás una silueta fantasmal con ojos brillantes
 - Ambientado en {UBICACION_HISTORIA}, alto contraste rojo/negro
-- Espacio limpio en el LADO DERECHO para texto
-- SIN texto (se agrega después)
+- Composición HORIZONTAL 16:9, espacio en el lado derecho para texto (que se añadirá después)
+- NO incluir texto en el prompt, la imagen debe estar limpia
 
 🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
 Línea 1 (GANCHO, 150 chars): frase impactante con keyword + lugar
@@ -399,7 +399,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
   "palabras_portada": "TEXTO GANCHO 2-3 palabras específico del relato",
   "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + créditos + hashtags)",
   "tags": "15-20 tags separados por coma (máx 500 caracteres)",
-  "miniatura_prompt": "YouTube horror thumbnail 16:9: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, dark clean area on the right side for text",
+  "miniatura_prompt": "YouTube horror thumbnail 16:9 scene: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, dark clean area on the right side for text, no text, no watermark",
   "capitulos": [
     {{"tiempo": "00:00", "titulo": "Capítulo 1"}},
     {{"tiempo": "02:15", "titulo": "Capítulo 2"}},
@@ -654,59 +654,163 @@ def generar_imagen(prompt, width=1080, height=1920, intentos=3):
     return None
 
 # ================================================================
-# 🖼️ MINIATURA HORIZONTAL CON TEXTO MEDIANO (Agnes dibuja, no gigante)
+# 🖼️ GENERAR MINIATURA BASE (SIN TEXTO) - para luego añadir texto con PIL
 # ================================================================
-def generar_miniatura_con_texto(prompt_base, texto_portada, width=1280, height=720, intentos=5):
-    texto_portada = (texto_portada or "LO VI").upper().strip()
-    palabras = texto_portada.split()
-    if len(palabras) > 3:
-        texto_portada = " ".join(palabras[:3])
-    prompt_base = re.sub(r'"', "'", prompt_base or "")
-    prompt_base = re.sub(r"\n+", " ", prompt_base)
-    prompt_final = f"""{prompt_base}, {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, 16:9 widescreen HORIZONTAL YouTube thumbnail, cinematic horror style, high contrast dramatic lighting, sharp focus, {EPOCA_MOD}.
-
-TEXT OVERLAY (CRITICAL REQUIREMENT):
-- Render the EXACT Spanish text: "{texto_portada}"
-- Style: bold capital letters, bright yellow fill, thin black outline, subtle drop shadow
-- Size: MEDIUM and compact, the text height must be only about 10-12% of the image height, so it fits with plenty of empty margin around it, NOT giant, NOT huge
-- Position: right side of the frame, vertically centered, over a dark clean area
-- The text MUST fit entirely INSIDE the frame with safe margins on all sides: never cut off, never overflowing, never touching the edges, never rotated
-- Spelling MUST be EXACT, character by character: "{texto_portada}". NO typos, NO extra letters, NO missing letters, NO distorted characters
-- Maximum 2 short lines if needed
-NO other text, NO watermarks, NO logos."""
+def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
+    """
+    Genera la imagen base de la miniatura (sin texto) usando Agnes.
+    """
+    prompt_limpio = limpiar_prompt(prompt)
+    # Aseguramos que el prompt no pida texto
+    prompt_limpio = re.sub(r"text\s*overlay|text\s*on\s*image|render\s*text|add\s*text", "", prompt_limpio, flags=re.IGNORECASE)
+    url = "https://apihub.agnes-ai.com/v1/images/generations"
+    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     negative = (
-        "oversized text, huge text, giant letters, text filling the frame, "
-        "misspelled text, wrong spelling, typo, distorted letters, garbled text, broken characters, "
-        "cut off text, text outside frame, text touching edges, overflowing text, "
         "multiple people, duplicate people, cloned faces, two people, crowd, "
         "dual face, split face, two faces, double face, mirror face, two heads, "
         "cloned face, duplicate person, twin, twins, doppelganger, "
         "deformed, mutated, bad anatomy, extra limbs, asymmetrical eyes, uncanny valley, "
         "gore, blood, wounds, gaunt, emaciated, zombie-like, corpse-like, "
-        "low quality, blurry, watermark, logo"
+        "low quality, blurry, watermark, logo, "
+        "text, letters, words, typography, writing, signs, labels, "
+        "oversized text, huge text, giant letters, text filling the frame, "
+        "misspelled text, wrong spelling, typo, distorted letters, broken characters"
     )
-    url = "https://apihub.agnes-ai.com/v1/images/generations"
-    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "agnes-image-2.1-flash",
-        "prompt": prompt_final[:1000],
+        "prompt": prompt_limpio[:900],
         "negative_prompt": negative,
         "width": width,
         "height": height,
         "num_images": 1
     }
-    backoff = [5, 10, 15, 20, 25]
     for intento in range(intentos):
-        print(f"🖼️ Intento {intento+1}/{intentos} miniatura HORIZONTAL con texto '{texto_portada}'...")
         try:
+            print(f"🖼️ Intento {intento+1}/{intentos} generando miniatura BASE (sin texto)...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
+            else:
+                print(f"⚠️ Error: {r.status_code} - {r.text[:100]}")
         except Exception as e:
-            print(f"⚠️ Error: {e}")
+            print(f"⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(backoff[intento] if intento < len(backoff) else 30)
+            time.sleep(10)
     return None
+
+# ================================================================
+# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL (perfecto, sin errores)
+# ================================================================
+def dibujar_texto_miniatura(img_path, texto, output_path):
+    """
+    Abre la imagen, dibuja el texto con PIL y guarda.
+    Elige colores aleatorios de una paleta de terror.
+    """
+    # Paleta de colores para el texto (adaptable al relato)
+    colores_texto = [
+        (255, 50, 50),    # Rojo intenso
+        (180, 0, 255),    # Morado
+        (255, 255, 0),    # Amarillo
+        (255, 140, 0),    # Naranja
+        (255, 255, 255),  # Blanco
+        (0, 0, 0),        # Negro (con borde blanco)
+    ]
+    color_fill = random.choice(colores_texto)
+    # Si el color es muy oscuro, usamos borde claro; si es claro, borde oscuro
+    brillo = sum(color_fill) / 3
+    color_outline = (255, 255, 255) if brillo < 128 else (0, 0, 0)
+
+    # También variamos la fuente (probamos varias)
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "arial.ttf"
+    ]
+    font = None
+    for fp in font_paths:
+        try:
+            font = ImageFont.truetype(fp, 120)  # tamaño base, luego se escala
+            break
+        except:
+            continue
+    if font is None:
+        font = ImageFont.load_default()
+
+    with Image.open(img_path) as img:
+        img = img.convert("RGBA")
+        w, h = img.size
+
+        # Texto en mayúsculas y limpio
+        texto_limpio = texto.upper().strip()
+        # Dividir en palabras y ajustar a 2 líneas máx
+        palabras = texto_limpio.split()
+        if len(palabras) > 3:
+            # Si tiene más de 3 palabras, partimos en 2 líneas
+            mitad = len(palabras) // 2
+            linea1 = " ".join(palabras[:mitad])
+            linea2 = " ".join(palabras[mitad:])
+            lineas = [linea1, linea2]
+        else:
+            lineas = [texto_limpio]
+
+        # Calcular tamaño de fuente para que ocupe ~25-30% del ancho
+        font_size = 120
+        for intento in range(5):
+            # Intentamos escalar hasta que quepa bien
+            try:
+                font = ImageFont.truetype(font_paths[0], font_size)
+            except:
+                font = ImageFont.load_default()
+            # Medir línea más larga
+            max_w = 0
+            total_h = 0
+            for lin in lineas:
+                bbox = ImageDraw.Draw(Image.new('RGBA', (1,1))).textbbox((0,0), lin, font=font)
+                w_lin = bbox[2] - bbox[0]
+                h_lin = bbox[3] - bbox[1]
+                if w_lin > max_w:
+                    max_w = w_lin
+                total_h += h_lin + 10
+            # Si el ancho excede el 80% del ancho de la imagen, reducimos fuente
+            if max_w > w * 0.8:
+                font_size = int(font_size * 0.9)
+            elif max_w < w * 0.25:
+                font_size = int(font_size * 1.1)
+            else:
+                break
+
+        # Ajustar tamaño final
+        try:
+            font = ImageFont.truetype(font_paths[0], font_size)
+        except:
+            font = ImageFont.load_default()
+
+        # Dibujar cada línea centrada en el lado derecho (espacio limpio)
+        draw = ImageDraw.Draw(img)
+        y_offset = (h - total_h) // 2
+        x_base = int(w * 0.55)  # empezar en el 55% del ancho (lado derecho)
+
+        for lin in lineas:
+            bbox = draw.textbbox((0,0), lin, font=font)
+            w_lin = bbox[2] - bbox[0]
+            h_lin = bbox[3] - bbox[1]
+            x = x_base + (w - x_base - w_lin) // 2  # centrar dentro del espacio derecho
+            y = y_offset
+
+            # Dibujar borde (stroke)
+            for dx in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+                for dy in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((x+dx, y+dy), lin, font=font, fill=color_outline)
+            # Dibujar texto principal
+            draw.text((x, y), lin, font=font, fill=color_fill)
+
+            y_offset += h_lin + 15
+
+        img.save(output_path, "JPEG", quality=95)
+    print(f"✅ Texto '{texto}' dibujado con PIL en {output_path}")
 
 # ================================================================
 # ✅ GENERAR AUDIO CON FALLBACK ENTRE VOCES NEURALES (sin gTTS)
@@ -929,7 +1033,7 @@ def verificar_envs():
 def main():
     verificar_envs()
 
-    # 🔥 NUEVO: si es ejecución manual (FORCE_PUBLISH=true), saltamos la verificación diaria
+    # Si es ejecución manual (FORCE_PUBLISH=true), saltamos la verificación diaria
     if os.getenv("FORCE_PUBLISH") == "true":
         print("🚀 FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
     else:
@@ -988,24 +1092,43 @@ def main():
 
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    print("🖼️ Generando miniatura HORIZONTAL con texto mediano (Agnes)...")
+    # ============================================================
+    # 🖼️ GENERAR MINIATURA CON PIL (texto perfecto, sin errores)
+    # ============================================================
+    print("🖼️ Generando miniatura HORIZONTAL con PIL (texto perfecto)...")
     miniatura_path = "miniatura.jpg"
-    miniatura_url = generar_miniatura_con_texto(historia.get("miniatura_prompt", "Terrified face with ghostly silhouette"), palabras_portada)
-    if miniatura_url:
+    miniatura_base_url = generar_miniatura_base(historia.get("miniatura_prompt", "Terrified face with ghostly silhouette"))
+
+    if miniatura_base_url:
         try:
-            r = requests.get(miniatura_url, timeout=30)
+            # Descargar imagen base
+            r = requests.get(miniatura_base_url, timeout=30)
             r.raise_for_status()
-            with open(miniatura_path, "wb") as f:
+            temp_base = "miniatura_base.jpg"
+            with open(temp_base, "wb") as f:
                 f.write(r.content)
-            with Image.open(miniatura_path) as img:
-                ImageOps.fit(img, (1280, 720), Image.LANCZOS).save(miniatura_path)
-            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' lista.")
+            # Redimensionar a 1280x720
+            with Image.open(temp_base) as img:
+                img_resized = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
+                img_resized.save(temp_base)
+
+            # Dibujar texto con PIL
+            dibujar_texto_miniatura(temp_base, palabras_portada, miniatura_path)
+
+            # Limpiar temporal
+            if os.path.exists(temp_base):
+                os.remove(temp_base)
+            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' generada con PIL.")
         except Exception as e:
-            print(f"⚠️ Error miniatura: {e}")
+            print(f"⚠️ Error generando miniatura con PIL: {e}")
             miniatura_path = None
     else:
+        print("❌ No se pudo generar la imagen base de la miniatura.")
         miniatura_path = None
 
+    # ============================================================
+    # CONTINUAR CON MONTAJE Y SUBIDA
+    # ============================================================
     print("🎬 Montando video VERTICAL...")
     video_path, duracion_final = montar_video(elementos_validos)
     print(f"⏱️ Duración final: {duracion_final/60:.1f} minutos")
@@ -1016,7 +1139,7 @@ def main():
     guardar_titulo_largo(titulo_video)
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado (video vertical + miniatura horizontal).")
+    print("🎉 Proceso completado (video vertical + miniatura con PIL).")
 
 if __name__ == "__main__":
     try:
