@@ -53,15 +53,15 @@ jobs:
           FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python bot_youtube.py
 
-      - name: Commit y push del estado de música
+      - name: Commit y push del estado de música, títulos y temas
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add estado_musica.json
+          git add estado_musica.json titulos_largos_publicados.json temas_shorts.json
           if git diff-index --quiet HEAD; then
-            echo "✅ No hay cambios en estado_musica.json"
+            echo "✅ No hay cambios en los archivos de estado."
           else
-            git commit -m "Actualizar estado música [skip ci]"
+            git commit -m "Actualizar estado [skip ci]"
             git pull origin main --rebase
             git push
           fi
