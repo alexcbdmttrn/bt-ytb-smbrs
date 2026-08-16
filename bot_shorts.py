@@ -36,9 +36,34 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
 TITULOS_FILE = "titulos_shorts_publicados.json"
+TEMAS_FILE = "temas_usados.json"
 META_DIARIA_SHORTS = 3
+MAX_TEMAS_HISTORIAL = 7
 ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
+
+# ================================================================
+# 📚 HISTORIAL DE TEMAS PARA EVITAR REPETICIONES
+# ================================================================
+def cargar_temas_usados():
+    try:
+        with open(TEMAS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"temas": []}
+
+def guardar_tema_usado(tema):
+    """tema: dict con {'tipo': 'fantasma', 'lugar': 'carretera', 'contexto': 'persecucion'}"""
+    data = cargar_temas_usados()
+    data["temas"].append(tema)
+    if len(data["temas"]) > MAX_TEMAS_HISTORIAL:
+        data["temas"] = data["temas"][-MAX_TEMAS_HISTORIAL:]
+    with open(TEMAS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+def obtener_temas_recientes():
+    data = cargar_temas_usados()
+    return data["temas"]
 
 # ================================================================
 # ÉPOCA DEL SUCESO (dinámica según el relato)
@@ -220,7 +245,7 @@ def seleccionar_fondo_disponible(estado):
     return None
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (conserva época, ambiente protagonista)
+# 🧼 LIMPIADOR DE PROMPTS
 # ================================================================
 def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -393,12 +418,20 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🎬 GENERAR HISTORIA CON SEO + ÉPOCA DINÁMICA
-# (MEJORADO: se usan palabras_clave en tags y hashtags dinámicos)
+# 🎬 GENERAR HISTORIA CON SEO + ÉPOCA DINÁMICA + ANTI-REPETICIÓN
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+
+    # Obtener temas recientes para evitar repeticiones
+    temas_recientes = obtener_temas_recientes()
+    temas_bloqueo = ""
+    if temas_recientes:
+        temas_bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE (NO REPETIR):\n"
+        for t in temas_recientes[-5:]:  # Últimos 5
+            temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
+        temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar que los listados.\n"
 
     prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
 🚨 REGLA DE ORO:
@@ -443,6 +476,8 @@ Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Lí
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
+{temas_bloqueo}
+
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
     "titulo": "Título SEO 1ra persona, 55-75 caracteres, con keyword al inicio",
@@ -454,7 +489,12 @@ Devuelve ESTRICTAMENTE este JSON válido:
     "fuente_relato": "Basado en un testimonio/leyenda real de ...",
     "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
     "palabras_portada": "TEXTO GANCHO máximo 2 palabras",
-    "tags": "10-15 tags separados por coma (máximo 480 caracteres)"
+    "tags": "10-15 tags separados por coma (máximo 480 caracteres)",
+    "tema": {{
+        "tipo": "fantasma",
+        "lugar": "carretera",
+        "contexto": "persecucion"
+    }}
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -496,22 +536,18 @@ Devuelve ESTRICTAMENTE este JSON válido:
 
             keywords = data.get("palabras_clave", [])
             if keywords and isinstance(keywords, list):
-                # Buscar si alguna keyword aparece al inicio del título (case insensitive)
                 keyword_encontrada = None
                 for kw in keywords:
                     if titulo.lower().startswith(kw.lower()):
                         keyword_encontrada = kw
                         break
                 if not keyword_encontrada and keywords:
-                    # Si ninguna keyword está al inicio, intentar poner la primera al principio
                     primera_kw = keywords[0]
-                    # Eliminar cualquier prefijo común como "El ", "La ", "Los ", etc.
                     titulo_sin_articulo = re.sub(r'^(El|La|Los|Las|Un|Una|Unos|Unas)\s+', '', titulo, flags=re.IGNORECASE)
                     if titulo_sin_articulo != titulo:
                         titulo = f"{primera_kw.capitalize()} {titulo_sin_articulo}"
                     else:
                         titulo = f"{primera_kw.capitalize()} {titulo}"
-                    # Asegurar que no exceda 75 chars
                     if len(titulo) > 75:
                         titulo = titulo[:72] + "..."
 
@@ -545,14 +581,12 @@ Devuelve ESTRICTAMENTE este JSON válido:
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:15]
 
-            # Añadir las keywords como tags si no están ya
             if keywords:
                 for kw in keywords:
                     kw_lower = kw.lower().strip()
                     if kw_lower not in [t.lower() for t in tags_list]:
                         tags_list.append(kw_lower)
 
-            # Extras long-tail
             extras = [
                 f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
                 "testimonios paranormales reales",
@@ -579,13 +613,11 @@ Devuelve ESTRICTAMENTE este JSON válido:
             data["tags"] = ", ".join(tags_final)
 
             # ---- HASHTAGS DINÁMICOS ----
-            # Generar hashtags variados usando keywords y lugar
             hashtag_base = "#Shorts"
             hashtag_lugar = f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}"
             hashtag_keywords = []
             if keywords:
                 for kw in keywords[:2]:
-                    # Limpiar y convertir a hashtag (sin espacios, sin tildes)
                     kw_clean = re.sub(r'[áéíóú]', lambda m: {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}.get(m.group(), m.group()), kw)
                     kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
                     if kw_clean and len(kw_clean) > 2:
@@ -601,6 +633,8 @@ Devuelve ESTRICTAMENTE este JSON válido:
             print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   📅 Año del suceso: {data.get('anio_suceso', 'actualidad')}")
             print(f"   🔑 Keywords: {keywords}")
+            if "tema" in data:
+                print(f"   🧩 Tema: {data['tema']}")
             return data
 
         except Exception as e:
@@ -686,10 +720,9 @@ def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segment
 
     # ---- VARIEDAD DE ÁNGULO ----
     angulos = ["low angle", "high angle", "eye level", "dutch angle", "overhead", "wide establishing shot"]
-    # Asignar un ángulo diferente según el índice del segmento
     angulo_elegido = angulos[index_segmento % len(angulos)]
     if total_segmentos > 1 and index_segmento == total_segmentos - 1:
-        angulo_elegido = "eye level"  # El último segmento más neutro
+        angulo_elegido = "eye level"
 
     prompt = f"""You are an expert cinematographer specializing in narrative visual continuity.
 Story segment:
@@ -738,7 +771,7 @@ Return ONLY the English prompt, no explanations.
         return f"Wide establishing shot of {ubicacion_escena}, {estilo}, vertical 9:16, environment as main subject, no close-up face, {EPOCA_MOD}"
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN VERTICAL (negative prompt anti-defectos)
+# 🖼️ GENERAR IMAGEN VERTICAL
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
@@ -859,7 +892,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO - SOLO 4 VOCES MASCULINAS QUE FUNCIONAN
+# ✅ GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -940,7 +973,7 @@ def generar_audio_cta_final():
     return None
 
 # ================================================================
-# 🎬 MONTAR VIDEO - BUG audio_final CORREGIDO
+# 🎬 MONTAR VIDEO
 # ================================================================
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
@@ -1023,7 +1056,6 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
 
     duracion_total = audio_narracion.duration
 
-    # 🛠️ BUG CORREGIDO: audio_final SIEMPRE se asigna
     audio_final = audio_narracion
     if fondo_path and os.path.exists(fondo_path):
         try:
@@ -1059,7 +1091,7 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
     return salida
 
 # ================================================================
-# 🔄 SUBIR A YOUTUBE (DESCRIPCIÓN MEJORADA)
+# 🔄 SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
@@ -1072,7 +1104,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    # ---- DESCRIPCIÓN CON SALTOS DE LÍNEA DOBLES PARA LEGIBILIDAD ----
     descripcion = f"""{gancho_descripcion}
 
 {contexto_descripcion}
@@ -1258,6 +1289,8 @@ def main():
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
+    if "tema" in historia_raw:
+        print(f"   🧩 Tema: {historia_raw['tema']}")
     print(f"\n   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
 
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
@@ -1304,6 +1337,11 @@ def main():
     )
 
     guardar_titulo_publicado(historia_raw["titulo"])
+
+    # Guardar tema usado (anti-repetición)
+    if "tema" in historia_raw:
+        guardar_tema_usado(historia_raw["tema"])
+        print(f"✅ Tema guardado en historial: {historia_raw['tema']}")
 
     # Facebook solo para los 2 primeros Shorts del día
     publicaciones_antes = obtener_publicaciones_hoy()
