@@ -41,7 +41,7 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
-# 🗓️ ÉPOCA DEL SUCESO (dinámica según el relato)
+# ÉPOCA DEL SUCESO (dinámica según el relato)
 # ================================================================
 ANIO_SUCESO = None
 EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
@@ -80,7 +80,7 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # 🎤 SOLO 4 VOCES MASCULINAS QUE FUNCIONAN
@@ -365,7 +365,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🆕 EXPANDIR / TRUNCAR TEXTO
+# 🔄 EXPANDIR / TRUNCAR TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     prompt = f"""Expande el siguiente relato a 150-170 palabras con detalles sensoriales de {ubicacion}.
@@ -394,11 +394,12 @@ def truncar_texto_largo(texto, max_palabras=170):
 
 # ================================================================
 # 🎬 GENERAR HISTORIA CON SEO + ÉPOCA DINÁMICA
+# (MEJORADO: se usan palabras_clave en tags y hashtags dinámicos)
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
-    
+
     prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
 🚨 REGLA DE ORO:
 La historia DEBE estar basada en un relato que REALMENTE alguien contó en internet.
@@ -425,6 +426,7 @@ AMBIENTACIÓN: Si el relato menciona un AÑO específico, úsalo para la época 
 FÓRMULA: [VERBO 1RA PERSONA / IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
 Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTORIA_SHORTS}.
 ❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
+IMPORTANTE: Asegúrate de que UNA de las palabras_clave (abajo) aparezca al INICIO del título (primeras 3 palabras). Por ejemplo, si la keyword es "fantasma", el título debe empezar con "Fantasma..." o similar.
 
 🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA
 "palabras_portada": TEXTO GANCHO de MÁXIMO 2 palabras cortas.
@@ -433,7 +435,7 @@ Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTOR
 Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Línea 4 (FUENTE), Línea 5 (FACEBOOK), Línea 6 (HASHTAGS máx 5).
 
 🎯 REGLA CRÍTICA 4: TAGS SEO (10-15, máx 480 chars)
-🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3)
+🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3) - serán usadas en el título, descripción y tags.
 🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
 🎯 REGLA CRÍTICA 7: AÑO DEL SUCESO
 "anio_suceso": año específico (ej: 1998). Si no hay fecha clara, usa la actualidad (2024).
@@ -443,7 +445,7 @@ Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Lí
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-    "titulo": "Título SEO 1ra persona, 55-75 caracteres",
+    "titulo": "Título SEO 1ra persona, 55-75 caracteres, con keyword al inicio",
     "titulo_alternativo": "Segundo título",
     "anio_suceso": 1998,
     "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
@@ -464,7 +466,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "max_tokens": 1100,
         "response_format": {"type": "json_object"}
     }
-    
+
     for intento in range(6):
         try:
             print(f"🔄 Intento {intento+1}/6 generando historia real...")
@@ -477,46 +479,80 @@ Devuelve ESTRICTAMENTE este JSON válido:
             except json.JSONDecodeError:
                 import json5
                 data = json5.loads(json_str)
-            
+
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto")
-            
+
             # Actualizar época según año del suceso
             anio_suceso = data.get("anio_suceso", None)
             actualizar_epoca(anio_suceso)
-            
+
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
-            
+
+            # ---- TÍTULO CON PALABRA CLAVE AL INICIO ----
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
+
+            keywords = data.get("palabras_clave", [])
+            if keywords and isinstance(keywords, list):
+                # Buscar si alguna keyword aparece al inicio del título (case insensitive)
+                keyword_encontrada = None
+                for kw in keywords:
+                    if titulo.lower().startswith(kw.lower()):
+                        keyword_encontrada = kw
+                        break
+                if not keyword_encontrada and keywords:
+                    # Si ninguna keyword está al inicio, intentar poner la primera al principio
+                    primera_kw = keywords[0]
+                    # Eliminar cualquier prefijo común como "El ", "La ", "Los ", etc.
+                    titulo_sin_articulo = re.sub(r'^(El|La|Los|Las|Un|Una|Unos|Unas)\s+', '', titulo, flags=re.IGNORECASE)
+                    if titulo_sin_articulo != titulo:
+                        titulo = f"{primera_kw.capitalize()} {titulo_sin_articulo}"
+                    else:
+                        titulo = f"{primera_kw.capitalize()} {titulo}"
+                    # Asegurar que no exceda 75 chars
+                    if len(titulo) > 75:
+                        titulo = titulo[:72] + "..."
+
             if len(titulo) < 40:
                 titulo = f"{titulo} - Testimonio real en {ESTADO_HISTORIA_SHORTS}"
             if len(titulo) > 95:
                 titulo = titulo[:92].rsplit(' ', 1)[0] + "..."
             data["titulo"] = titulo
-            
+
             if titulo_ya_publicado(titulo):
                 print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
                 raise ValueError("Título duplicado")
-            
+
+            # ---- GANCHO Y CONTEXTO ----
             gancho = data.get("gancho_descripcion", "").strip()
             if not gancho or len(gancho) > 110:
                 gancho = f"Esto fue lo que viví en {ESTADO_HISTORIA_SHORTS} y nunca pude explicar"[:100]
             data["gancho_descripcion"] = gancho
-            
+
             contexto = data.get("contexto_descripcion", "").strip()
             if not contexto:
                 contexto = f"Un testimonio real de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."
             data["contexto_descripcion"] = contexto
-            
+
             fuente = data.get("fuente_relato", "").strip()
             if not fuente:
                 fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
-            
+
+            # ---- TAGS INCORPORANDO KEYWORDS ----
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:15]
+
+            # Añadir las keywords como tags si no están ya
+            if keywords:
+                for kw in keywords:
+                    kw_lower = kw.lower().strip()
+                    if kw_lower not in [t.lower() for t in tags_list]:
+                        tags_list.append(kw_lower)
+
+            # Extras long-tail
             extras = [
                 f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
                 "testimonios paranormales reales",
@@ -531,7 +567,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 if extras[i] not in tags_list:
                     tags_list.append(extras[i])
                 i += 1
-            
+
             tags_final = []
             total_chars = 0
             for t in tags_list:
@@ -541,22 +577,42 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 tags_final.append(t)
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
-            data["hashtags_descripcion"] = "#Shorts #TerrorEn" + ESTADO_HISTORIA_SHORTS.replace(" ", "") + " #RelatosReales #Paranormal #MiedoReal"
-            
+
+            # ---- HASHTAGS DINÁMICOS ----
+            # Generar hashtags variados usando keywords y lugar
+            hashtag_base = "#Shorts"
+            hashtag_lugar = f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}"
+            hashtag_keywords = []
+            if keywords:
+                for kw in keywords[:2]:
+                    # Limpiar y convertir a hashtag (sin espacios, sin tildes)
+                    kw_clean = re.sub(r'[áéíóú]', lambda m: {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}.get(m.group(), m.group()), kw)
+                    kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
+                    if kw_clean and len(kw_clean) > 2:
+                        hashtag_keywords.append(f"#{kw_clean.capitalize()}")
+            hashtag_extra = random.choice([
+                "#RelatosReales", "#Paranormal", "#MiedoReal",
+                "#LeyendasUrbanas", "#CasosReales", "#TerrorMexicano",
+                "#HistoriasDeTerror", "#Sobrenatural", "#ExperienciasReales"
+            ])
+            hashtag_final = f"{hashtag_base} {hashtag_lugar} {' '.join(hashtag_keywords[:2])} {hashtag_extra}"
+            data["hashtags_descripcion"] = hashtag_final
+
             print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
-            print(f"   🗓️ Año del suceso: {data.get('anio_suceso', 'actualidad')}")
+            print(f"   📅 Año del suceso: {data.get('anio_suceso', 'actualidad')}")
+            print(f"   🔑 Keywords: {keywords}")
             return data
-            
+
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
                 time.sleep(10 + intento * 5)
-    
+
     print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
 
 # ================================================================
-# 🆕 DIVIDIR TEXTO POR ORACIONES
+# 🔄 DIVIDIR TEXTO POR ORACIONES
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -580,7 +636,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     return segmentos
 
 # ================================================================
-# 🎬 ASIGNAR ETAPAS VISUALES
+# 🎭 ASIGNAR ETAPAS VISUALES
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -608,17 +664,17 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL + ÉPOCA
+# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL + ÉPOCA + VARIEDAD DE ÁNGULO
 # ================================================================
-def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, perfil=None, estilo_visual=None, paleta_color=None):
+def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, perfil=None, estilo_visual=None, paleta_color=None, index_segmento=0, total_segmentos=1):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
     paleta = paleta_color or PALETA_COLOR_ACTUAL
     perfil = perfil or PERFIL_PERSONAJE_SHORTS
-    
+
     contexto_previo = ""
     if segmento_anterior_texto:
         contexto_previo = f"\nPREVIOUS SCENE: The character was just in: '{segmento_anterior_texto[:120]}'"
-    
+
     instrucciones_etapa = {
         "inicio_casa": "Show the environment of a home interior (furniture, rooms, objects). If the person is mentioned, show them SMALL at distance (max 20% of frame). If not mentioned, show ONLY the environment without people.",
         "desplazamiento": "Show the environment of movement (street, vehicle, road). Vehicles and surroundings are the MAIN subject. If person is mentioned, show them small at distance (max 20% of frame).",
@@ -627,7 +683,14 @@ def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segment
         "resolucion": "Show the environment of departure/return. Calmer atmosphere. If person is mentioned, show them small at distance (max 20% of frame).",
     }
     instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
-    
+
+    # ---- VARIEDAD DE ÁNGULO ----
+    angulos = ["low angle", "high angle", "eye level", "dutch angle", "overhead", "wide establishing shot"]
+    # Asignar un ángulo diferente según el índice del segmento
+    angulo_elegido = angulos[index_segmento % len(angulos)]
+    if total_segmentos > 1 and index_segmento == total_segmentos - 1:
+        angulo_elegido = "eye level"  # El último segmento más neutro
+
     prompt = f"""You are an expert cinematographer specializing in narrative visual continuity.
 Story segment:
 \"\"\"
@@ -641,6 +704,8 @@ CONTINUITY INSTRUCTIONS:
 - Current stage: {etapa}
 - Current location: {ubicacion_escena}
 - DIRECTIVE: {instruccion}
+- CAMERA ANGLE: {angulo_elegido} (to give visual variety between segments)
+- Ensure the scene is LEGIBLE on small screens: clear composition, main subject (if any) well centered in the frame, no clutter.
 
 STRICT COMPOSITION RULES:
 - SHOT: Wide shot or extreme wide shot. ABSOLUTELY NO close-up, NO portrait, NO headshot.
@@ -716,12 +781,13 @@ def generar_imagen_vertical(prompt, intentos=3):
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
+    total_seg = len(segmentos)
     for idx, seg in enumerate(segmentos):
         etapa = etapas[idx] if idx < len(etapas) else "lugar_destino"
         ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ubicacion
-        print(f"  🎬 Segmento {idx+1}/{len(segmentos)} ({len(seg.split())} palabras) - Etapa: {etapa}")
+        print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
-        
+
         seg_anterior = segmentos[idx-1] if idx > 0 else None
         prompt_imagen = generar_prompt_con_contexto(
             segmento_texto=seg,
@@ -730,10 +796,12 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
             segmento_anterior_texto=seg_anterior,
             perfil=perfil,
             estilo_visual=estilo,
-            paleta_color=paleta
+            paleta_color=paleta,
+            index_segmento=idx,
+            total_segmentos=total_seg
         )
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
-        
+
         img_url = None
         for intento in range(intentos_por_imagen):
             try:
@@ -745,31 +813,31 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
                 pass
             if intento < intentos_por_imagen - 1:
                 time.sleep(6)
-        
+
         if not img_url:
             print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
-        
+
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
             print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
             return None
-        
+
         try:
             audio_clip = AudioFileClip(audio_path)
             duracion = audio_clip.duration
             audio_clip.close()
         except Exception:
             duracion = 10.0
-        
+
         resultados_temporales.append({
             "imagen_url": img_url,
             "audio_path": audio_path,
             "duracion": duracion
         })
-        
+
         if idx < len(segmentos) - 1:
             time.sleep(12)
-    
+
     # Reparar imágenes fallidas
     for i, res in enumerate(resultados_temporales):
         if res["imagen_url"] is None:
@@ -798,24 +866,24 @@ def generar_audio(texto, index, intentos_por_voz=2):
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_caracteres_para_tts(texto_limpio)
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
-    
+
     if len(texto_limpio) < 30:
         texto_limpio = "Esa noche en la carretera, el silencio era tan denso que podía cortarse con un cuchillo. El miedo lo envolvía todo."
-    
+
     if not texto_limpio:
         return None
-    
+
     filename = f"audio_short_{index}.mp3"
     voces_a_probar = [CONFIG_VOZ_ACTUAL]
     for voz_config in VOCES_DISPONIBLES:
         if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
             voces_a_probar.append(voz_config)
-    
+
     for intento_voz, voz_config in enumerate(voces_a_probar):
         voz = voz_config["voz"]
         rate = voz_config["velocidad"]
         pitch = voz_config["tono"]
-        
+
         for intento in range(intentos_por_voz):
             async def _generar():
                 communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
@@ -836,7 +904,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
                         os.remove(filename)
                     except:
                         pass
-    
+
     print("❌ TODAS las voces fallaron.")
     return None
 
@@ -851,7 +919,7 @@ def generar_audio_cta_final():
     for voz_config in VOCES_DISPONIBLES:
         if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
             voces_a_probar.append(voz_config)
-    
+
     for voz_config in voces_a_probar:
         voz = voz_config["voz"]
         rate = voz_config["velocidad"]
@@ -877,21 +945,21 @@ def generar_audio_cta_final():
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
         raise ValueError("No hay recursos para montar el video")
-    
+
     clips_video = []
     clips_audio = []
-    
+
     for i, recurso in enumerate(recursos_por_segmento):
         img_url = recurso["imagen_url"]
         audio_path = recurso["audio_path"]
         duracion = recurso["duracion"]
-        
+
         try:
             audio_clip = AudioFileClip(audio_path)
             clips_audio.append(audio_clip)
         except Exception as e:
             raise ValueError(f"Fallo al cargar audio del segmento {i}")
-        
+
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -901,11 +969,11 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
                     f.write(r.content)
             else:
                 img_path = img_url
-            
+
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
-            
+
             video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
         except Exception as e:
@@ -919,10 +987,10 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
                 clips_video.append(video_clip)
             else:
                 continue
-    
+
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
-    
+
     PAUSA_ENTRE_SEGMENTOS = 0.3
     if len(clips_audio) > 1:
         audio_con_pausas = []
@@ -934,9 +1002,9 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         audio_narracion = concatenate_audioclips(audio_con_pausas)
     else:
         audio_narracion = clips_audio[0]
-    
+
     video = concatenate_videoclips(clips_video, method="compose")
-    
+
     # CTA final
     cta_audio_path = generar_audio_cta_final()
     if cta_audio_path and os.path.exists(cta_audio_path):
@@ -952,9 +1020,9 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             print(f"✅ CTA final agregado ({duracion_cta:.1f}s adicionales)")
         except Exception as e:
             print(f"⚠️ Error agregando CTA final: {e}")
-    
+
     duracion_total = audio_narracion.duration
-    
+
     # 🛠️ BUG CORREGIDO: audio_final SIEMPRE se asigna
     audio_final = audio_narracion
     if fondo_path and os.path.exists(fondo_path):
@@ -969,7 +1037,7 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
-    
+
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     video.close()
@@ -986,12 +1054,12 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             os.remove(cta_audio_path)
         except:
             pass
-    
+
     print(f"✅ Short vertical creado: {salida}")
     return salida
 
 # ================================================================
-# 🆕 SUBIR A YOUTUBE
+# 🔄 SUBIR A YOUTUBE (DESCRIPCIÓN MEJORADA)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
@@ -1000,20 +1068,26 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
     except Exception as e:
         print(f"❌ Error autenticando con YouTube: {e}")
         sys.exit(1)
-    
+
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
-    
+
+    # ---- DESCRIPCIÓN CON SALTOS DE LÍNEA DOBLES PARA LEGIBILIDAD ----
     descripcion = f"""{gancho_descripcion}
+
 {contexto_descripcion}
+
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
+
 📖 {fuente_relato}
+
 📱 Facebook: {FACEBOOK_LINK}
+
 {hashtags_descripcion}"""
-    
+
     if ACTIVAR_DISCLOSURE_IA:
         descripcion += DISCLOSURE_TEXT
-    
+
     body = {
         "snippet": {
             "title": titulo,
@@ -1041,7 +1115,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         sys.exit(1)
 
 # ================================================================
-# 🆕 SUBIR VIDEO A HOST TEMPORAL
+# 🔄 SUBIR VIDEO A HOST TEMPORAL
 # ================================================================
 def subir_video_temporal(video_path, intentos=2):
     for _ in range(intentos):
@@ -1060,7 +1134,7 @@ def subir_video_temporal(video_path, intentos=2):
         except Exception as e:
             print(f"⚠️ litterbox falló: {e}")
             time.sleep(3)
-    
+
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1077,7 +1151,7 @@ def subir_video_temporal(video_path, intentos=2):
         except Exception as e:
             print(f"⚠️ tmpfiles falló: {e}")
             time.sleep(3)
-    
+
     try:
         with open(video_path, "rb") as f:
             r = requests.post("https://0x0.st", files={"file": f}, timeout=180)
@@ -1087,19 +1161,19 @@ def subir_video_temporal(video_path, intentos=2):
                 return url
     except Exception as e:
         print(f"⚠️ 0x0.st falló: {e}")
-    
+
     print("❌ No se pudo subir el video a ningún host temporal.")
     return None
 
 # ================================================================
-# 🆕 ENVIAR A MAKE
+# 🔄 ENVIAR A MAKE
 # ================================================================
 def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
     webhook_url = os.getenv("MAKE_WEBHOOK_URL_REELS")
     if not webhook_url:
         print("⚠️ MAKE_WEBHOOK_URL_REELS no configurado. Saltando Facebook.")
         return False
-    
+
     payload = {
         "titulo": titulo,
         "descripcion": descripcion,
@@ -1139,28 +1213,28 @@ def main():
     print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con continuidad visual)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
-    
+
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN.")
         sys.exit(1)
-    
+
     publicadas_hoy = obtener_publicaciones_hoy()
     if publicadas_hoy >= META_DIARIA_SHORTS:
         print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
-    
+
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
-    
-    print("🆕 Generando nueva historia REAL con SEO experto...")
+
+    print("🔄 Generando nueva historia REAL con SEO experto...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
         sys.exit(1)
-    
+
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
-    
+
     if palabras < 130:
         print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
         texto_completo = expandir_texto_corto(
@@ -1171,28 +1245,28 @@ def main():
     elif palabras > 190:
         print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
         texto_completo = truncar_texto_largo(texto_completo, max_palabras=170)
-    
+
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
     paleta = PALETA_COLOR_ACTUAL
     estilo = ESTILO_VISUAL_ACTUAL
-    
+
     print(f"\n📊 RESUMEN SEO:")
     print(f"   🏷️ Título: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
-    print(f"   🗓️ Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
+    print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
     print(f"\n   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
-    
+
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
-    
+
     print(f"\n🖼️ Generando {len(segmentos)} imágenes con continuidad narrativa...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
         print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
-    
+
     recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
         etapas=etapas,
@@ -1203,14 +1277,11 @@ def main():
         paleta=paleta,
         intentos_por_imagen=3
     )
-    
+
     if not recursos:
         print("❌ Error generando recursos. Abortando.")
         sys.exit(1)
-    
-    # SIN PORTADA CON TEXTO - el primer frame es la imagen del segmento 1
-    # (YouTube elige automáticamente el thumbnail)
-    
+
     try:
         video_final = montar_video_shorts(
             recursos_por_segmento=recursos,
@@ -1220,7 +1291,7 @@ def main():
     except Exception as e:
         print(f"❌ Error montando video: {e}")
         sys.exit(1)
-    
+
     print(f"\n🚀 Subiendo Short a YouTube...")
     video_id_youtube = subir_a_youtube(
         video_path=video_final,
@@ -1231,9 +1302,9 @@ def main():
         hashtags_descripcion=historia_raw["hashtags_descripcion"],
         fuente_relato=historia_raw.get("fuente_relato", "Basado en un testimonio real compartido en internet."),
     )
-    
+
     guardar_titulo_publicado(historia_raw["titulo"])
-    
+
     # Facebook solo para los 2 primeros Shorts del día
     publicaciones_antes = obtener_publicaciones_hoy()
     if publicaciones_antes < 2:
@@ -1256,7 +1327,7 @@ def main():
             print("⚠️ No se pudo subir al host temporal. Facebook omitido.")
     else:
         print(f"\n⏭️ Reel #{publicaciones_antes + 1} del día: NO se envía a Facebook (límite: 2 diarios).")
-    
+
     incrementar_publicaciones_hoy()
     guardar_estado(estado)
     limpiar_temporales_shorts()
