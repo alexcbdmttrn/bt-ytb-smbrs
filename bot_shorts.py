@@ -37,7 +37,6 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
 TITULOS_FILE = "titulos_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
-
 ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
@@ -84,23 +83,13 @@ def actualizar_epoca(anio):
     print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎤 VOCES NEURALES VÁLIDAS
+# 🎤 SOLO 4 VOCES MASCULINAS QUE FUNCIONAN
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
-    {"voz": "es-MX-DaliaNeural", "velocidad": "+10%", "tono": "+0Hz"},
     {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz"},
-    {"voz": "es-ES-ElviraNeural", "velocidad": "+10%", "tono": "+1Hz"},
-    {"voz": "es-CO-GonzaloNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-CO-SalomeNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+10%", "tono": "+2Hz"},
-    {"voz": "es-AR-DiegoNeural", "velocidad": "+10%", "tono": "-2Hz"},
-    {"voz": "es-US-AlonsoNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-US-PalomaNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-PE-CamilaNeural", "velocidad": "+10%", "tono": "+0Hz"},
-    {"voz": "es-PE-AlexNeural", "velocidad": "+10%", "tono": "-1Hz"},
+    {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz"},
     {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
-    {"voz": "es-CL-CatalinaNeural", "velocidad": "+10%", "tono": "+1Hz"},
 ]
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
@@ -108,7 +97,7 @@ CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 # 🎨 PALETAS
 # ================================================================
 PALETAS_COLOR = [
-    "Cold cyan blue fog, navy blue shadows, crisp white moonlight",
+    "Cold cyan blue LED fog, navy blue shadows, crisp white moonlight",
     "Emerald green twilight, city haze, muted sage ambient lighting",
     "Deep violet haze, electric purple ambient light, dark magenta shadows",
     "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
@@ -167,22 +156,19 @@ def generar_perfil_personaje_shorts():
         "with olive skin and a strong jaw",
         "with pale skin and green eyes",
         "with tan skin and a warm smile",
-        "with light beige skin and a serious expression",
     ]
-    profesiones_masculinas = [
-        "trailero conduciendo tráiler en autopista nocturna",
+    profesiones = [
+        "trailero conduciendo un tráiler en autopista nocturna",
         "policía en su turno nocturno en patrulla",
         "conductor de taxi en ciudad",
         "repartidor en moto",
         "velador en condominio residencial",
         "enfermero en hospital",
-        "taxista en aeropuerto",
         "guardia de seguridad en centro comercial",
         "carpintero en taller",
         "paramédico en ambulancia",
-        "vendedor ambulante en calle urbana",
     ]
-    profesion = random.choice(profesiones_masculinas)
+    profesion = random.choice(profesiones)
     articulo = "un"
     perfil_fisico = (
         f"a {random.choice(edades)} Mexican man, "
@@ -214,7 +200,6 @@ def seleccionar_fondo_disponible(estado):
     ultimo_fondo = estado.get("ultimo_fondo")
     if ultimo_fondo and ultimo_fondo in fondos:
         fondos.remove(ultimo_fondo)
-        print(f"🎵 Evitando repetir fondo: {ultimo_fondo}")
     random.shuffle(fondos)
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
@@ -224,7 +209,6 @@ def seleccionar_fondo_disponible(estado):
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
                     estado["ultimo_fondo"] = fondo
-                    print(f"✅ Audio de fondo seleccionado: {full_path}")
                     return full_path
     for root, dirs, files in os.walk("."):
         for file in files:
@@ -232,9 +216,7 @@ def seleccionar_fondo_disponible(estado):
                 if file.lower() == fondo.lower():
                     full_path = os.path.join(root, file)
                     estado["ultimo_fondo"] = fondo
-                    print(f"✅ Audio de fondo (única opción): {full_path}")
                     return full_path
-    print("⚠️ No se encontró ningún archivo de fondo disponible.")
     return None
 
 # ================================================================
@@ -260,14 +242,14 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
         "vertical 9:16 format, WIDE environmental establishing shot, "
         "the ENVIRONMENT, objects and location are the main focal point (cars, trees, houses, streets, buildings, forests, gardens), "
         "if a person appears they occupy AT MOST 20% of the frame, small and at distance, "
-        "EXACTLY ONE single person if mentioned, NO clones, NO duplicates, NO twins, NO double faces, NO mirror faces, "
+        "EXACTLY ONE single person, NO clones, NO duplicates, NO twins, NO double faces, "
         f"{EPOCA_MOD}, period-accurate vehicles, architecture, clothing and technology, "
         "sharp focus, natural lighting, no text, no watermark"
     )
     return prompt_base + modificadores
 
 # ================================================================
-# 🧹 LIMPIAR CARACTERES ESPECIALES PARA TTS
+# 🧹 LIMPIAR CARACTERES PARA TTS
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
@@ -287,7 +269,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🗂️ ESTADO DE SHORTS
+# 🗂️ ESTADO
 # ================================================================
 def cargar_estado():
     try:
@@ -305,11 +287,7 @@ def guardar_estado(estado):
             "ultimo_fondo": estado.get("ultimo_fondo"),
             "publicaciones_hoy": estado.get("publicaciones_hoy")
         }, f, indent=2, ensure_ascii=False)
-        print("✅ Estado de Shorts guardado")
 
-# ================================================================
-# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS
-# ================================================================
 def cargar_titulos_publicados():
     try:
         with open(TITULOS_FILE, "r", encoding="utf-8") as f:
@@ -321,9 +299,8 @@ def guardar_titulo_publicado(titulo):
     data = cargar_titulos_publicados()
     if titulo not in data["titulos"]:
         data["titulos"].append(titulo)
-    with open(TITULOS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"✅ Título guardado en registro: '{titulo}'")
+        with open(TITULOS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
 def titulo_ya_publicado(titulo):
     data = cargar_titulos_publicados()
@@ -341,9 +318,6 @@ def titulo_ya_publicado(titulo):
                 return True
     return False
 
-# ================================================================
-# 📊 FUNCIONES DE CONTEO DIARIO
-# ================================================================
 def obtener_publicaciones_hoy():
     estado = cargar_estado()
     pub = estado.get("publicaciones_hoy")
@@ -364,9 +338,6 @@ def incrementar_publicaciones_hoy():
         estado["publicaciones_hoy"] = {"fecha": hoy, "cantidad": 1}
     guardar_estado(estado)
 
-# ================================================================
-# 🧹 LIMPIAR TEXTO PARA AUDIO
-# ================================================================
 def limpiar_texto_para_audio(texto):
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
     texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
@@ -375,9 +346,6 @@ def limpiar_texto_para_audio(texto):
     texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
 
-# ================================================================
-# GENERAR PLACEHOLDER LOCAL
-# ================================================================
 def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
     try:
         img = Image.new("RGB", size, (20, 20, 20))
@@ -387,56 +355,34 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         except:
             font = ImageFont.load_default()
         bbox = draw.textbbox((0, 0), texto, font=font)
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
-        x = (size[0] - text_w) // 2
-        y = (size[1] - text_h) // 2
+        x = (size[0] - (bbox[2]-bbox[0])) // 2
+        y = (size[1] - (bbox[3]-bbox[1])) // 2
         draw.text((x, y), texto, fill="red", font=font)
         path = f"placeholder_{random.randint(1000, 9999)}.jpg"
         img.save(path)
         return path
-    except Exception as e:
-        print(f"⚠️ Error generando placeholder local: {e}")
+    except Exception:
         return None
 
 # ================================================================
-# 🆕 EXPANDIR TEXTO CORTO
+# 🆕 EXPANDIR / TRUNCAR TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
-    print("🔄 Expandiendo texto corto...")
-    prompt = f"""Eres un editor de testimonios paranormales reales. Expande el siguiente
-relato para que tenga entre 150 y 170 palabras.
-Añade más detalles sensoriales y específicos (sonidos, olores, lugares reales de {ubicacion},
-horas, objetos) como los que incluiría una persona contando su experiencia real.
-Mantén la trama y el tono coloquial exactamente iguales.
-NO agregues ningún llamado a suscribirse ni CTA.
-RELATO ORIGINAL:
-{texto_corto}
-Devuelve SOLO el relato expandido (150-170 palabras).
-"""
+    prompt = f"""Expande el siguiente relato a 150-170 palabras con detalles sensoriales de {ubicacion}.
+Mantén trama y tono. Sin CTA.
+RELATO: {texto_corto}
+Devuelve SOLO el relato."""
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.8,
-        "max_tokens": 700,
-    }
+    payload = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "temperature": 0.8, "max_tokens": 700}
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
-        texto_expandido = r.json()["choices"][0]["message"]["content"].strip()
-        if len(texto_expandido.split()) > 130:
-            return texto_expandido
-        else:
-            return texto_corto + " El miedo crecía con cada paso. El silencio era ensordecedor."
-    except Exception as e:
-        print(f"❌ Error expandiendo: {e}")
+        t = r.json()["choices"][0]["message"]["content"].strip()
+        return t if len(t.split()) > 130 else texto_corto
+    except Exception:
         return texto_corto
 
-# ================================================================
-# TRUNCAR TEXTO LARGO
-# ================================================================
 def truncar_texto_largo(texto, max_palabras=170):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
@@ -447,41 +393,27 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🎬 GENERAR HISTORIA CON SEO EXPERTO + ETAPAS VISUALES + EXTRACCIÓN DE AÑO
+# 🎬 GENERAR HISTORIA CON SEO + ÉPOCA DINÁMICA
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+    
     prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
 🚨 REGLA DE ORO:
 La historia DEBE estar basada en un relato que REALMENTE alguien contó en internet.
 Adáptalo en primera persona, tono coloquial, ambientado en {ESTADO_HISTORIA_SHORTS}, México.
 
 🎯 REGLA CRÍTICA: CONTINUIDAD VISUAL NARRATIVA
-El relato se dividirá en 4-5 segmentos visuales. Cada segmento DEBE tener:
-- "etapa_visual": una de estas 5 etapas:
-  * "inicio_casa" (el personaje en su espacio seguro)
-  * "desplazamiento" (en movimiento: caminando, en auto, en moto)
-  * "lugar_destino" (llega al lugar de los hechos)
-  * "climax_evento" (ocurre el evento paranormal)
-  * "resolucion" (conclusión o regreso)
-- "ubicacion_escena": el lugar específico donde ocurre ese fragmento
-- Las escenas deben tener TRAYECTORIA LÓGICA
-- El entorno se mantiene coherente durante segmentos consecutivos
-- IMPORTANTE: Si el segmento NO menciona al personaje, NO lo incluyas en el prompt de imagen. Enfócate solo en el entorno (carros, casas, bosques, jardines, calles).
+El relato se dividirá en 4-5 segmentos visuales con etapas:
+inicio_casa, desplazamiento, lugar_destino, climax_evento, resolucion.
+Trayectoria lógica y entorno coherente entre segmentos consecutivos.
 
 PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-
-🎯 REGLA CRÍTICA: ÉPOCA DEL SUCESO
-- DEBES especificar el AÑO en que ocurrió el suceso en el campo "anio_suceso"
-- Puede ser cualquier año (1970, 1985, 1998, 2005, 2018, 2024, etc.)
-- La ropa, vehículos, tecnología y arquitectura de las imágenes se adaptarán a ese año
-- Si no especificas año, se asumirá la actualidad
-- El año debe ser coherente con la historia que estás contando
+AMBIENTACIÓN: Si el relato menciona un AÑO específico, úsalo para la época (autos, ropa, tecnología). Si no, usa la actualidad.
 
 🎯 REGLA CRÍTICA DE LONGITUD:
 - EXACTAMENTE entre 150 y 170 palabras.
-- Duración narrada: 50-65 segundos a velocidad +10%.
 
 📐 ESTRUCTURA:
 1. GANCHO (5-10 palabras)
@@ -490,46 +422,36 @@ PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 4. TWIST FINAL (30-40 palabras)
 
 🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR
-FÓRMULA: [VERBO EN 1RA PERSONA / PALABRA DE IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
-✅ EJEMPLOS:
-- "Vi algo en la carretera de Zacatecas que no era humano"
-- "Escuché mi nombre en un pueblo abandonado de Puebla"
-- "El Uber me dejó en un lugar que no existe en el mapa"
-- "Trabajé de velador 1 noche en Monterrey. No volví jamás."
-❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "Una noche en...", "El misterio de..."
+FÓRMULA: [VERBO 1RA PERSONA / IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
 Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTORIA_SHORTS}.
+❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
 
-🎯 REGLA CRÍTICA 2: DESCRIPCIÓN CON SEO EXPERTO
-Línea 1 (GANCHO, máx 90 chars): keyword principal + {ESTADO_HISTORIA_SHORTS}
-Línea 2 (CONTEXTO): keywords long-tail
-Línea 3 (CTA): "🔴 RELATO COMPLETO en el canal: {CANAL_LINK}"
-Línea 4 (FUENTE): "📖 Basado en un testimonio real compartido en internet."
-Línea 5 (FACEBOOK): "📱 Síguenos: {FACEBOOK_LINK}"
-Línea 6 (HASHTAGS): máx 5
+🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA
+"palabras_portada": TEXTO GANCHO de MÁXIMO 2 palabras cortas.
 
-🎯 REGLA CRÍTICA 3: TAGS SEO (10-15, máx 480 chars)
-🎯 REGLA CRÍTICA 4: PALABRAS CLAVE (2-3)
-🎯 REGLA CRÍTICA 5: TÍTULO ALTERNATIVO (A/B testing)
+🎯 REGLA CRÍTICA 3: DESCRIPCIÓN SEO
+Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Línea 4 (FUENTE), Línea 5 (FACEBOOK), Línea 6 (HASHTAGS máx 5).
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
+🎯 REGLA CRÍTICA 4: TAGS SEO (10-15, máx 480 chars)
+🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3)
+🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
+🎯 REGLA CRÍTICA 7: AÑO DEL SUCESO
+"anio_suceso": año específico (ej: 1998). Si no hay fecha clara, usa la actualidad (2024).
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
-
-REGLAS GENERALES:
-- PRIMERA FRASE = GANCHO IMPACTANTE de máximo 5 palabras.
-- Ortografía perfecta. NO repitas frases.
-- PALETA: {PALETA_COLOR_ACTUAL}
-- "texto_completo" NO debe incluir CTA de suscripción.
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
     "titulo": "Título SEO 1ra persona, 55-75 caracteres",
-    "titulo_alternativo": "Segundo título con ángulo diferente",
+    "titulo_alternativo": "Segundo título",
     "anio_suceso": 1998,
     "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
-    "gancho_descripcion": "Gancho de máx 90 caracteres (primera línea de descripción)",
-    "contexto_descripcion": "1 oración con contexto y keywords",
+    "gancho_descripcion": "Gancho máx 90 caracteres",
+    "contexto_descripcion": "1 oración con contexto",
     "fuente_relato": "Basado en un testimonio/leyenda real de ...",
     "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
+    "palabras_portada": "TEXTO GANCHO máximo 2 palabras",
     "tags": "10-15 tags separados por coma (máximo 480 caracteres)"
 }}
 """
@@ -542,81 +464,74 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "max_tokens": 1100,
         "response_format": {"type": "json_object"}
     }
+    
     for intento in range(6):
         try:
             print(f"🔄 Intento {intento+1}/6 generando historia real...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
-            finish_reason = r.json()["choices"][0].get("finish_reason", "unknown")
-            print(f"   📊 finish_reason: {finish_reason}")
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
-            print(f"   📝 Respuesta cruda (primeros 300 chars): {respuesta[:300]}...")
             json_str = limpiar_respuesta_json(respuesta)
             try:
                 data = json.loads(json_str, strict=False)
-                print("   ✅ JSON parseado correctamente con json.loads")
-            except json.JSONDecodeError as e:
-                print(f"   ⚠️ json.loads falló: {e}")
-                try:
-                    import json5
-                    data = json5.loads(json_str)
-                    print("   ✅ JSON parseado correctamente con json5 (fallback)")
-                except ImportError:
-                    print("   ❌ json5 no está instalado.")
-                    raise
-                except Exception as e2:
-                    print(f"   ❌ json5 también falló: {e2}")
-                    raise
+            except json.JSONDecodeError:
+                import json5
+                data = json5.loads(json_str)
+            
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
-                raise ValueError("Texto demasiado corto o campo faltante")
+                raise ValueError("Texto demasiado corto")
+            
+            # Actualizar época según año del suceso
+            anio_suceso = data.get("anio_suceso", None)
+            actualizar_epoca(anio_suceso)
+            
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
-            data["texto_completo"] = re.sub(r'\n{3,}', '\n\n', data["texto_completo"])
+            
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
             if len(titulo) < 40:
                 titulo = f"{titulo} - Testimonio real en {ESTADO_HISTORIA_SHORTS}"
             if len(titulo) > 95:
-                recorte = titulo[:92].rsplit(' ', 1)[0]
-                titulo = recorte + "..."
+                titulo = titulo[:92].rsplit(' ', 1)[0] + "..."
             data["titulo"] = titulo
+            
             if titulo_ya_publicado(titulo):
-                print(f"   ⚠️ Título YA PUBLICADO: '{titulo}'. Regenerando...")
+                print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
                 raise ValueError("Título duplicado")
+            
             gancho = data.get("gancho_descripcion", "").strip()
             if not gancho or len(gancho) > 110:
                 gancho = f"Esto fue lo que viví en {ESTADO_HISTORIA_SHORTS} y nunca pude explicar"[:100]
             data["gancho_descripcion"] = gancho
+            
             contexto = data.get("contexto_descripcion", "").strip()
             if not contexto:
-                contexto = f"Un testimonio real de fenómenos paranormales ocurrido en {ESTADO_HISTORIA_SHORTS}, México."
+                contexto = f"Un testimonio real de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."
             data["contexto_descripcion"] = contexto
+            
             fuente = data.get("fuente_relato", "").strip()
             if not fuente:
                 fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
-            # 🆕 Extraer y actualizar año del suceso
-            anio_suceso = data.get("anio_suceso", None)
-            actualizar_epoca(anio_suceso)
+            
             tags_raw = data.get("tags", "")
-            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
-            tags_list = tags_list[:15]
-            extras_long_tail = [
+            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:15]
+            extras = [
                 f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
-                f"relatos reales de terror en {ESTADO_HISTORIA_SHORTS.lower()}",
                 "testimonios paranormales reales",
                 "historias reales contadas en primera persona",
                 "leyendas urbanas mexicanas reales",
-                "relatos de internet reales",
                 "casos paranormales reales mexico",
                 "historias de fantasmas reales",
                 "shorts terror",
             ]
             i = 0
-            while len(tags_list) < 10 and i < len(extras_long_tail):
-                if extras_long_tail[i] not in tags_list:
-                    tags_list.append(extras_long_tail[i])
+            while len(tags_list) < 10 and i < len(extras):
+                if extras[i] not in tags_list:
+                    tags_list.append(extras[i])
                 i += 1
+            
             tags_final = []
             total_chars = 0
             for t in tags_list:
@@ -626,20 +541,18 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 tags_final.append(t)
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
-            hashtags_descripcion = "#Shorts #TerrorEn" + ESTADO_HISTORIA_SHORTS.replace(" ", "") + " #RelatosReales #Paranormal #MiedoReal"
-            data["hashtags_descripcion"] = hashtags_descripcion
+            data["hashtags_descripcion"] = "#Shorts #TerrorEn" + ESTADO_HISTORIA_SHORTS.replace(" ", "") + " #RelatosReales #Paranormal #MiedoReal"
+            
             print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
-            print(f"   🔑 Keywords: {data.get('palabras_clave', [])}")
-            print(f"   📖 Fuente: {data['fuente_relato']}")
-            print(f"   🏷️ Tags generados: {len(tags_final)}")
+            print(f"   🗓️ Año del suceso: {data.get('anio_suceso', 'actualidad')}")
             return data
+            
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
-                espera = 10 + intento * 5
-                print(f"⏳ Esperando {espera}s antes de reintentar...")
-                time.sleep(espera)
-    print("❌ TODOS LOS INTENTOS DE GENERACIÓN FALLARON.")
+                time.sleep(10 + intento * 5)
+    
+    print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
 
 # ================================================================
@@ -667,7 +580,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     return segmentos
 
 # ================================================================
-# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS
+# 🎬 ASIGNAR ETAPAS VISUALES
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -695,54 +608,51 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL (ambiente protagonista)
+# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL + ÉPOCA
 # ================================================================
 def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, perfil=None, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
     paleta = paleta_color or PALETA_COLOR_ACTUAL
     perfil = perfil or PERFIL_PERSONAJE_SHORTS
+    
     contexto_previo = ""
     if segmento_anterior_texto:
-        contexto_previo = f"\nPREVIOUS SCENE: The character was just in the previous moment: '{segmento_anterior_texto[:120]}'"
+        contexto_previo = f"\nPREVIOUS SCENE: The character was just in: '{segmento_anterior_texto[:120]}'"
+    
     instrucciones_etapa = {
-        "inicio_casa": "Show the interior environment of a home, establishing shot. If the person is mentioned in the text, show them small (max 20% of frame). If not mentioned, show ONLY the environment (rooms, furniture, objects).",
-        "desplazamiento": "Show the character in movement (walking or driving), same route continuing from the previous scene, different camera angle. Focus on the vehicle/street/environment.",
-        "lugar_destino": "Show the specific location the character is arriving at or exploring. The ENVIRONMENT is the main subject (forest, house, street, garden, building). Person max 20% if mentioned.",
-        "climax_evento": "Show the paranormal event happening in this exact location. Focus on the atmosphere and environment. Character reacting but NOT in close-up face.",
-        "resolucion": "Show the aftermath or the character leaving, calmer atmosphere, conclusion."
+        "inicio_casa": "Show the environment of a home interior (furniture, rooms, objects). If the person is mentioned, show them SMALL at distance (max 20% of frame). If not mentioned, show ONLY the environment without people.",
+        "desplazamiento": "Show the environment of movement (street, vehicle, road). Vehicles and surroundings are the MAIN subject. If person is mentioned, show them small at distance (max 20% of frame).",
+        "lugar_destino": "Show the environment of the specific location. Cars, trees, houses, buildings are the MAIN subject. If person is mentioned, show them small at distance (max 20% of frame).",
+        "climax_evento": "Show the environment where the event happens. The LOCATION is the main subject. If person is mentioned, show them small at distance (max 20% of frame). NO close-up faces.",
+        "resolucion": "Show the environment of departure/return. Calmer atmosphere. If person is mentioned, show them small at distance (max 20% of frame).",
     }
     instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
-    prompt = f"""Eres un director de fotografía experto en composición cinematográfica y continuidad narrativa.
-Fragmento del relato actual:
+    
+    prompt = f"""You are an expert cinematographer specializing in narrative visual continuity.
+Story segment:
 \"\"\"
 {segmento_texto}
 \"\"\"
 {contexto_previo}
-Genera un PROMPT DE IMAGEN EN INGLÉS para una foto vertical (9:16) que represente esta escena.
 
-SCENE CONTINUITY INSTRUCTIONS:
-- Current narrative stage: {etapa}
+Generate an ENGLISH PROMPT for a vertical (9:16) photo of this scene.
+
+CONTINUITY INSTRUCTIONS:
+- Current stage: {etapa}
 - Current location: {ubicacion_escena}
 - DIRECTIVE: {instruccion}
 
-Reglas estrictas de composición:
-- PLANO: Wide shot o extreme wide shot. PROHIBIDO close-up, portrait, headshot.
-- Enfoque principal: el ENTORNO, objetos y ubicación (carros, árboles, casas, calles, bosques, jardines, edificios).
-- Personaje (SOLO si el texto lo menciona): {perfil}, ocupando como MÁXIMO el 20% del área, a distancia.
-- Si el fragmento NO menciona al personaje, NO incluyas personas. Enfócate 100% en el entorno.
-- Estilo: professional hyperrealistic photography, 4k, ultra-detailed, natural lighting.
-- Paleta de color: {paleta}
-- ÉPOCA: {EPOCA_MOD}. Los vehículos, ropa, tecnología y arquitectura deben ser coherentes con esta época.
-- PROHIBIDO: clones, duplicados, dobles caras, gemelos, twins, doppelganger.
+STRICT COMPOSITION RULES:
+- SHOT: Wide shot or extreme wide shot. ABSOLUTELY NO close-up, NO portrait, NO headshot.
+- MAIN SUBJECT: The ENVIRONMENT, objects and location (cars, trees, houses, streets, buildings, forests, gardens).
+- If a person is mentioned: include them occupying AT MOST 20% of the frame, small and at distance.
+- If NO person is mentioned: show ONLY the environment without people.
+- Style: professional hyperrealistic photography, sharp focus.
+- Color palette: {paleta}
+- ERA: {EPOCA_MOD}. Period-accurate vehicles, architecture, clothing and technology.
+- ABSOLUTE PROHIBITIONS: NO clones, NO duplicates, NO twins, NO double faces, NO close-up faces, NO gore, NO blood.
 
-VISUAL CONSISTENCY RULES:
-- EXACTLY ONE PERSON (only if mentioned in the text segment)
-- NO cut-off bodies, NO partial bodies, NO limbs outside frame
-- NO multiple people, NO duplicate figures, NO clones
-- NO floating objects, NO illogical elements
-- The environment (cars, trees, houses, streets, buildings, forests, gardens) must be the MAIN SUBJECT
-
-Devuelve SOLO el prompt en inglés, sin explicaciones.
+Return ONLY the English prompt, no explanations.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -756,11 +666,11 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         prompt_imagen = r.json()["choices"][0]["message"]["content"].strip()
-        prompt_imagen += f", {estilo}, vertical 9:16, wide establishing shot, environment as main subject, no close-up face, no portrait, no blood, no gore, {EPOCA_MOD}, single person only if mentioned, no cut off body, no clones, no duplicates"
+        prompt_imagen += f", {estilo}, vertical 9:16, wide establishing shot, environment as main subject, no close-up face, no portrait, no gore, no blood, {EPOCA_MOD}, exactly one person if mentioned, no clones, no duplicates"
         return prompt_imagen
     except Exception as e:
         print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Wide establishing shot of {ubicacion_escena}, {estilo}, vertical 9:16, environment as main subject, {EPOCA_MOD}, no close-up face, single person"
+        return f"Wide establishing shot of {ubicacion_escena}, {estilo}, vertical 9:16, environment as main subject, no close-up face, {EPOCA_MOD}"
 
 # ================================================================
 # 🖼️ GENERAR IMAGEN VERTICAL (negative prompt anti-defectos)
@@ -775,15 +685,13 @@ def generar_imagen_vertical(prompt, intentos=3):
         "deformed, mutated, bad anatomy, extra limbs, extra fingers, missing limbs, missing fingers, "
         "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
         "close-up face, portrait, headshot, person filling frame, face occupying more than 20% of image, "
-        "centered subject, camera pointed directly at face, "
         "gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, "
-        "sickly, decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, unattractive, "
+        "sickly, decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, "
         "dual face, split face, two faces, double face, mirror face, two heads, "
         "cloned face, duplicate person, twin, twins, doppelganger, siamese, conjoined, "
         "floating objects, illogical elements, impossible physics, "
         "ghost doubles, transparent figures, multiple versions of same person, "
-        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo, "
-        "broken, shattered, destroyed, post-apocalyptic, dystopian ruins"
+        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo"
     )
     payload = {
         "model": "agnes-image-2.1-flash",
@@ -813,6 +721,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ubicacion
         print(f"  🎬 Segmento {idx+1}/{len(segmentos)} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
+        
         seg_anterior = segmentos[idx-1] if idx > 0 else None
         prompt_imagen = generar_prompt_con_contexto(
             segmento_texto=seg,
@@ -824,6 +733,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
             paleta_color=paleta
         )
         print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
+        
         img_url = None
         for intento in range(intentos_por_imagen):
             try:
@@ -834,76 +744,78 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
             except Exception:
                 pass
             if intento < intentos_por_imagen - 1:
-                print(f"    ⏳ Reintentando imagen...")
                 time.sleep(6)
+        
         if not img_url:
             print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
+        
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
             print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
             return None
+        
         try:
             audio_clip = AudioFileClip(audio_path)
             duracion = audio_clip.duration
             audio_clip.close()
-        except Exception as e:
-            print(f"    ⚠️ Error midiendo duración: {e}. Usando estimación de 10s.")
+        except Exception:
             duracion = 10.0
+        
         resultados_temporales.append({
             "imagen_url": img_url,
             "audio_path": audio_path,
             "duracion": duracion
         })
+        
         if idx < len(segmentos) - 1:
-            print(f"    ⏳ Esperando 12 segundos antes del siguiente segmento...")
             time.sleep(12)
-    print("\n🔄 Reparando imágenes fallidas...")
+    
+    # Reparar imágenes fallidas
     for i, res in enumerate(resultados_temporales):
         if res["imagen_url"] is None:
             siguiente_imagen = None
             for j in range(i + 1, len(resultados_temporales)):
                 if resultados_temporales[j]["imagen_url"] is not None:
                     siguiente_imagen = resultados_temporales[j]["imagen_url"]
-                    print(f"    🔄 Segmento {i+1} usando imagen del segmento {j+1}")
                     break
             if siguiente_imagen is not None:
                 res["imagen_url"] = siguiente_imagen
             else:
                 if i > 0 and resultados_temporales[i-1]["imagen_url"] is not None:
                     res["imagen_url"] = resultados_temporales[i-1]["imagen_url"]
-                    print(f"    🔄 Segmento {i+1} usando imagen del segmento anterior")
                 else:
                     img_url = generar_placeholder_local("Terror", (1080, 1920))
                     if not img_url:
                         img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
                     res["imagen_url"] = img_url
-                    print(f"    ⚠️ Segmento {i+1}: usando placeholder")
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO - CON FALLBACK ENTRE VOCES NEURALES
+# ✅ GENERAR AUDIO - SOLO 4 VOCES MASCULINAS QUE FUNCIONAN
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
     texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE).strip()
     texto_limpio = limpiar_caracteres_para_tts(texto_limpio)
     texto_limpio = limpiar_texto_para_audio(texto_limpio)
+    
     if len(texto_limpio) < 30:
-        print(f"⚠️ Texto corto ({len(texto_limpio)} caracteres). Rellenando...")
-        texto_limpio = "Esa noche en la carretera, el silencio era tan denso que podía cortarse con un cuchillo. El miedo lo envolvía todo. No podía escapar."
+        texto_limpio = "Esa noche en la carretera, el silencio era tan denso que podía cortarse con un cuchillo. El miedo lo envolvía todo."
+    
     if not texto_limpio:
         return None
+    
     filename = f"audio_short_{index}.mp3"
     voces_a_probar = [CONFIG_VOZ_ACTUAL]
     for voz_config in VOCES_DISPONIBLES:
         if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
             voces_a_probar.append(voz_config)
-    print(f"🔊 Generando audio para segmento {index}. Probando hasta {len(voces_a_probar)} voces neurales...")
+    
     for intento_voz, voz_config in enumerate(voces_a_probar):
         voz = voz_config["voz"]
         rate = voz_config["velocidad"]
         pitch = voz_config["tono"]
-        print(f"🎤 Intento {intento_voz+1}/{len(voces_a_probar)} con voz: {voz}")
+        
         for intento in range(intentos_por_voz):
             async def _generar():
                 communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
@@ -911,23 +823,21 @@ def generar_audio(texto, index, intentos_por_voz=2):
             try:
                 asyncio.run(_generar())
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    print(f"✅ Audio segmento {index} generado con {voz}")
                     if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
+                        print(f"🔄 Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
                         CONFIG_VOZ_ACTUAL = voz_config
                     return filename
             except Exception as e:
                 print(f"❌ Falló con {voz}: {e}")
                 if intento < intentos_por_voz - 1:
-                    espera = 3 * (intento + 1)
-                    print(f"⏳ Esperando {espera}s antes de reintentar con la misma voz...")
-                    time.sleep(espera)
-            if os.path.exists(filename):
-                try:
-                    os.remove(filename)
-                except:
-                    pass
-    print("❌ TODAS las voces neurales de Edge TTS fallaron. Abortando generación de audio.")
+                    time.sleep(3 * (intento + 1))
+                if os.path.exists(filename):
+                    try:
+                        os.remove(filename)
+                    except:
+                        pass
+    
+    print("❌ TODAS las voces fallaron.")
     return None
 
 # ================================================================
@@ -941,51 +851,47 @@ def generar_audio_cta_final():
     for voz_config in VOCES_DISPONIBLES:
         if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
             voces_a_probar.append(voz_config)
-    print(f"🔊 Generando audio CTA final. Probando hasta {len(voces_a_probar)} voces neurales...")
-    for intento_voz, voz_config in enumerate(voces_a_probar):
+    
+    for voz_config in voces_a_probar:
         voz = voz_config["voz"]
         rate = voz_config["velocidad"]
         pitch = voz_config["tono"]
-        print(f"🎤 CTA - Intento {intento_voz+1}/{len(voces_a_probar)} con voz: {voz}")
         async def _generar():
             communicate = edge_tts.Communicate(cta_texto, voz, rate=rate, pitch=pitch)
             await communicate.save(filename)
         try:
             asyncio.run(_generar())
             if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                print(f"✅ Audio CTA final generado con voz: {voz}")
-                if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                    print(f"🔄 Voz principal cambiada de {CONFIG_VOZ_ACTUAL['voz']} a {voz}")
-                    CONFIG_VOZ_ACTUAL = voz_config
                 return filename
-        except Exception as e:
-            print(f"❌ CTA falló con {voz}: {e}")
-        if os.path.exists(filename):
-            try:
-                os.remove(filename)
-            except:
-                pass
-    print("❌ No se pudo generar audio CTA con ninguna voz neural.")
+        except Exception:
+            if os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                except:
+                    pass
     return None
 
 # ================================================================
-# MONTAR VIDEO CON TRANSICIONES SUAVES
+# 🎬 MONTAR VIDEO - BUG audio_final CORREGIDO
 # ================================================================
 def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.mp4"):
     if not recursos_por_segmento:
         raise ValueError("No hay recursos para montar el video")
+    
     clips_video = []
     clips_audio = []
+    
     for i, recurso in enumerate(recursos_por_segmento):
         img_url = recurso["imagen_url"]
         audio_path = recurso["audio_path"]
         duracion = recurso["duracion"]
+        
         try:
             audio_clip = AudioFileClip(audio_path)
             clips_audio.append(audio_clip)
         except Exception as e:
-            print(f"⚠️ Error cargando audio segmento {i}: {e}")
             raise ValueError(f"Fallo al cargar audio del segmento {i}")
+        
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -995,9 +901,11 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
                     f.write(r.content)
             else:
                 img_path = img_url
+            
             with Image.open(img_path) as img:
                 img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
                 img_fitted.save(img_path)
+            
             video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
         except Exception as e:
@@ -1011,8 +919,10 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
                 clips_video.append(video_clip)
             else:
                 continue
+    
     if not clips_video:
         raise ValueError("No se pudieron crear clips de video")
+    
     PAUSA_ENTRE_SEGMENTOS = 0.3
     if len(clips_audio) > 1:
         audio_con_pausas = []
@@ -1024,7 +934,10 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
         audio_narracion = concatenate_audioclips(audio_con_pausas)
     else:
         audio_narracion = clips_audio[0]
+    
     video = concatenate_videoclips(clips_video, method="compose")
+    
+    # CTA final
     cta_audio_path = generar_audio_cta_final()
     if cta_audio_path and os.path.exists(cta_audio_path):
         try:
@@ -1039,20 +952,24 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             print(f"✅ CTA final agregado ({duracion_cta:.1f}s adicionales)")
         except Exception as e:
             print(f"⚠️ Error agregando CTA final: {e}")
+    
     duracion_total = audio_narracion.duration
+    
+    # 🛠️ BUG CORREGIDO: audio_final SIEMPRE se asigna
+    audio_final = audio_narracion
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
             if fondo_clip.duration < duracion_total:
                 veces = int(duracion_total / fondo_clip.duration) + 1
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
-                fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
-                audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
+            fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
+            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
+            print("🎵 Audio de fondo mezclado al 8%")
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
-    else:
-        audio_final = audio_narracion
+    
     video = video.set_audio(audio_final)
     video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
     video.close()
@@ -1069,11 +986,12 @@ def montar_video_shorts(recursos_por_segmento, fondo_path, salida="short_final.m
             os.remove(cta_audio_path)
         except:
             pass
+    
     print(f"✅ Short vertical creado: {salida}")
     return salida
 
 # ================================================================
-# 🆕 SUBIR A YOUTUBE (SIN MINIATURA PERSONALIZADA)
+# 🆕 SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
@@ -1081,21 +999,21 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         youtube = build("youtube", "v3", credentials=creds)
     except Exception as e:
         print(f"❌ Error autenticando con YouTube: {e}")
-        if "invalid_grant" in str(e) or "expired" in str(e):
-            print("🔴 El token de YouTube ha expirado. Debes renovar YOUTUBE_USER_TOKEN.")
-            sys.exit(1)
+        sys.exit(1)
+    
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
+    
     descripcion = f"""{gancho_descripcion}
 {contexto_descripcion}
-
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
 📖 {fuente_relato}
 📱 Facebook: {FACEBOOK_LINK}
-
 {hashtags_descripcion}"""
+    
     if ACTIVAR_DISCLOSURE_IA:
         descripcion += DISCLOSURE_TEXT
+    
     body = {
         "snippet": {
             "title": titulo,
@@ -1117,7 +1035,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         response = request.execute()
         video_id = response["id"]
         print(f"✅ Short subido: https://youtu.be/{video_id}")
-        print("📌 YouTube elegirá automáticamente el mejor frame como miniatura")
         return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
@@ -1143,6 +1060,7 @@ def subir_video_temporal(video_path, intentos=2):
         except Exception as e:
             print(f"⚠️ litterbox falló: {e}")
             time.sleep(3)
+    
     for _ in range(intentos):
         try:
             with open(video_path, "rb") as f:
@@ -1159,6 +1077,7 @@ def subir_video_temporal(video_path, intentos=2):
         except Exception as e:
             print(f"⚠️ tmpfiles falló: {e}")
             time.sleep(3)
+    
     try:
         with open(video_path, "rb") as f:
             r = requests.post("https://0x0.st", files={"file": f}, timeout=180)
@@ -1168,6 +1087,7 @@ def subir_video_temporal(video_path, intentos=2):
                 return url
     except Exception as e:
         print(f"⚠️ 0x0.st falló: {e}")
+    
     print("❌ No se pudo subir el video a ningún host temporal.")
     return None
 
@@ -1179,6 +1099,7 @@ def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
     if not webhook_url:
         print("⚠️ MAKE_WEBHOOK_URL_REELS no configurado. Saltando Facebook.")
         return False
+    
     payload = {
         "titulo": titulo,
         "descripcion": descripcion,
@@ -1204,12 +1125,11 @@ def limpiar_temporales_shorts():
                 os.remove(f)
             except Exception:
                 pass
-    for aux in ["short_final.mp4"]:
-        if os.path.exists(aux):
-            try:
-                os.remove(aux)
-            except Exception:
-                pass
+    if os.path.exists("short_final.mp4"):
+        try:
+            os.remove("short_final.mp4")
+        except Exception:
+            pass
     print("🧹 Archivos temporales de Shorts eliminados.")
 
 # ================================================================
@@ -1219,23 +1139,28 @@ def main():
     print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con continuidad visual)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
+    
     if not YOUTUBE_USER_TOKEN:
-        print("❌ No se encontró YOUTUBE_USER_TOKEN en las variables de entorno.")
+        print("❌ No se encontró YOUTUBE_USER_TOKEN.")
         sys.exit(1)
+    
     publicadas_hoy = obtener_publicaciones_hoy()
     if publicadas_hoy >= META_DIARIA_SHORTS:
         print(f"✅ Ya se alcanzó la meta de {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
+    
     estado = cargar_estado()
-    print(f"📌 Estado cargado: {estado}")
     fondo_path = seleccionar_fondo_disponible(estado)
+    
     print("🆕 Generando nueva historia REAL con SEO experto...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
         sys.exit(1)
+    
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
+    
     if palabras < 130:
         print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
         texto_completo = expandir_texto_corto(
@@ -1246,23 +1171,28 @@ def main():
     elif palabras > 190:
         print(f"✂️ Texto largo ({palabras} palabras). Truncando...")
         texto_completo = truncar_texto_largo(texto_completo, max_palabras=170)
+    
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
     paleta = PALETA_COLOR_ACTUAL
     estilo = ESTILO_VISUAL_ACTUAL
+    
     print(f"\n📊 RESUMEN SEO:")
     print(f"   🏷️ Título: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
-    print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"   🗓️ Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
     print(f"\n   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
+    
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
+    
     print(f"\n🖼️ Generando {len(segmentos)} imágenes con continuidad narrativa...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
         print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
+    
     recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
         etapas=etapas,
@@ -1273,10 +1203,14 @@ def main():
         paleta=paleta,
         intentos_por_imagen=3
     )
+    
     if not recursos:
-        print("❌ Error generando recursos para los segmentos. Abortando.")
+        print("❌ Error generando recursos. Abortando.")
         sys.exit(1)
-    # SIN PORTADA PERSONALIZADA - YouTube elige el frame automáticamente
+    
+    # SIN PORTADA CON TEXTO - el primer frame es la imagen del segmento 1
+    # (YouTube elige automáticamente el thumbnail)
+    
     try:
         video_final = montar_video_shorts(
             recursos_por_segmento=recursos,
@@ -1286,6 +1220,7 @@ def main():
     except Exception as e:
         print(f"❌ Error montando video: {e}")
         sys.exit(1)
+    
     print(f"\n🚀 Subiendo Short a YouTube...")
     video_id_youtube = subir_a_youtube(
         video_path=video_final,
@@ -1296,10 +1231,10 @@ def main():
         hashtags_descripcion=historia_raw["hashtags_descripcion"],
         fuente_relato=historia_raw.get("fuente_relato", "Basado en un testimonio real compartido en internet."),
     )
+    
     guardar_titulo_publicado(historia_raw["titulo"])
-    titulo_alternativo = historia_raw.get("titulo_alternativo", "")
-    if titulo_alternativo and titulo_alternativo != historia_raw["titulo"]:
-        print(f"💡 Título alternativo para A/B testing: {titulo_alternativo}")
+    
+    # Facebook solo para los 2 primeros Shorts del día
     publicaciones_antes = obtener_publicaciones_hoy()
     if publicaciones_antes < 2:
         print(f"\n📘 Reel #{publicaciones_antes + 1} del día: enviando a Facebook vía Make...")
@@ -1307,11 +1242,9 @@ def main():
         if video_url_temporal:
             descripcion_facebook = f"""{historia_raw['gancho_descripcion']}
 {historia_raw['contexto_descripcion']}
-
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
 📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real compartido en internet.')}
 📱 Síguenos: {FACEBOOK_LINK}
-
 {historia_raw['hashtags_descripcion']}"""
             enviar_a_make(
                 titulo=historia_raw["titulo"],
@@ -1323,10 +1256,11 @@ def main():
             print("⚠️ No se pudo subir al host temporal. Facebook omitido.")
     else:
         print(f"\n⏭️ Reel #{publicaciones_antes + 1} del día: NO se envía a Facebook (límite: 2 diarios).")
+    
     incrementar_publicaciones_hoy()
     guardar_estado(estado)
     limpiar_temporales_shorts()
-    print("✨ Ejecución del Bot finalizada con continuidad visual + época dinámica.")
+    print("✨ Ejecución del Bot finalizada con éxito.")
 
 if __name__ == "__main__":
     try:
