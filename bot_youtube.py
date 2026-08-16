@@ -35,6 +35,7 @@ FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
+TEMAS_SHORTS_FILE = "temas_shorts.json"
 DURACION_MINIMA_SEGUNDOS = 480
 MAX_INTENTOS_EXPANSION = 2
 ACTIVAR_DISCLOSURE_IA = True
@@ -190,7 +191,7 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (sin repetir)
+# 🎵 AUDIO DE FONDO (sin repetir los últimos 3)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -200,9 +201,15 @@ FONDOS_DISPONIBLES = [
 def cargar_estado_musica():
     try:
         with open(MUSICA_ESTADO_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            estado = json.load(f)
+        # Migración del formato antiguo al nuevo
+        if "ultimo_fondo" in estado and "ultimos_fondos" not in estado:
+            estado["ultimos_fondos"] = [estado["ultimo_fondo"]]
+            del estado["ultimo_fondo"]
+            guardar_estado_musica(estado)
+        return estado
     except:
-        return {"ultimo_fondo": None}
+        return {"ultimos_fondos": []}
 
 def guardar_estado_musica(estado):
     with open(MUSICA_ESTADO_FILE, "w", encoding="utf-8") as f:
@@ -210,34 +217,50 @@ def guardar_estado_musica(estado):
     print(f"✅ Estado de música guardado: {estado}")
 
 def seleccionar_fondo_disponible():
-    estado_musica = cargar_estado_musica()
-    ultimo_fondo = estado_musica.get("ultimo_fondo")
-    fondos = FONDOS_DISPONIBLES.copy()
-    if ultimo_fondo and ultimo_fondo in fondos:
-        fondos.remove(ultimo_fondo)
-        print(f"🎵 Evitando repetir fondo: {ultimo_fondo}")
-    random.shuffle(fondos)
-    for root, dirs, files in os.walk("."):
-        if "/." in root or "\\." in root:
-            continue
-        for file in files:
-            for fondo in fondos:
-                if file.lower() == fondo.lower():
-                    full_path = os.path.join(root, file)
-                    estado_musica["ultimo_fondo"] = fondo
-                    guardar_estado_musica(estado_musica)
-                    print(f"✅ Audio de fondo seleccionado: {full_path}")
-                    return full_path
-    for root, dirs, files in os.walk("."):
-        for file in files:
-            for fondo in FONDOS_DISPONIBLES:
-                if file.lower() == fondo.lower():
-                    full_path = os.path.join(root, file)
-                    estado_musica["ultimo_fondo"] = fondo
-                    guardar_estado_musica(estado_musica)
-                    print(f"✅ Audio de fondo (única opción): {full_path}")
-                    return full_path
-    print("⚠️ No se encontró ningún archivo de fondo disponible.")
+    estado = cargar_estado_musica()
+    ultimos = estado.get("ultimos_fondos", [])
+    
+    # Excluir los últimos 3 fondos usados
+    excluir = set(ultimos[-3:]) if ultimos else set()
+    disponibles = [f for f in FONDOS_DISPONIBLES if f not in excluir]
+    
+    # Si no hay disponibles (todos excluidos), usar todos
+    if not disponibles:
+        disponibles = FONDOS_DISPONIBLES.copy()
+    
+    # Intentar hasta 5 veces encontrar un archivo que exista
+    for _ in range(5):
+        elegido = random.choice(disponibles)
+        # Buscar el archivo en el directorio actual y subdirectorios
+        for root, dirs, files in os.walk("."):
+            if "/." in root or "\\." in root:
+                continue
+            if elegido in files:
+                full_path = os.path.join(root, elegido)
+                # Actualizar historial
+                ultimos.append(elegido)
+                if len(ultimos) > 10:
+                    ultimos = ultimos[-10:]
+                estado["ultimos_fondos"] = ultimos
+                guardar_estado_musica(estado)
+                print(f"✅ Audio de fondo seleccionado: {full_path}")
+                return full_path
+        # Si no se encontró, eliminar de disponibles y reintentar
+        disponibles.remove(elegido)
+        if not disponibles:
+            break
+    
+    # Fallback: usar el primero que exista
+    for fondo in FONDOS_DISPONIBLES:
+        for root, dirs, files in os.walk("."):
+            if "/." in root or "\\." in root:
+                continue
+            if fondo in files:
+                full_path = os.path.join(root, fondo)
+                print(f"⚠️ Fallback: {full_path}")
+                return full_path
+    
+    print("⚠️ No se encontró ningún archivo de fondo.")
     return None
 
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
@@ -277,6 +300,43 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
+# 🆕 GESTIÓN DE TEMAS SHORTS (evitar repetición temática)
+# ================================================================
+def cargar_temas_shorts():
+    try:
+        with open(TEMAS_SHORTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {"temas": []}
+
+def guardar_tema_shorts(tema):
+    data = cargar_temas_shorts()
+    if tema not in data["temas"]:
+        data["temas"].append(tema)
+    with open(TEMAS_SHORTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    print(f"✅ Tema guardado: '{tema}'")
+
+def tema_ya_usado(tema, umbral=0.5):
+    data = cargar_temas_shorts()
+    if not data["temas"]:
+        return False
+    palabras_nuevas = set(re.findall(r'\w+', tema.lower()))
+    if not palabras_nuevas:
+        return False
+    for tema_antiguo in data["temas"][-20:]:
+        palabras_antiguas = set(re.findall(r'\w+', tema_antiguo.lower()))
+        if not palabras_antiguas:
+            continue
+        interseccion = palabras_nuevas.intersection(palabras_antiguas)
+        union = palabras_nuevas.union(palabras_antiguas)
+        similitud = len(interseccion) / len(union) if union else 0
+        if similitud > umbral:
+            print(f"⚠️ Tema similar: '{tema_antiguo}' (similitud {similitud:.2f})")
+            return True
+    return False
+
+# ================================================================
 # 🧼 LIMPIADOR DE PROMPTS (conserva época, entorno protagonista, anti-clones)
 # ================================================================
 def limpiar_prompt(prompt):
@@ -307,7 +367,7 @@ def limpiar_prompt(prompt):
     return prompt_base + modificadores
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON
+# LIMPIAR RESPUESTA JSON (CORREGIDO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
@@ -320,19 +380,28 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
+        # Línea eliminada: ya no reemplazamos saltos de línea, confiamos en strict=False y json5
         return json_str
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO)
+# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - con control de temas)
 # ================================================================
 def generar_historia_completa():
+    # Obtener temas recientes (los más recientes primero)
+    temas_recientes = cargar_temas_shorts()["temas"][-20:]
+    temas_texto = "\n".join([f"- {t}" for t in temas_recientes]) if temas_recientes else "Ninguno aún."
+
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+
     prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO + MINIATURAS PARA YOUTUBE 2026.
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
+
+🚫 TEMAS YA PUBLICADOS (EVITAR ESTAS TEMÁTICAS):
+{temas_texto}
 
 Escribe un RELATO PARANORMAL COMPLETO en primera persona, en español, de 1.400-1.600 palabras, ambientado en {UBICACION_HISTORIA}, México.
 Escríbelo como TEXTO CONTINUO en párrafos (NO lo dividas en segmentos ni listas).
@@ -449,6 +518,13 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 if titulo_largo_ya_publicado(titulo_generado):
                     print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
                     raise ValueError("Título duplicado")
+                # Verificar tema
+                keywords = data.get("palabras_clave", [])
+                if keywords:
+                    tema = " ".join(keywords)
+                    if tema_ya_usado(tema):
+                        print(f"⚠️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
+                        raise ValueError("Tema duplicado")
                 anio_suceso = data.get("anio_suceso", None)
                 actualizar_epoca(anio_suceso)
                 print(f"✅ Historia generada: {palabras} palabras.")
@@ -657,9 +733,6 @@ def generar_imagen(prompt, width=1080, height=1920, intentos=3):
 # 🖼️ GENERAR MINIATURA BASE (SIN TEXTO) - para luego añadir texto con PIL
 # ================================================================
 def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
-    """
-    Genera la imagen base de la miniatura (sin texto) usando Agnes.
-    """
     prompt_limpio = limpiar_prompt(prompt)
     # Aseguramos que el prompt no pida texto
     prompt_limpio = re.sub(r"text\s*overlay|text\s*on\s*image|render\s*text|add\s*text", "", prompt_limpio, flags=re.IGNORECASE)
@@ -1136,7 +1209,17 @@ def main():
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video, capitulos_video)
 
+    # Guardar título y tema
     guardar_titulo_largo(titulo_video)
+    palabras_clave = historia.get("palabras_clave", [])
+    if palabras_clave:
+        tema = " ".join(palabras_clave)
+        if not tema_ya_usado(tema):
+            guardar_tema_shorts(tema)
+    else:
+        tema = f"{UBICACION_HISTORIA} {titulo_video.split()[0]}"
+        guardar_tema_shorts(tema)
+
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
     print("🎉 Proceso completado (video vertical + miniatura con PIL).")
