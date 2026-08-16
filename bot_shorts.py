@@ -473,7 +473,7 @@ El relato se dividirá en 4-5 segmentos visuales. Cada segmento DEBE tener:
 PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 
 🎯 REGLA CRÍTICA: ÉPOCA DEL SUCESO
-- DEBES especificar el AÑO en que ocurrió el suceso en el campo "anio_suces"
+- DEBES especificar el AÑO en que ocurrió el suceso en el campo "anio_suceso"
 - Puede ser cualquier año (1970, 1985, 1998, 2005, 2018, 2024, etc.)
 - La ropa, vehículos, tecnología y arquitectura de las imágenes se adaptarán a ese año
 - Si no especificas año, se asumirá la actualidad
