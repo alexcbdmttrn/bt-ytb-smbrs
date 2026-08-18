@@ -385,10 +385,9 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - con control de temas)
+# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - con control de temas y reintentos)
 # ================================================================
 def generar_historia_completa():
-    # Obtener temas recientes (los más recientes primero)
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
     temas_texto = "\n".join([f"- {t}" for t in temas_recientes]) if temas_recientes else "Ninguno aún."
 
@@ -405,6 +404,8 @@ def generar_historia_completa():
 
 Escribe un RELATO PARANORMAL COMPLETO en primera persona, en español, de 1.400-1.600 palabras, ambientado en {UBICACION_HISTORIA}, México.
 Escríbelo como TEXTO CONTINUO en párrafos (NO lo dividas en segmentos ni listas).
+
+🎯 **IMPORTANTE: CUENTA MENTALMENTE LAS PALABRAS DEL CAMPO `texto_completo` ANTES DE RESPONDER. SI TU PRIMER BORRADOR TIENE MENOS DE 1400 PALABRAS, CONTINÚA ESCRIBIENDO HASTA ALCANZAR EL MÍNIMO. NUNCA ENTREGUES UN `texto_completo` DE MENOS DE 1200 PALABRAS.**
 
 PERSONAJE PRINCIPAL (FIJO):
 "{PERFIL_PERSONAJE}"
@@ -484,10 +485,11 @@ Devuelve ESTRICTAMENTE este JSON válido:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt_base}],
         "temperature": 0.7,
-        "max_tokens": 4000,
+        "max_tokens": 4800,
         "response_format": {"type": "json_object"}
     }
-    for intento in range(3):
+    # 6 intentos con espera de 10s entre cada uno
+    for intento in range(6):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=120)
             r.raise_for_status()
@@ -513,12 +515,12 @@ Devuelve ESTRICTAMENTE este JSON válido:
             texto = data.get("texto_completo", "")
             palabras = len(texto.split())
             print(f"📊 Palabras del relato: {palabras}")
-            if "texto_completo" in data and palabras >= 900:
+            # Umbral reducido a 500 palabras
+            if "texto_completo" in data and palabras >= 500:
                 titulo_generado = data.get("titulo", "")
                 if titulo_largo_ya_publicado(titulo_generado):
                     print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
                     raise ValueError("Título duplicado")
-                # Verificar tema
                 keywords = data.get("palabras_clave", [])
                 if keywords:
                     tema = " ".join(keywords)
@@ -534,12 +536,14 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 print(f"📝 Título alternativo: {data.get('titulo_alternativo', 'N/A')}")
                 return data
             else:
-                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando...")
+                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
                 raise ValueError("Texto insuficiente")
         except Exception as e:
-            print(f"❌ Intento {intento+1}/3 falló: {e}")
-            time.sleep(5)
-    print("❌ No se pudo generar historia válida.")
+            print(f"❌ Intento {intento+1}/6 falló: {e}")
+            if intento < 5:
+                print("⏳ Esperando 10 segundos antes del siguiente intento...")
+                time.sleep(10)
+    print("❌ No se pudo generar historia válida después de 6 intentos.")
     sys.exit(1)
 
 # ================================================================
@@ -650,7 +654,7 @@ Devuelve SOLO el prompt en inglés, sin explicaciones.
         return f"Vertical 9:16 wide shot of {ubicacion_escena} in {EPOCA_MOD}, depicting: {segmento_texto[:100]}, environment as main focal point, no close-up face, single person only if mentioned"
 
 # ================================================================
-# 🆕 EXPANDIR TEXTO (continuación)
+# 🆕 EXPANDIR TEXTO (continuación) - con espera de 10s
 # ================================================================
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Historia: "{titulo}"
@@ -681,11 +685,13 @@ Devuelve SOLO el texto de continuación, sin título ni explicaciones.
                 return extra
         except Exception as e:
             print(f"❌ Expansión intento {intento+1}/2 falló: {e}")
-        time.sleep(5)
+        if intento < 1:
+            print("⏳ Esperando 10 segundos antes del siguiente intento de expansión...")
+            time.sleep(10)
     return ""
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN VERTICAL (segmentos 1080x1920)
+# 🖼️ GENERAR IMAGEN VERTICAL (segmentos 1080x1920) - 3 intentos, 10s espera
 # ================================================================
 def generar_imagen(prompt, width=1080, height=1920, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
@@ -726,11 +732,12 @@ def generar_imagen(prompt, width=1080, height=1920, intentos=3):
         except Exception as e:
             print(f"⚠️ Error conexión: {e}")
         if intento < intentos - 1:
+            print("⏳ Esperando 10 segundos antes de reintentar...")
             time.sleep(10)
     return None
 
 # ================================================================
-# 🖼️ GENERAR MINIATURA BASE (SIN TEXTO) - para luego añadir texto con PIL
+# 🖼️ GENERAR MINIATURA BASE (SIN TEXTO) - 3 intentos, 10s espera
 # ================================================================
 def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
@@ -768,6 +775,7 @@ def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
         except Exception as e:
             print(f"⚠️ Error conexión: {e}")
         if intento < intentos - 1:
+            print("⏳ Esperando 10 segundos antes de reintentar...")
             time.sleep(10)
     return None
 
