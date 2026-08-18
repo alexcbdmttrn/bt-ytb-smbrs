@@ -24,6 +24,11 @@
       "tipo": "fantasma",
       "lugar": "autopista",
       "contexto": "choque"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "terminal de autobuses",
+      "contexto": "persecucion"
     }
   ]
 }
