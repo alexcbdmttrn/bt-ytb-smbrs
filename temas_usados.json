@@ -19,6 +19,11 @@
       "tipo": "fantasma",
       "lugar": "centro comercial",
       "contexto": "persecucion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "autopista",
+      "contexto": "choque"
     }
   ]
 }
