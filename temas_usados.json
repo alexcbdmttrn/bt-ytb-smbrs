@@ -1,7 +1,24 @@
 {
   "temas": [
-    {"tipo": "fantasma", "lugar": "carretera", "contexto": "persecucion"},
-    {"tipo": "bruja", "lugar": "pueblo", "contexto": "ritual"},
-    {"tipo": "aparicion", "lugar": "casa abandonada", "contexto": "miedo"}
+    {
+      "tipo": "fantasma",
+      "lugar": "carretera",
+      "contexto": "persecucion"
+    },
+    {
+      "tipo": "bruja",
+      "lugar": "pueblo",
+      "contexto": "ritual"
+    },
+    {
+      "tipo": "aparicion",
+      "lugar": "casa abandonada",
+      "contexto": "miedo"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "centro comercial",
+      "contexto": "persecucion"
+    }
   ]
 }
