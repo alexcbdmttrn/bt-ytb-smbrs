@@ -53,7 +53,6 @@ def cargar_temas_usados():
         return {"temas": []}
 
 def guardar_tema_usado(tema):
-    """tema: dict con {'tipo': 'fantasma', 'lugar': 'carretera', 'contexto': 'persecucion'}"""
     data = cargar_temas_usados()
     data["temas"].append(tema)
     if len(data["temas"]) > MAX_TEMAS_HISTORIAL:
@@ -213,7 +212,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO
+# 🎵 AUDIO DE FONDO - NUEVA FUNCIÓN CORREGIDA (ALEATORIEDAD REAL)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -221,28 +220,27 @@ FONDOS_DISPONIBLES = [
 ]
 
 def seleccionar_fondo_disponible(estado):
-    fondos = FONDOS_DISPONIBLES.copy()
-    ultimo_fondo = estado.get("ultimo_fondo")
-    if ultimo_fondo and ultimo_fondo in fondos:
-        fondos.remove(ultimo_fondo)
-    random.shuffle(fondos)
+    """Escanea el disco una vez, construye un diccionario de canciones existentes
+    y elige aleatoriamente entre ellas (menos la última usada)."""
+    encontrados = {}
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
             continue
         for file in files:
-            for fondo in fondos:
-                if file.lower() == fondo.lower():
-                    full_path = os.path.join(root, file)
-                    estado["ultimo_fondo"] = fondo
-                    return full_path
-    for root, dirs, files in os.walk("."):
-        for file in files:
             for fondo in FONDOS_DISPONIBLES:
                 if file.lower() == fondo.lower():
-                    full_path = os.path.join(root, file)
-                    estado["ultimo_fondo"] = fondo
-                    return full_path
-    return None
+                    encontrados[fondo] = os.path.join(root, file)
+    
+    if not encontrados:
+        print("⚠️ No se encontraron archivos de música de fondo en el repositorio.")
+        return None
+    
+    ultimo_fondo = estado.get("ultimo_fondo")
+    candidatos = [f for f in encontrados if f != ultimo_fondo] or list(encontrados.keys())
+    seleccionado = random.choice(candidatos)
+    estado["ultimo_fondo"] = seleccionado
+    print(f"🎵 Música de fondo seleccionada: {seleccionado} (de {len(candidatos)} candidatas disponibles)")
+    return encontrados[seleccionado]
 
 # ================================================================
 # 🧼 LIMPIADOR DE PROMPTS
@@ -424,12 +422,11 @@ def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # Obtener temas recientes para evitar repeticiones
     temas_recientes = obtener_temas_recientes()
     temas_bloqueo = ""
     if temas_recientes:
         temas_bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE (NO REPETIR):\n"
-        for t in temas_recientes[-5:]:  # Últimos 5
+        for t in temas_recientes[-5:]:
             temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
         temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar que los listados.\n"
 
@@ -523,7 +520,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto")
 
-            # Actualizar época según año del suceso
             anio_suceso = data.get("anio_suceso", None)
             actualizar_epoca(anio_suceso)
 
@@ -718,7 +714,6 @@ def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segment
     }
     instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
 
-    # ---- VARIEDAD DE ÁNGULO ----
     angulos = ["low angle", "high angle", "eye level", "dutch angle", "overhead", "wide establishing shot"]
     angulo_elegido = angulos[index_segmento % len(angulos)]
     if total_segmentos > 1 and index_segmento == total_segmentos - 1:
@@ -771,7 +766,7 @@ Return ONLY the English prompt, no explanations.
         return f"Wide establishing shot of {ubicacion_escena}, {estilo}, vertical 9:16, environment as main subject, no close-up face, {EPOCA_MOD}"
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN VERTICAL
+# 🖼️ GENERAR IMAGEN VERTICAL (con espera de 10s en fallos)
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
@@ -799,14 +794,16 @@ def generar_imagen_vertical(prompt, intentos=3):
         "height": 1920,
         "num_images": 1
     }
-    for _ in range(intentos):
+    for intento in range(intentos):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             if r.status_code == 200:
                 return r.json()["data"][0]["url"]
-            time.sleep(6)
-        except Exception:
-            time.sleep(6)
+            print(f"   ⚠️ Imagen devolvió {r.status_code}, esperando 10s...")
+            time.sleep(10)
+        except Exception as e:
+            print(f"   ⚠️ Error en imagen: {e}, esperando 10s...")
+            time.sleep(10)
     return None
 
 # ================================================================
@@ -845,7 +842,8 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
             except Exception:
                 pass
             if intento < intentos_por_imagen - 1:
-                time.sleep(6)
+                print(f"    ⏳ Esperando 10s antes de reintentar imagen...")
+                time.sleep(10)
 
         if not img_url:
             print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
@@ -869,7 +867,8 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         })
 
         if idx < len(segmentos) - 1:
-            time.sleep(12)
+            print(f"    ⏳ Esperando 10s antes del siguiente segmento...")
+            time.sleep(10)
 
     # Reparar imágenes fallidas
     for i, res in enumerate(resultados_temporales):
@@ -892,7 +891,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO
+# ✅ GENERAR AUDIO (con 10s de espera en fallos)
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -931,7 +930,8 @@ def generar_audio(texto, index, intentos_por_voz=2):
             except Exception as e:
                 print(f"❌ Falló con {voz}: {e}")
                 if intento < intentos_por_voz - 1:
-                    time.sleep(3 * (intento + 1))
+                    print(f"   ⏳ Esperando 10s antes de reintentar audio...")
+                    time.sleep(10)
                 if os.path.exists(filename):
                     try:
                         os.remove(filename)
@@ -1338,7 +1338,6 @@ def main():
 
     guardar_titulo_publicado(historia_raw["titulo"])
 
-    # Guardar tema usado (anti-repetición)
     if "tema" in historia_raw:
         guardar_tema_usado(historia_raw["tema"])
         print(f"✅ Tema guardado en historial: {historia_raw['tema']}")
