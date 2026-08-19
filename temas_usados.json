@@ -29,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "terminal de autobuses",
       "contexto": "persecucion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "taller",
+      "contexto": "comunicacion"
     }
   ]
 }
