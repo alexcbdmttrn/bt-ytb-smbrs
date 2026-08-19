@@ -780,12 +780,13 @@ def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
     return None
 
 # ================================================================
-# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL (perfecto, sin errores)
+# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL (CORREGIDO + FALLBACK)
 # ================================================================
 def dibujar_texto_miniatura(img_path, texto, output_path):
     """
     Abre la imagen, dibuja el texto con PIL y guarda.
     Elige colores aleatorios de una paleta de terror.
+    CORREGIDO: convierte a RGB antes de guardar como JPEG.
     """
     # Paleta de colores para el texto (adaptable al relato)
     colores_texto = [
@@ -890,7 +891,8 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
 
             y_offset += h_lin + 15
 
-        img.save(output_path, "JPEG", quality=95)
+        # CORREGIDO: convertir a RGB antes de guardar como JPEG
+        img.convert("RGB").save(output_path, "JPEG", quality=95)
     print(f"✅ Texto '{texto}' dibujado con PIL en {output_path}")
 
 # ================================================================
@@ -1177,7 +1179,7 @@ def main():
     # 🖼️ GENERAR MINIATURA CON PIL (texto perfecto, sin errores)
     # ============================================================
     print("🖼️ Generando miniatura HORIZONTAL con PIL (texto perfecto)...")
-    miniatura_path = "miniatura.jpg"
+    miniatura_path = None
     miniatura_base_url = generar_miniatura_base(historia.get("miniatura_prompt", "Terrified face with ghostly silhouette"))
 
     if miniatura_base_url:
@@ -1193,16 +1195,30 @@ def main():
                 img_resized = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
                 img_resized.save(temp_base)
 
-            # Dibujar texto con PIL
-            dibujar_texto_miniatura(temp_base, palabras_portada, miniatura_path)
+            # Dibujar texto con PIL (ahora corregido)
+            dibujar_texto_miniatura(temp_base, palabras_portada, "miniatura.jpg")
+            miniatura_path = "miniatura.jpg"
+            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' generada con PIL.")
 
             # Limpiar temporal
             if os.path.exists(temp_base):
                 os.remove(temp_base)
-            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' generada con PIL.")
+
         except Exception as e:
             print(f"⚠️ Error generando miniatura con PIL: {e}")
-            miniatura_path = None
+            import traceback
+            traceback.print_exc()
+            # FALLBACK: usar la imagen base sin texto
+            try:
+                if os.path.exists(temp_base):
+                    # Guardar la imagen base sin texto
+                    with Image.open(temp_base) as img:
+                        img.save("miniatura.jpg", "JPEG", quality=85)
+                    miniatura_path = "miniatura.jpg"
+                    print(f"⚠️ Fallback: miniatura guardada SIN texto en miniatura.jpg")
+            except Exception as e2:
+                print(f"❌ Fallback también falló: {e2}")
+                miniatura_path = None
     else:
         print("❌ No se pudo generar la imagen base de la miniatura.")
         miniatura_path = None
