@@ -1,7 +1,8 @@
 import asyncio
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 import json
+import json5
 import os
 import random
 import re
@@ -31,13 +32,17 @@ YOUTUBE_USER_TOKEN = (
     if os.getenv("YOUTUBE_USER_TOKEN")
     else {}
 )
+
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
+
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
-DURACION_MINIMA_SEGUNDOS = 480
+
+DURACION_MINIMA_SEGUNDOS = 480  # 8 minutos
 MAX_INTENTOS_EXPANSION = 2
+
 ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n\n🤖 Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
 
@@ -202,7 +207,6 @@ def cargar_estado_musica():
     try:
         with open(MUSICA_ESTADO_FILE, "r", encoding="utf-8") as f:
             estado = json.load(f)
-        # Migración del formato antiguo al nuevo
         if "ultimo_fondo" in estado and "ultimos_fondos" not in estado:
             estado["ultimos_fondos"] = [estado["ultimo_fondo"]]
             del estado["ultimo_fondo"]
@@ -219,25 +223,17 @@ def guardar_estado_musica(estado):
 def seleccionar_fondo_disponible():
     estado = cargar_estado_musica()
     ultimos = estado.get("ultimos_fondos", [])
-    
-    # Excluir los últimos 3 fondos usados
     excluir = set(ultimos[-3:]) if ultimos else set()
     disponibles = [f for f in FONDOS_DISPONIBLES if f not in excluir]
-    
-    # Si no hay disponibles (todos excluidos), usar todos
     if not disponibles:
         disponibles = FONDOS_DISPONIBLES.copy()
-    
-    # Intentar hasta 5 veces encontrar un archivo que exista
     for _ in range(5):
         elegido = random.choice(disponibles)
-        # Buscar el archivo en el directorio actual y subdirectorios
         for root, dirs, files in os.walk("."):
             if "/." in root or "\\." in root:
                 continue
             if elegido in files:
                 full_path = os.path.join(root, elegido)
-                # Actualizar historial
                 ultimos.append(elegido)
                 if len(ultimos) > 10:
                     ultimos = ultimos[-10:]
@@ -245,12 +241,9 @@ def seleccionar_fondo_disponible():
                 guardar_estado_musica(estado)
                 print(f"✅ Audio de fondo seleccionado: {full_path}")
                 return full_path
-        # Si no se encontró, eliminar de disponibles y reintentar
         disponibles.remove(elegido)
         if not disponibles:
             break
-    
-    # Fallback: usar el primero que exista
     for fondo in FONDOS_DISPONIBLES:
         for root, dirs, files in os.walk("."):
             if "/." in root or "\\." in root:
@@ -259,7 +252,6 @@ def seleccionar_fondo_disponible():
                 full_path = os.path.join(root, fondo)
                 print(f"⚠️ Fallback: {full_path}")
                 return full_path
-    
     print("⚠️ No se encontró ningún archivo de fondo.")
     return None
 
@@ -337,7 +329,7 @@ def tema_ya_usado(tema, umbral=0.5):
     return False
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS (conserva época, entorno protagonista, anti-clones)
+# 🧼 LIMPIADOR DE PROMPTS
 # ================================================================
 def limpiar_prompt(prompt):
     if not prompt:
@@ -367,6 +359,43 @@ def limpiar_prompt(prompt):
     return prompt_base + modificadores
 
 # ================================================================
+# 🆕 VALIDACIÓN DE TÍTULO GANCHO (Outlier Strategy)
+# ================================================================
+def validar_titulo_gancho(titulo):
+    """
+    Valida que el título sea un gancho efectivo (no genérico).
+    Basado en la estrategia de Yayas: competir por curiosidad, no por skill.
+    """
+    if not titulo or len(titulo) < 30:
+        return False
+    
+    # Palabras genéricas que indican título débil
+    genericas = ["misterio", "leyenda", "relato", "historia", "caso", "real", "terror", "miedo", "espanto", "susto"]
+    if any(p in titulo.lower() for p in genericas):
+        return False
+    
+    # Palabras de gancho que generan curiosidad
+    ganchos = [
+        "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví", 
+        "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "vi", "oí", "sentí",
+        "3:33", "3:00", "medianoche", "nunca", "jamás", "solo", "único", "primero",
+        "último", "desapareció", "regresó", "volvió", "entró", "salió", "huyó",
+        "escapé", "corrí", "grité", "lloré", "rogué", "supliqué"
+    ]
+    if not any(g in titulo.lower() for g in ganchos):
+        return False
+    
+    # Longitud ideal para SEO (50-65 caracteres)
+    if len(titulo) < 40 or len(titulo) > 70:
+        return False
+    
+    # Debe tener al menos una coma, dos puntos o guión (estructura de gancho)
+    if ":" not in titulo and "," not in titulo and "-" not in titulo and "|" not in titulo:
+        return False
+    
+    return True
+
+# ================================================================
 # LIMPIAR RESPUESTA JSON (CORREGIDO)
 # ================================================================
 def limpiar_respuesta_json(respuesta):
@@ -380,12 +409,11 @@ def limpiar_respuesta_json(respuesta):
         json_str = respuesta[inicio : fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
-        # Línea eliminada: ya no reemplazamos saltos de línea, confiamos en strict=False y json5
         return json_str
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - con control de temas y reintentos)
+# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - con control de temas y título gancho)
 # ================================================================
 def generar_historia_completa():
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
@@ -394,7 +422,8 @@ def generar_historia_completa():
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    prompt_base = f"""Eres un GUIONISTA, DIRECTOR DE CINE DE MISTERIO y EXPERTO EN SEO + MINIATURAS PARA YOUTUBE 2026.
+    prompt_base = f"""
+Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para YouTube.
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
@@ -402,81 +431,68 @@ def generar_historia_completa():
 🚫 TEMAS YA PUBLICADOS (EVITAR ESTAS TEMÁTICAS):
 {temas_texto}
 
-Escribe un RELATO PARANORMAL COMPLETO en primera persona, en español, de 1.400-1.600 palabras, ambientado en {UBICACION_HISTORIA}, México.
-Escríbelo como TEXTO CONTINUO en párrafos (NO lo dividas en segmentos ni listas).
+🎯 REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
+La premisa debe responder a: "¿Qué pasaría si...?" o "¿Qué ocurriría si alguien...?".
+✅ Ejemplos de premisas ganadoras en terror:
+- "El único sobreviviente de la masacre regresó al lugar. Esto pasó."
+- "Un niño desapareció y al volver años después hablaba un idioma desconocido."
+- "Cada noche en esa casa ocurre algo diferente. Nadie sabe por qué."
+- "El espejo del hotel reflejaba algo que no estaba en la habitación."
 
-🎯 **IMPORTANTE: CUENTA MENTALMENTE LAS PALABRAS DEL CAMPO `texto_completo` ANTES DE RESPONDER. SI TU PRIMER BORRADOR TIENE MENOS DE 1400 PALABRAS, CONTINÚA ESCRIBIENDO HASTA ALCANZAR EL MÍNIMO. NUNCA ENTREGUES UN `texto_completo` DE MENOS DE 1200 PALABRAS.**
+🎯 REGLA DE TÍTULO SEO (CRÍTICA - DETERMINA EL ÉXITO DEL VIDEO):
+El título debe ser un GANCHO que genere CURIOSIDAD, NO una descripción genérica.
+FÓRMULA GANADORA: [GANCHO EMOCIONAL] + [LUGAR/EVENTO] + [CONSECUENCIA]
+✅ EJEMPLOS DE TÍTULOS GANADORES (50-65 caracteres):
+- "Fui velador en Oaxaca y vi algo que no debí ver" (61 chars)
+- "Trabajé de noche en un manicomio de Puebla. Nunca volví." (62 chars)
+- "El GPS me llevó a un cenote que no existe en ningún mapa" (56 chars)
+- "A las 3 AM escuché esto en el bosque. No volví a dormir." (58 chars)
+- "Mi abuela me contó un secreto que nadie debía saber" (53 chars)
+- "Sobreviví 7 días en un pueblo fantasma de Chihuahua" (55 chars)
+- "El único testigo de la masacre de la casa del lago" (50 chars)
+❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de...", "Caso real...", "Historia de terror..."
 
-PERSONAJE PRINCIPAL (FIJO):
-"{PERFIL_PERSONAJE}"
+🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
+"palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales y ESPECÍFICAS del relato.
+✅ EJEMPLOS: "LO VI", "NO ENTRES", "3:33 AM", "JAMÁS VOLVÍ", "NO ERA HUMANO", "ME SIGUIÓ"
+❌ NUNCA: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
 
-🎯 REGLA CRÍTICA: ÉPOCA DEL SUCESO
-"anio_suceso": año específico en que ocurrió el suceso (1970, 1987, 1998, 2005, 2018, etc).
-Si el relato no tiene fecha clara, INVENTA un año coherente con la trama.
-Las imágenes se adaptarán a ese año (autos, ropa, tecnología de la época).
+🎯 REGLA DE ÉPOCA Y AMBIENTACIÓN:
+"anio_suceso": año específico del suceso (1970-2020). Las imágenes se adaptarán.
+Si no tienes referencia, inventa un año coherente.
 
-🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR
-FÓRMULA: [VERBO EN 1RA PERSONA] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
-✅ EJEMPLOS:
-- "Fui velador en Oaxaca y vi algo que no debí ver"
-- "Trabajé de noche en un manicomio de Puebla. Nunca volví."
-- "El GPS me llevó a un cenote que no existe en ningún mapa"
-❌ PROHIBIDOS: "El misterio de...", "La leyenda de...", "Relato de..."
-Longitud: 50-65 caracteres, primera persona, lugar específico de {UBICACION_HISTORIA}.
+🎯 REGLA DE PERSONAJE:
+Personaje principal fijo: "{PERFIL_PERSONAJE}"
 
-🎯 REGLA CRÍTICA 2: MINIATURA DE ALTO CTR (HORIZONTAL 16:9)
-"palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales ESPECÍFICO del relato.
-✅ EJEMPLOS: "LO VI", "ME SIGUIÓ", "NO ENTRES", "3:33 AM", "JAMÁS VOLVÍ", "NO ERA HUMANO"
-❌ NUNCA uses: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
-"miniatura_prompt": PROMPT EN INGLÉS para la imagen BASE de la miniatura (SIN texto, solo la escena visual):
-- Rostro aterrorizado con ojos muy abiertos, detrás una silueta fantasmal con ojos brillantes
-- Ambientado en {UBICACION_HISTORIA}, alto contraste rojo/negro
-- Composición HORIZONTAL 16:9, espacio en el lado derecho para texto (que se añadirá después)
-- NO incluir texto en el prompt, la imagen debe estar limpia
+🎯 ESTRUCTURA DEL RELATO (texto_completo - 1400-1600 palabras):
+1. GANCHO (1-2 párrafos): Presenta el conflicto central de forma impactante.
+2. CONTEXTO: Quién, dónde, cuándo. Introduce el escenario y la época.
+3. DESARROLLO: Aumento de tensión. Detalles sensoriales (sonidos, olores, sensaciones). Pequeños giros.
+4. CLÍMAX: El momento más aterrador o revelador. El punto de no retorno.
+5. DESENLACE: Resolución o reflexión. Puede ser abierto o con un giro final.
+- Tono: Natural, coloquial, en primera persona.
+- IMPORTANTE: Describe ENTORNOS (carros, casas, bosques, árboles, jardines, calles) porque las imágenes mostrarán esos entornos.
 
-🎯 REGLA CRÍTICA 3: DESCRIPCIÓN CON SEO EXPERTO
-Línea 1 (GANCHO, 150 chars): frase impactante con keyword + lugar
-Línea 2-3 (CONTEXTO): keywords long-tail naturales
-Línea 4 (CTA): "🔴 SUSCRÍBETE: {CANAL_LINK}"
-Línea 5 (CAPÍTULOS): 4-6 timestamps "00:00 - Título"
-Línea 6 (CRÉDITOS): "📱 Facebook: {FACEBOOK_LINK}" + disclaimer IA
-Línea 7 (HASHTAGS): máx 5
+🎯 REGLA DE CAPÍTULOS:
+Genera 4-6 capítulos con timestamps (00:00, 02:15, 04:30, 06:45, etc.) y títulos descriptivos.
 
-🎯 REGLA CRÍTICA 4: TAGS SEO (15-20, máx 500 chars)
-- 3-5 específicos (lugar + fenómeno)
-- 5-7 long-tail
-- 3-5 tendencia
-- 2-3 geográficos
-
-🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3)
-🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
-
-🎬 ESTRUCTURA DEL RELATO (texto_completo):
-1. GANCHO inicial impactante
-2. CONTEXTO: quién, dónde, cuándo
-3. DESARROLLO con detalles sensoriales (sonidos, olores, sensaciones)
-4. CLÍMAX paranormal
-5. DESENLACE
-- Tono natural y coloquial, primera persona.
-- IMPORTANTE: describe claramente los ENTORNOS (carros, casas, bosques, árboles, jardines, calles) porque las imágenes mostrarán esos entornos.
-
-Devuelve ESTRICTAMENTE este JSON válido:
+Responde ESTRICTAMENTE en este JSON:
 {{
-  "titulo": "Título SEO 1ra persona, 50-65 caracteres",
-  "titulo_alternativo": "Segundo título con ángulo diferente",
+  "titulo": "Título GANCHO de 50-65 caracteres (debe pasar la validación)",
+  "titulo_alternativo": "Título alternativo con otro ángulo",
   "anio_suceso": 1998,
-  "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
-  "palabras_portada": "TEXTO GANCHO 2-3 palabras específico del relato",
-  "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + créditos + hashtags)",
+  "palabras_clave": ["keyword1", "keyword2", "keyword3"],
+  "palabras_portada": "TEXTO GANCHO 2-3 palabras",
+  "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + hashtags)",
   "tags": "15-20 tags separados por coma (máx 500 caracteres)",
-  "miniatura_prompt": "YouTube horror thumbnail 16:9 scene: terrified face close-up + ghostly silhouette with glowing eyes in {UBICACION_HISTORIA}, high contrast red/black, dark clean area on the right side for text, no text, no watermark",
+  "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena impactante del relato], high contrast, dark clean area on the right side for text, no text, no watermark",
   "capitulos": [
-    {{"tiempo": "00:00", "titulo": "Capítulo 1"}},
-    {{"tiempo": "02:15", "titulo": "Capítulo 2"}},
-    {{"tiempo": "04:30", "titulo": "Capítulo 3"}},
-    {{"tiempo": "06:45", "titulo": "Capítulo 4"}}
+    {{"tiempo": "00:00", "titulo": "El Comienzo"}},
+    {{"tiempo": "02:15", "titulo": "El Encuentro"}},
+    {{"tiempo": "04:30", "titulo": "El Miedo"}},
+    {{"tiempo": "06:45", "titulo": "La Verdad"}}
   ],
-  "texto_completo": "Relato continuo de 1.400-1.600 palabras en párrafos, primera persona, coloquial"
+  "texto_completo": "Relato completo de 1400-1600 palabras en párrafos, primera persona, coloquial"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -484,11 +500,11 @@ Devuelve ESTRICTAMENTE este JSON válido:
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt_base}],
-        "temperature": 0.7,
-        "max_tokens": 4800,
+        "temperature": 0.75,
+        "max_tokens": 5000,
         "response_format": {"type": "json_object"}
     }
-    # 6 intentos con espera de 10s entre cada uno
+
     for intento in range(6):
         try:
             r = requests.post(url, headers=headers, json=payload, timeout=120)
@@ -501,36 +517,44 @@ Devuelve ESTRICTAMENTE este JSON válido:
             json_str = limpiar_respuesta_json(respuesta)
             data = None
             try:
-                data = json.loads(json_str, strict=False)
-                print("✅ json.loads parseó exitosamente.")
-            except json.JSONDecodeError as e:
-                print(f"⚠️ json.loads falló: {e}. Intentando con json5...")
+                data = json5.loads(json_str)
+                print("✅ json5 parseó exitosamente.")
+            except Exception as e5:
+                print(f"⚠️ json5 falló: {e5}. Intentando con json.loads(strict=False)...")
                 try:
-                    import json5
-                    data = json5.loads(json_str)
-                    print("✅ json5 parseó exitosamente.")
-                except Exception as e5:
-                    print(f"❌ json5 también falló: {e5}")
+                    data = json.loads(json_str, strict=False)
+                    print("✅ json.loads(strict=False) parseó exitosamente.")
+                except json.JSONDecodeError as e:
+                    print(f"❌ Ambos parsers fallaron: {e}")
                     raise
+
             texto = data.get("texto_completo", "")
             palabras = len(texto.split())
             print(f"📊 Palabras del relato: {palabras}")
-            # Umbral reducido a 500 palabras
+
             if "texto_completo" in data and palabras >= 500:
                 titulo_generado = data.get("titulo", "")
+                
+                # 🔥 VALIDACIÓN DE TÍTULO GANCHO
+                if not validar_titulo_gancho(titulo_generado):
+                    print(f"⚠️ Título genérico: '{titulo_generado}'. No pasa validación. Reintentando...")
+                    raise ValueError("Título no cumple estándar de gancho")
+                
                 if titulo_largo_ya_publicado(titulo_generado):
                     print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
                     raise ValueError("Título duplicado")
+                
                 keywords = data.get("palabras_clave", [])
                 if keywords:
                     tema = " ".join(keywords)
                     if tema_ya_usado(tema):
                         print(f"⚠️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
                         raise ValueError("Tema duplicado")
+                
                 anio_suceso = data.get("anio_suceso", None)
                 actualizar_epoca(anio_suceso)
                 print(f"✅ Historia generada: {palabras} palabras.")
-                print(f"🏷️ Título SEO: {titulo_generado}")
+                print(f"🏷️ Título GANCHO: {titulo_generado}")
                 print(f"🖼️ Texto miniatura: {data.get('palabras_portada', 'N/A')}")
                 print(f"🔑 Keywords: {data.get('palabras_clave', [])}")
                 print(f"📝 Título alternativo: {data.get('titulo_alternativo', 'N/A')}")
@@ -547,7 +571,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
     sys.exit(1)
 
 # ================================================================
-# 🆕 DIVIDIR TEXTO EN SEGMENTOS (por código, no por el modelo)
+# 🆕 DIVIDIR TEXTO EN SEGMENTOS (por código)
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -741,7 +765,6 @@ def generar_imagen(prompt, width=1080, height=1920, intentos=3):
 # ================================================================
 def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
     prompt_limpio = limpiar_prompt(prompt)
-    # Aseguramos que el prompt no pida texto
     prompt_limpio = re.sub(r"text\s*overlay|text\s*on\s*image|render\s*text|add\s*text", "", prompt_limpio, flags=re.IGNORECASE)
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
@@ -780,7 +803,7 @@ def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
     return None
 
 # ================================================================
-# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL (CORREGIDO + FALLBACK)
+# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL (CORREGIDO + MEJORADO)
 # ================================================================
 def dibujar_texto_miniatura(img_path, texto, output_path):
     """
@@ -796,13 +819,15 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
         (255, 140, 0),    # Naranja
         (255, 255, 255),  # Blanco
         (0, 0, 0),        # Negro (con borde blanco)
+        (0, 200, 255),    # Cian neón
+        (255, 0, 200),    # Rosa neón
+        (50, 255, 50),    # Verde neón
     ]
     color_fill = random.choice(colores_texto)
-    # Si el color es muy oscuro, usamos borde claro; si es claro, borde oscuro
     brillo = sum(color_fill) / 3
     color_outline = (255, 255, 255) if brillo < 128 else (0, 0, 0)
 
-    # También variamos la fuente (probamos varias)
+    # Fuentes (variadas)
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -812,7 +837,7 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
     font = None
     for fp in font_paths:
         try:
-            font = ImageFont.truetype(fp, 120)  # tamaño base, luego se escala
+            font = ImageFont.truetype(fp, 120)
             break
         except:
             continue
@@ -823,12 +848,9 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
         img = img.convert("RGBA")
         w, h = img.size
 
-        # Texto en mayúsculas y limpio
         texto_limpio = texto.upper().strip()
-        # Dividir en palabras y ajustar a 2 líneas máx
         palabras = texto_limpio.split()
         if len(palabras) > 3:
-            # Si tiene más de 3 palabras, partimos en 2 líneas
             mitad = len(palabras) // 2
             linea1 = " ".join(palabras[:mitad])
             linea2 = " ".join(palabras[mitad:])
@@ -836,15 +858,13 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
         else:
             lineas = [texto_limpio]
 
-        # Calcular tamaño de fuente para que ocupe ~25-30% del ancho
+        # Escalar fuente
         font_size = 120
         for intento in range(5):
-            # Intentamos escalar hasta que quepa bien
             try:
                 font = ImageFont.truetype(font_paths[0], font_size)
             except:
                 font = ImageFont.load_default()
-            # Medir línea más larga
             max_w = 0
             total_h = 0
             for lin in lineas:
@@ -854,7 +874,6 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
                 if w_lin > max_w:
                     max_w = w_lin
                 total_h += h_lin + 10
-            # Si el ancho excede el 80% del ancho de la imagen, reducimos fuente
             if max_w > w * 0.8:
                 font_size = int(font_size * 0.9)
             elif max_w < w * 0.25:
@@ -862,41 +881,39 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
             else:
                 break
 
-        # Ajustar tamaño final
         try:
             font = ImageFont.truetype(font_paths[0], font_size)
         except:
             font = ImageFont.load_default()
 
-        # Dibujar cada línea centrada en el lado derecho (espacio limpio)
         draw = ImageDraw.Draw(img)
         y_offset = (h - total_h) // 2
-        x_base = int(w * 0.55)  # empezar en el 55% del ancho (lado derecho)
+        x_base = int(w * 0.55)
 
         for lin in lineas:
             bbox = draw.textbbox((0,0), lin, font=font)
             w_lin = bbox[2] - bbox[0]
             h_lin = bbox[3] - bbox[1]
-            x = x_base + (w - x_base - w_lin) // 2  # centrar dentro del espacio derecho
+            x = x_base + (w - x_base - w_lin) // 2
             y = y_offset
 
-            # Dibujar borde (stroke)
-            for dx in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
-                for dy in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+            # Borde más grueso para impacto
+            for dx in range(-6, 7):
+                for dy in range(-6, 7):
                     if dx == 0 and dy == 0:
                         continue
-                    draw.text((x+dx, y+dy), lin, font=font, fill=color_outline)
-            # Dibujar texto principal
+                    if abs(dx) > 4 or abs(dy) > 4:
+                        draw.text((x+dx, y+dy), lin, font=font, fill=(0, 0, 0, 180))
+                    else:
+                        draw.text((x+dx, y+dy), lin, font=font, fill=color_outline)
             draw.text((x, y), lin, font=font, fill=color_fill)
-
             y_offset += h_lin + 15
 
-        # CORREGIDO: convertir a RGB antes de guardar como JPEG
         img.convert("RGB").save(output_path, "JPEG", quality=95)
     print(f"✅ Texto '{texto}' dibujado con PIL en {output_path}")
 
 # ================================================================
-# ✅ GENERAR AUDIO CON FALLBACK ENTRE VOCES NEURALES (sin gTTS)
+# ✅ GENERAR AUDIO CON FALLBACK ENTRE VOCES NEURALES
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -1116,7 +1133,6 @@ def verificar_envs():
 def main():
     verificar_envs()
 
-    # Si es ejecución manual (FORCE_PUBLISH=true), saltamos la verificación diaria
     if os.getenv("FORCE_PUBLISH") == "true":
         print("🚀 FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
     else:
@@ -1124,10 +1140,22 @@ def main():
             print("✅ Ya se publicó hoy. Saliendo.")
             sys.exit(0)
 
-    print(f"🎬 Bot YouTube VERTICAL | Voz: {CONFIG_VOZ_ACTUAL['voz']}")
+    print("="*70)
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT VERSIÓN OUTLIER")
+    print("   ✦ Títulos gancho (validación automática)")
+    print("   ✦ Premisas fuertes (generación de curiosidad)")
+    print("   ✦ Estructura de conflicto + tensión + clímax")
+    print("   ✦ Miniaturas con texto neón mejorado")
+    print("   ✦ 6 intentos, 10s de espera")
+    print("   ✦ Sin títulos genéricos")
+    print("="*70)
+    print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
+    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
+    print(f"🎵 Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("-"*70)
 
     historia = generar_historia_completa()
     titulo_video = historia.get("titulo", "Relato Paranormal Real")
@@ -1138,9 +1166,10 @@ def main():
     texto_completo = historia.get("texto_completo", "")
 
     print(f"\n📊 SEO GENERADO:")
-    print(f"   🏷️ Título: {titulo_video}")
+    print(f"   🏷️ Título GANCHO: {titulo_video}")
     print(f"   🖼️ Texto miniatura: {palabras_portada}")
     print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"   📚 Capítulos: {len(capitulos_video)}")
 
     segmentos = dividir_en_segmentos(texto_completo, 55)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, UBICACION_HISTORIA)
@@ -1176,31 +1205,27 @@ def main():
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
     # ============================================================
-    # 🖼️ GENERAR MINIATURA CON PIL (texto perfecto, sin errores)
+    # 🖼️ GENERAR MINIATURA CON PIL (mejorada)
     # ============================================================
-    print("🖼️ Generando miniatura HORIZONTAL con PIL (texto perfecto)...")
+    print("🖼️ Generando miniatura HORIZONTAL con PIL (texto neón)...")
     miniatura_path = None
     miniatura_base_url = generar_miniatura_base(historia.get("miniatura_prompt", "Terrified face with ghostly silhouette"))
 
     if miniatura_base_url:
         try:
-            # Descargar imagen base
             r = requests.get(miniatura_base_url, timeout=30)
             r.raise_for_status()
             temp_base = "miniatura_base.jpg"
             with open(temp_base, "wb") as f:
                 f.write(r.content)
-            # Redimensionar a 1280x720
             with Image.open(temp_base) as img:
                 img_resized = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
                 img_resized.save(temp_base)
 
-            # Dibujar texto con PIL (ahora corregido)
             dibujar_texto_miniatura(temp_base, palabras_portada, "miniatura.jpg")
             miniatura_path = "miniatura.jpg"
-            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' generada con PIL.")
+            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' generada.")
 
-            # Limpiar temporal
             if os.path.exists(temp_base):
                 os.remove(temp_base)
 
@@ -1208,10 +1233,8 @@ def main():
             print(f"⚠️ Error generando miniatura con PIL: {e}")
             import traceback
             traceback.print_exc()
-            # FALLBACK: usar la imagen base sin texto
             try:
                 if os.path.exists(temp_base):
-                    # Guardar la imagen base sin texto
                     with Image.open(temp_base) as img:
                         img.save("miniatura.jpg", "JPEG", quality=85)
                     miniatura_path = "miniatura.jpg"
@@ -1233,7 +1256,6 @@ def main():
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video, capitulos_video)
 
-    # Guardar título y tema
     guardar_titulo_largo(titulo_video)
     palabras_clave = historia.get("palabras_clave", [])
     if palabras_clave:
