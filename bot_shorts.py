@@ -43,6 +43,32 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
+# 🚀 LISTA DE OUTLIERS (temas que ya funcionaron en canales pequeños)
+# ================================================================
+OUTLIERS_TERROR = [
+    "Intenté sobrevivir 7 días en el hotel más embrujado de México",
+    "¿Qué vi en el espejo del manicomio abandonado?",
+    "De creyente a escéptico en una noche en el panteón",
+    "El ritual que hice y nunca debí hacer (primera persona)",
+    "Sobreviví a la carretera fantasma de Chihuahua sin gasolina",
+    "Intenté comunicarme con los muertos y esto pasó",
+    "¿Lograré salir del sanatorio abandonado antes del amanecer?",
+    "Pasé una noche en la casa de las brujas de Veracruz",
+    "El pueblo fantasma me llamó por mi nombre y no debí responder",
+    "Intenté grabar un fantasma y casi no lo cuento",
+    "De escéptico a creyente en la carretera de Zacatecas",
+    "Sobreviví al bosque donde nadie entra",
+    "¿Qué se esconde en la mina abandonada de Hidalgo?",
+    "El día que vi a mi doble en el espejo del hospital viejo",
+    "Intenté hacer un pacto con el diablo y esto pasó",
+    "Pasé la noche en el panteón más viejo de Guanajuato",
+    "El susurro en mi habitación no era humano (lo enfrenté)",
+    "Intenté escapar del pueblo fantasma y casi lo logro",
+    "¿Qué encontré en el sótano de la casa embrujada?",
+    "De incrédulo a perseguido en la carretera de Sinaloa",
+]
+
+# ================================================================
 # 📚 HISTORIAL DE TEMAS PARA EVITAR REPETICIONES
 # ================================================================
 def cargar_temas_usados():
@@ -212,7 +238,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO - NUEVA FUNCIÓN CORREGIDA (ALEATORIEDAD REAL)
+# 🎵 AUDIO DE FONDO - FUNCIÓN CORREGIDA (ALEATORIEDAD REAL)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -388,10 +414,11 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🔄 EXPANDIR / TRUNCAR TEXTO
+# 🔄 EXPANDIR / TRUNCAR TEXTO (CON REFUERZO DE CONFLICTO)
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     prompt = f"""Expande el siguiente relato a 150-170 palabras con detalles sensoriales de {ubicacion}.
+IMPORTANTE: Asegúrate de que el relato tenga un OBJETIVO CLARO, una RESTRICCIÓN y que el protagonista ACTÚE, no solo observe.
 Mantén trama y tono. Sin CTA.
 RELATO: {texto_corto}
 Devuelve SOLO el relato."""
@@ -416,7 +443,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🎬 GENERAR HISTORIA CON SEO + ÉPOCA DINÁMICA + ANTI-REPETICIÓN
+# 🎬 GENERAR HISTORIA CON SEO + OUTLIERS + ESTRATEGIAS DE GAMING
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -430,7 +457,25 @@ def generar_historia_completa():
             temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
         temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar que los listados.\n"
 
+    # Seleccionar outliers de referencia
+    outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
+    outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
+
+    # Hashtags de estrategia (adicionales)
+    hashtags_estrategia = random.choice([
+        "#DesafioParanormal #RestriccionTerror #Transformacion",
+        "#Supervivencia #TerrorActivo #ObjetivoClaro",
+        "#Outlier #RompiendoElAlgoritmo #Curiosidad",
+        "#Restriccion #Desafio #Transformacion",
+    ])
+
     prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
+
+🚀 REFERENCIAS DE OUTLIERS (temas que ya funcionaron en canales pequeños):
+{outliers_texto}
+
+Inspírate en la estructura de estos títulos, pero NO los copies. Crea tu propia variación.
+
 🚨 REGLA DE ORO:
 La historia DEBE estar basada en un relato que REALMENTE alguien contó en internet.
 Adáptalo en primera persona, tono coloquial, ambientado en {ESTADO_HISTORIA_SHORTS}, México.
@@ -446,29 +491,42 @@ AMBIENTACIÓN: Si el relato menciona un AÑO específico, úsalo para la época 
 🎯 REGLA CRÍTICA DE LONGITUD:
 - EXACTAMENTE entre 150 y 170 palabras.
 
-📐 ESTRUCTURA:
-1. GANCHO (5-10 palabras)
-2. CONTEXTO (20-30 palabras)
-3. TENSIÓN (80-90 palabras)
-4. TWIST FINAL (30-40 palabras)
+📐 ESTRUCTURA (CONFLICTO ACTIVO):
+La historia NO debe ser solo un relato de miedo pasivo. Debe tener:
+1. UN OBJETIVO CLARO del protagonista (ej. salir, encontrar algo, descubrir la verdad, sobrevivir).
+2. UNA RESTRICCIÓN o LIMITACIÓN que hace más difícil lograr ese objetivo (sin luz, sin comunicación, sin escape, sin ayuda).
+3. UN CONFLICTO ACTIVO (el protagonista TOMA DECISIONES, no solo observa).
+4. UN FINAL que resuelva el desafío (éxito o fracaso, pero con conclusión).
 
-🎯 REGLA CRÍTICA 1: TÍTULO SEO DE ALTO CTR
-FÓRMULA: [VERBO 1RA PERSONA / IMPACTO] + [LUGAR ESPECÍFICO] + [GANCHO EMOCIONAL]
+🎯 REGLA CRÍTICA 1: TÍTULO CON ESTRATEGIA DE OUTLIER (ALTO CTR)
+FÓRMULAS PROBADAS PARA CANALES PEQUEÑOS:
+- RESTRICCIÓN: "Intenté [acción] sin [recurso] en [lugar] y [resultado inesperado]"
+  Ej: "Intenté dormir en la casa más embrujada de México sin linterna"
+- DESAFÍO: "¿[Acción imposible] en [tiempo límite] en [lugar]?"
+  Ej: "¿Lograré salir del sanatorio abandonado antes del amanecer?"
+- TRANSFORMACIÓN: "De [estado inicial] a [estado final] en [lugar]"
+  Ej: "De escéptico a creyente en la carretera fantasma de Zacatecas"
+
 Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTORIA_SHORTS}.
 ❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
-IMPORTANTE: Asegúrate de que UNA de las palabras_clave (abajo) aparezca al INICIO del título (primeras 3 palabras). Por ejemplo, si la keyword es "fantasma", el título debe empezar con "Fantasma..." o similar.
+IMPORTANTE: El título DEBE tener UNA de estas tres estructuras. No se permite título genérico.
 
 🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA
-"palabras_portada": TEXTO GANCHO de MÁXIMO 2 palabras cortas.
+"palabras_portada": TEXTO GANCHO de MÁXIMO 2 palabras cortas. Ej: "SIN LUZ", "ATRAPADO", "ESCAPA".
 
 🎯 REGLA CRÍTICA 3: DESCRIPCIÓN SEO
-Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Línea 4 (FUENTE), Línea 5 (FACEBOOK), Línea 6 (HASHTAGS máx 5).
+Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Línea 4 (FUENTE), Línea 5 (FACEBOOK), Línea 6 (HASHTAGS máx 5 + hashtags de estrategia).
 
 🎯 REGLA CRÍTICA 4: TAGS SEO (10-15, máx 480 chars)
+Incluye tags relacionados con la estrategia: desafi paranormal, restriccion terror, transformacion, terror activo.
+
 🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3) - serán usadas en el título, descripción y tags.
 🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
 🎯 REGLA CRÍTICA 7: AÑO DEL SUCESO
 "anio_suceso": año específico (ej: 1998). Si no hay fecha clara, usa la actualidad (2024).
+
+🎯 REGLA CRÍTICA 8: GANCHO (máx 5 palabras) que plantee el conflicto.
+Ej: "Sin linterna, en la oscuridad total..."
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
@@ -477,14 +535,14 @@ Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Lí
 
 Devuelve ESTRICTAMENTE este JSON válido:
 {{
-    "titulo": "Título SEO 1ra persona, 55-75 caracteres, con keyword al inicio",
+    "titulo": "Título con estructura de outlier (55-75 caracteres)",
     "titulo_alternativo": "Segundo título",
     "anio_suceso": 1998,
     "palabras_clave": ["keyword 1", "keyword 2", "keyword 3"],
-    "gancho_descripcion": "Gancho máx 90 caracteres",
+    "gancho_descripcion": "Gancho máx 90 caracteres que plantee el conflicto",
     "contexto_descripcion": "1 oración con contexto",
     "fuente_relato": "Basado en un testimonio/leyenda real de ...",
-    "texto_completo": "Micro-relato REAL, 150-170 palabras, primera persona, coloquial",
+    "texto_completo": "Micro-relato REAL, 150-170 palabras, con objetivo claro, restricción y conflicto activo",
     "palabras_portada": "TEXTO GANCHO máximo 2 palabras",
     "tags": "10-15 tags separados por coma (máximo 480 caracteres)",
     "tema": {{
@@ -499,14 +557,14 @@ Devuelve ESTRICTAMENTE este JSON válido:
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
+        "temperature": 0.75,
         "max_tokens": 1100,
         "response_format": {"type": "json_object"}
     }
 
     for intento in range(6):
         try:
-            print(f"🔄 Intento {intento+1}/6 generando historia real...")
+            print(f"🔄 Intento {intento+1}/6 generando historia con estrategia de outlier...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
@@ -525,27 +583,20 @@ Devuelve ESTRICTAMENTE este JSON válido:
 
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
 
-            # ---- TÍTULO CON PALABRA CLAVE AL INICIO ----
+            # ---- TÍTULO CON ESTRUCTURA DE OUTLIER ----
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
 
-            keywords = data.get("palabras_clave", [])
-            if keywords and isinstance(keywords, list):
-                keyword_encontrada = None
-                for kw in keywords:
-                    if titulo.lower().startswith(kw.lower()):
-                        keyword_encontrada = kw
-                        break
-                if not keyword_encontrada and keywords:
-                    primera_kw = keywords[0]
-                    titulo_sin_articulo = re.sub(r'^(El|La|Los|Las|Un|Una|Unos|Unas)\s+', '', titulo, flags=re.IGNORECASE)
-                    if titulo_sin_articulo != titulo:
-                        titulo = f"{primera_kw.capitalize()} {titulo_sin_articulo}"
-                    else:
-                        titulo = f"{primera_kw.capitalize()} {titulo}"
-                    if len(titulo) > 75:
-                        titulo = titulo[:72] + "..."
+            # Verificar que el título tenga estructura de outlier (contiene "Intenté", "¿", "De...a...", "Sin", etc.)
+            palabras_outlier = ["intenté", "¿", "de ", "a ", "sin", "sobreviví", "lograré", "pasé", "escapar", "encontré"]
+            tiene_estructura = any(palabra in titulo.lower() for palabra in palabras_outlier)
+            if not tiene_estructura and len(titulo) > 10:
+                # Forzar estructura de restricción si no tiene
+                keywords = data.get("palabras_clave", [])
+                primera_kw = keywords[0] if keywords else "terror"
+                lugar = ESTADO_HISTORIA_SHORTS
+                titulo = f"Intenté sobrevivir en {lugar} sin {primera_kw}"
 
             if len(titulo) < 40:
                 titulo = f"{titulo} - Testimonio real en {ESTADO_HISTORIA_SHORTS}"
@@ -560,7 +611,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
             # ---- GANCHO Y CONTEXTO ----
             gancho = data.get("gancho_descripcion", "").strip()
             if not gancho or len(gancho) > 110:
-                gancho = f"Esto fue lo que viví en {ESTADO_HISTORIA_SHORTS} y nunca pude explicar"[:100]
+                gancho = f"Sin recursos, en {ESTADO_HISTORIA_SHORTS}..."[:100]
             data["gancho_descripcion"] = gancho
 
             contexto = data.get("contexto_descripcion", "").strip()
@@ -573,15 +624,30 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
 
-            # ---- TAGS INCORPORANDO KEYWORDS ----
+            # ---- TAGS INCORPORANDO KEYWORDS Y ESTRATEGIA ----
             tags_raw = data.get("tags", "")
-            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:15]
+            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:12]
 
+            keywords = data.get("palabras_clave", [])
             if keywords:
                 for kw in keywords:
                     kw_lower = kw.lower().strip()
                     if kw_lower not in [t.lower() for t in tags_list]:
                         tags_list.append(kw_lower)
+
+            # Agregar tags de estrategia
+            tags_estrategia = [
+                "desafio paranormal",
+                "restriccion terror",
+                "transformacion",
+                "terror activo",
+                "supervivencia",
+                "objetivo claro",
+                "shorts terror"
+            ]
+            for tag in tags_estrategia:
+                if tag not in tags_list and len(tags_list) < 15:
+                    tags_list.append(tag)
 
             extras = [
                 f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
@@ -589,11 +655,9 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 "historias reales contadas en primera persona",
                 "leyendas urbanas mexicanas reales",
                 "casos paranormales reales mexico",
-                "historias de fantasmas reales",
-                "shorts terror",
             ]
             i = 0
-            while len(tags_list) < 10 and i < len(extras):
+            while len(tags_list) < 12 and i < len(extras):
                 if extras[i] not in tags_list:
                     tags_list.append(extras[i])
                 i += 1
@@ -608,7 +672,7 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
 
-            # ---- HASHTAGS DINÁMICOS ----
+            # ---- HASHTAGS DINÁMICOS CON ESTRATEGIA ----
             hashtag_base = "#Shorts"
             hashtag_lugar = f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}"
             hashtag_keywords = []
@@ -623,12 +687,23 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 "#LeyendasUrbanas", "#CasosReales", "#TerrorMexicano",
                 "#HistoriasDeTerror", "#Sobrenatural", "#ExperienciasReales"
             ])
-            hashtag_final = f"{hashtag_base} {hashtag_lugar} {' '.join(hashtag_keywords[:2])} {hashtag_extra}"
+            # Agregar hashtag de estrategia según la estructura del título
+            if "intenté" in titulo.lower() or "sin" in titulo.lower():
+                hashtag_estrategia = "#RestriccionTerror"
+            elif "?" in titulo or "¿" in titulo:
+                hashtag_estrategia = "#DesafioParanormal"
+            elif "de " in titulo.lower() and " a " in titulo.lower():
+                hashtag_estrategia = "#Transformacion"
+            else:
+                hashtag_estrategia = "#Outlier"
+            
+            hashtag_final = f"{hashtag_base} {hashtag_lugar} {' '.join(hashtag_keywords[:2])} {hashtag_extra} {hashtag_estrategia}"
             data["hashtags_descripcion"] = hashtag_final
 
-            print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
+            print(f"   🏷️ Título SEO (Outlier): {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   📅 Año del suceso: {data.get('anio_suceso', 'actualidad')}")
             print(f"   🔑 Keywords: {keywords}")
+            print(f"   🧩 Estrategia: {hashtag_estrategia}")
             if "tema" in data:
                 print(f"   🧩 Tema: {data['tema']}")
             return data
@@ -1241,7 +1316,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Micro-relatos REALES con continuidad visual)")
+    print("🎬 Iniciando Bot de SHORTS (Micro-relatos con ESTRATEGIA DE OUTLIER)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1257,7 +1332,7 @@ def main():
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
 
-    print("🔄 Generando nueva historia REAL con SEO experto...")
+    print("🔄 Generando nueva historia con ESTRATEGIA DE OUTLIER...")
     historia_raw = generar_historia_completa()
     if not historia_raw:
         print("❌ No se pudo generar la historia. Abortando.")
@@ -1267,7 +1342,7 @@ def main():
     palabras = len(texto_completo.split())
 
     if palabras < 130:
-        print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo...")
+        print(f"⚠️ Texto corto ({palabras} palabras). Expandiendo con conflicto activo...")
         texto_completo = expandir_texto_corto(
             texto_completo,
             ESTADO_HISTORIA_SHORTS,
@@ -1282,13 +1357,14 @@ def main():
     paleta = PALETA_COLOR_ACTUAL
     estilo = ESTILO_VISUAL_ACTUAL
 
-    print(f"\n📊 RESUMEN SEO:")
+    print(f"\n📊 RESUMEN SEO (OUTLIER):")
     print(f"   🏷️ Título: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
     print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
+    print(f"   🧩 Hashtags: {historia_raw['hashtags_descripcion']}")
     if "tema" in historia_raw:
         print(f"   🧩 Tema: {historia_raw['tema']}")
     print(f"\n   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
