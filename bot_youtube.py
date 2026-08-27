@@ -26,7 +26,7 @@ import edge_tts
 # CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-AGNES_API_KEY = os.getenv("AGNES_API_KEY")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 YOUTUBE_USER_TOKEN = (
     json.loads(os.getenv("YOUTUBE_USER_TOKEN"))
     if os.getenv("YOUTUBE_USER_TOKEN")
@@ -329,52 +329,16 @@ def tema_ya_usado(tema, umbral=0.5):
     return False
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
-# ================================================================
-def limpiar_prompt(prompt):
-    if not prompt:
-        prompt = "Night scene, dramatic lighting"
-    prompt = re.sub(r"\n+", " ", prompt)
-    prompt = re.sub(r'"', "'", prompt)
-    prompt = re.sub(r"[^\x00-\x7F]+", "", prompt)
-    palabras_malas = [
-        r"\bgore\b", r"\bblood\b", r"\bbloody\b", r"\bwounds?\b", r"\bzombies?\b",
-        r"\bdisfigured\b", r"\bmonster\b", r"\bdemacrad[oa]s?\b",
-        r"\btwin\b", r"\btwins\b", r"\bdoppelganger\b", r"\bclone\b", r"\bclones\b",
-        r"\bduplicate\b", r"\bduplicates\b", r"\bsiamese\b", r"\bconjoined\b",
-        r"\btwo[- ]?faced\b", r"\bdual[- ]?face\b", r"\bsplit[- ]?face\b",
-    ]
-    for pattern in palabras_malas:
-        prompt = re.sub(pattern, "", prompt, flags=re.IGNORECASE)
-    prompt_base = re.sub(r"\s+", " ", prompt).strip()[:220]
-    modificadores = (
-        f", {ESTILO_VISUAL_ACTUAL}, color palette of {PALETA_COLOR_ACTUAL}, "
-        "VERTICAL 9:16 portrait format, WIDE environmental establishing shot, "
-        "the ENVIRONMENT, objects and location are the main focal point (cars, trees, houses, streets, buildings, forests, gardens), "
-        "if a person appears they occupy AT MOST 20% of the frame, small and at distance, "
-        "EXACTLY ONE single person, NO clones, NO duplicates, NO twins, NO double faces, NO mirror faces, NO two houses, "
-        f"{EPOCA_MOD}, period-accurate vehicles, architecture, clothing and technology, "
-        "sharp focus, natural lighting, no text, no watermark"
-    )
-    return prompt_base + modificadores
-
-# ================================================================
 # 🆕 VALIDACIÓN DE TÍTULO GANCHO (Outlier Strategy)
 # ================================================================
 def validar_titulo_gancho(titulo):
-    """
-    Valida que el título sea un gancho efectivo (no genérico).
-    Basado en la estrategia de Yayas: competir por curiosidad, no por skill.
-    """
     if not titulo or len(titulo) < 30:
         return False
     
-    # Palabras genéricas que indican título débil
     genericas = ["misterio", "leyenda", "relato", "historia", "caso", "real", "terror", "miedo", "espanto", "susto"]
     if any(p in titulo.lower() for p in genericas):
         return False
     
-    # Palabras de gancho que generan curiosidad
     ganchos = [
         "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví", 
         "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "vi", "oí", "sentí",
@@ -385,18 +349,16 @@ def validar_titulo_gancho(titulo):
     if not any(g in titulo.lower() for g in ganchos):
         return False
     
-    # Longitud ideal para SEO (50-65 caracteres)
     if len(titulo) < 40 or len(titulo) > 70:
         return False
     
-    # Debe tener al menos una coma, dos puntos o guión (estructura de gancho)
     if ":" not in titulo and "," not in titulo and "-" not in titulo and "|" not in titulo:
         return False
     
     return True
 
 # ================================================================
-# LIMPIAR RESPUESTA JSON (CORREGIDO)
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
@@ -413,7 +375,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO - con control de temas y título gancho)
+# 🎬 GENERAR HISTORIA (TEXTO CONTINUO)
 # ================================================================
 def generar_historia_completa():
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
@@ -535,7 +497,6 @@ Responde ESTRICTAMENTE en este JSON:
             if "texto_completo" in data and palabras >= 500:
                 titulo_generado = data.get("titulo", "")
                 
-                # 🔥 VALIDACIÓN DE TÍTULO GANCHO
                 if not validar_titulo_gancho(titulo_generado):
                     print(f"⚠️ Título genérico: '{titulo_generado}'. No pasa validación. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
@@ -618,67 +579,116 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN POR SEGMENTO (entorno protagonista + continuidad + época)
+# 🔍 GENERAR QUERY DE BÚSQUEDA PARA PEXELS (Optimizado)
 # ================================================================
-def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None):
-    contexto_previo = ""
-    if segmento_anterior_texto:
-        contexto_previo = f"\nPREVIOUS SCENE: The character was just in: '{segmento_anterior_texto[:120]}'"
-    instrucciones_etapa = {
-        "inicio_casa": "Show the character in a home interior, establishing shot, calm before the events.",
-        "desplazamiento": "Show the character in movement (walking, driving), same route as previous scene, different camera angle.",
-        "lugar_destino": "Show the character arriving at or exploring the main location, maintaining architectural consistency.",
-        "climax_evento": "Show the paranormal event happening in this specific location, character reacting but NOT in close-up face.",
-        "resolucion": "Show the aftermath or the character leaving/returning, calmer atmosphere."
-    }
-    instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
-    prompt = f"""Eres un director de fotografía experto en continuidad narrativa.
-
-Fragmento del relato:
-\"\"\"
-{segmento_texto}
-\"\"\"
-{contexto_previo}
-
-Genera un PROMPT DE IMAGEN EN INGLÉS para una foto VERTICAL (9:16) de esta escena.
-
-SCENE CONTINUITY INSTRUCTIONS:
-- Current stage: {etapa}
-- Current location: {ubicacion_escena}
-- DIRECTIVE: {instruccion}
-- Mantén la MISMA ubicación y entorno que la escena anterior (continuidad).
-
-Reglas:
-- FORMATO: VERTICAL 9:16 (portrait), composición alta.
-- PLANO: Wide o medium shot. PROHIBIDO close-up de caras.
-- ENFOQUE PRINCIPAL: el ENTORNO y los objetos (carros, casas, bosques, árboles, jardines, calles, edificios). El ambiente es el PROTAGONISTA.
-- Personaje: {PERFIL_PERSONAJE}, SOLO si el fragmento lo menciona, ocupando máx 20% del encuadre, a distancia.
-- Si el fragmento NO menciona al personaje, NO lo incluyas. Muestra solo el entorno.
-- Estilo: hyperrealistic photography, 4k, ultra-detailed.
-- Paleta: {PALETA_COLOR_ACTUAL}
-- ÉPOCA: {EPOCA_MOD}. Los vehículos, ropa, tecnología y arquitectura deben ser coherentes con esta época.
-- PROHIBIDO: abandoned, rusty, decayed, gore, blood, clones, duplicates, twins, double faces, two houses.
-
-Devuelve SOLO el prompt en inglés, sin explicaciones.
-"""
+def generar_query_pexels(segmento_texto, etapa, ubicacion_escena):
+    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto de stock en Pexels.
+    Contexto: {etapa} en {ubicacion_escena}.
+    Fragmento: "{segmento_texto[:100]}"
+    Reglas: Solo palabras separadas por espacio, sin comas, enfocado en ambiente nocturno, terror, paisaje o interiores. Ej: "dark forest night fog" o "empty house interior night".
+    """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6,
-        "max_tokens": 200,
+        "temperature": 0.5,
+        "max_tokens": 30,
     }
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r = requests.post(url, headers=headers, json=payload, timeout=30)
         r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"].strip()
+        query = r.json()["choices"][0]["message"]["content"].strip().replace('"', '').replace(',', '').replace('.', '')
+        query = " ".join(query.split())
+        if len(query) < 5:
+            query = "dark night landscape scary"
+        return query
     except Exception as e:
-        print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Vertical 9:16 wide shot of {ubicacion_escena} in {EPOCA_MOD}, depicting: {segmento_texto[:100]}, environment as main focal point, no close-up face, single person only if mentioned"
+        print(f"⚠️ Error generando query Pexels: {e}")
+        return "dark night landscape scary"
+
+def generar_query_miniatura_pexels(miniatura_prompt):
+    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto de stock horizontal en Pexels para una miniatura de YouTube de terror.
+    Idea: "{miniatura_prompt[:150]}"
+    Reglas: Solo palabras separadas por espacio, sin comas. Ej: "scary dark forest night fog" o "creepy abandoned house night".
+    """
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.5,
+        "max_tokens": 30,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=30)
+        r.raise_for_status()
+        query = r.json()["choices"][0]["message"]["content"].strip().replace('"', '').replace(',', '').replace('.', '')
+        query = " ".join(query.split())
+        return query if len(query) > 5 else "horror night dark landscape"
+    except Exception as e:
+        return "horror night dark landscape"
 
 # ================================================================
-# 🆕 EXPANDIR TEXTO (continuación) - con espera de 10s
+# 🖼️ BUSCAR IMAGEN EN PEXELS (Reemplazo de Agnes)
+# ================================================================
+def buscar_imagen_pexels(query, orientation="portrait", intentos=3):
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    params = {
+        "query": query,
+        "orientation": orientation,
+        "per_page": 5,
+        "page": random.randint(1, 5)
+    }
+    for intento in range(intentos):
+        try:
+            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query}' ({orientation})...")
+            r = requests.get(url, headers=headers, params=params, timeout=30)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("photos") and len(data["photos"]) > 0:
+                    foto = random.choice(data["photos"])
+                    return foto["src"]["original"]
+                else:
+                    print("⚠️ No se encontraron fotos en Pexels para esta consulta.")
+            else:
+                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+        except Exception as e:
+            print(f"⚠️ Error conexión Pexels: {e}")
+        if intento < intentos - 1:
+            print("⏳ Esperando 5 segundos antes de reintentar...")
+            time.sleep(5)
+    return None
+
+def buscar_miniatura_pexels(query, intentos=3):
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    params = {
+        "query": query,
+        "orientation": "landscape",
+        "per_page": 5,
+        "page": random.randint(1, 3)
+    }
+    for intento in range(intentos):
+        try:
+            print(f"🔍 Intento {intento+1}/{intentos} buscando miniatura en Pexels: '{query}'...")
+            r = requests.get(url, headers=headers, params=params, timeout=30)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("photos") and len(data["photos"]) > 0:
+                    return random.choice(data["photos"])["src"]["original"]
+            else:
+                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+        except Exception as e:
+            print(f"⚠️ Error conexión Pexels: {e}")
+        if intento < intentos - 1:
+            print("⏳ Esperando 5 segundos antes de reintentar...")
+            time.sleep(5)
+    return None
+
+# ================================================================
+# 🆕 EXPANDIR TEXTO (continuación)
 # ================================================================
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Historia: "{titulo}"
@@ -715,119 +725,17 @@ Devuelve SOLO el texto de continuación, sin título ni explicaciones.
     return ""
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN VERTICAL (segmentos 1080x1920) - 3 intentos, 10s espera
-# ================================================================
-def generar_imagen(prompt, width=1080, height=1920, intentos=3):
-    prompt_limpio = limpiar_prompt(prompt)
-    url = "https://apihub.agnes-ai.com/v1/images/generations"
-    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
-    negative = (
-        "multiple people, duplicate people, cloned faces, two people, three people, crowd, "
-        "two houses, duplicate houses, duplicate buildings, duplicate cars, "
-        "cut off body, cropped body, partial body, limbs outside frame, truncated person, "
-        "deformed, mutated, bad anatomy, extra limbs, extra fingers, missing limbs, missing fingers, "
-        "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
-        "close-up face, portrait, headshot, person filling frame, face occupying more than 20% of image, "
-        "centered subject, camera pointed directly at face, "
-        "gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, sickly, "
-        "decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, "
-        "dual face, split face, two faces, double face, mirror face, two heads, "
-        "cloned face, duplicate person, twin, twins, doppelganger, siamese, conjoined, "
-        "floating objects, illogical elements, impossible physics, surreal impossibilities, "
-        "ghost doubles, transparent figures, multiple versions of same person, "
-        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo"
-    )
-    payload = {
-        "model": "agnes-image-2.1-flash",
-        "prompt": prompt_limpio[:800],
-        "negative_prompt": negative,
-        "width": width,
-        "height": height,
-        "num_images": 1
-    }
-    for intento in range(intentos):
-        try:
-            print(f"🖼️ Intento {intento+1}/{intentos} generando imagen VERTICAL...")
-            r = requests.post(url, headers=headers, json=payload, timeout=90)
-            if r.status_code == 200:
-                return r.json()["data"][0]["url"]
-            else:
-                print(f"⚠️ Error: {r.status_code} - {r.text[:100]}")
-        except Exception as e:
-            print(f"⚠️ Error conexión: {e}")
-        if intento < intentos - 1:
-            print("⏳ Esperando 10 segundos antes de reintentar...")
-            time.sleep(10)
-    return None
-
-# ================================================================
-# 🖼️ GENERAR MINIATURA BASE (SIN TEXTO) - 3 intentos, 10s espera
-# ================================================================
-def generar_miniatura_base(prompt, width=1280, height=720, intentos=3):
-    prompt_limpio = limpiar_prompt(prompt)
-    prompt_limpio = re.sub(r"text\s*overlay|text\s*on\s*image|render\s*text|add\s*text", "", prompt_limpio, flags=re.IGNORECASE)
-    url = "https://apihub.agnes-ai.com/v1/images/generations"
-    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
-    negative = (
-        "multiple people, duplicate people, cloned faces, two people, crowd, "
-        "dual face, split face, two faces, double face, mirror face, two heads, "
-        "cloned face, duplicate person, twin, twins, doppelganger, "
-        "deformed, mutated, bad anatomy, extra limbs, asymmetrical eyes, uncanny valley, "
-        "gore, blood, wounds, gaunt, emaciated, zombie-like, corpse-like, "
-        "low quality, blurry, watermark, logo, "
-        "text, letters, words, typography, writing, signs, labels, "
-        "oversized text, huge text, giant letters, text filling the frame, "
-        "misspelled text, wrong spelling, typo, distorted letters, broken characters"
-    )
-    payload = {
-        "model": "agnes-image-2.1-flash",
-        "prompt": prompt_limpio[:900],
-        "negative_prompt": negative,
-        "width": width,
-        "height": height,
-        "num_images": 1
-    }
-    for intento in range(intentos):
-        try:
-            print(f"🖼️ Intento {intento+1}/{intentos} generando miniatura BASE (sin texto)...")
-            r = requests.post(url, headers=headers, json=payload, timeout=90)
-            if r.status_code == 200:
-                return r.json()["data"][0]["url"]
-            else:
-                print(f"⚠️ Error: {r.status_code} - {r.text[:100]}")
-        except Exception as e:
-            print(f"⚠️ Error conexión: {e}")
-        if intento < intentos - 1:
-            print("⏳ Esperando 10 segundos antes de reintentar...")
-            time.sleep(10)
-    return None
-
-# ================================================================
-# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL (CORREGIDO + MEJORADO)
+# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL
 # ================================================================
 def dibujar_texto_miniatura(img_path, texto, output_path):
-    """
-    Abre la imagen, dibuja el texto con PIL y guarda.
-    Elige colores aleatorios de una paleta de terror.
-    CORREGIDO: convierte a RGB antes de guardar como JPEG.
-    """
-    # Paleta de colores para el texto (adaptable al relato)
     colores_texto = [
-        (255, 50, 50),    # Rojo intenso
-        (180, 0, 255),    # Morado
-        (255, 255, 0),    # Amarillo
-        (255, 140, 0),    # Naranja
-        (255, 255, 255),  # Blanco
-        (0, 0, 0),        # Negro (con borde blanco)
-        (0, 200, 255),    # Cian neón
-        (255, 0, 200),    # Rosa neón
-        (50, 255, 50),    # Verde neón
+        (255, 50, 50), (180, 0, 255), (255, 255, 0), (255, 140, 0),
+        (255, 255, 255), (0, 0, 0), (0, 200, 255), (255, 0, 200), (50, 255, 50),
     ]
     color_fill = random.choice(colores_texto)
     brillo = sum(color_fill) / 3
     color_outline = (255, 255, 255) if brillo < 128 else (0, 0, 0)
 
-    # Fuentes (variadas)
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -858,7 +766,6 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
         else:
             lineas = [texto_limpio]
 
-        # Escalar fuente
         font_size = 120
         for intento in range(5):
             try:
@@ -897,7 +804,6 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
             x = x_base + (w - x_base - w_lin) // 2
             y = y_offset
 
-            # Borde más grueso para impacto
             for dx in range(-6, 7):
                 for dy in range(-6, 7):
                     if dx == 0 and dy == 0:
@@ -1019,7 +925,7 @@ def limpiar_archivos_temporales():
                 os.remove(f)
             except:
                 pass
-    for aux in ["video_final.mp4", "miniatura.jpg"]:
+    for aux in ["video_final.mp4", "miniatura.jpg", "miniatura_base.jpg"]:
         if os.path.exists(aux):
             try:
                 os.remove(aux)
@@ -1101,11 +1007,14 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
         etapa = etapas[i] if i < len(etapas) else "lugar_destino"
         ubic = ubicaciones[i] if i < len(ubicaciones) else UBICACION_HISTORIA
         print(f"\n📍 Segmento {idx+1} - Etapa: {etapa} | {ubic}")
-        seg_anterior = segmentos[i-1] if i > 0 else None
-        prompt_img = generar_prompt_imagen_segmento(seg_texto, etapa, ubic, seg_anterior)
+        
+        # Generar query optimizada para Pexels
+        query = generar_query_pexels(seg_texto, etapa, ubic)
+        
         if i > 0:
             time.sleep(3)
-        url_img = generar_imagen(prompt_img)
+            
+        url_img = buscar_imagen_pexels(query, orientation="portrait")
         if url_img:
             imagen_ultimo_recurso = url_img
         else:
@@ -1114,9 +1023,11 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
                 url_img = imagen_ultimo_recurso
             else:
                 continue
+                
         audio_file = generar_audio(seg_texto, idx)
         if not audio_file:
             continue
+            
         elementos.append({"imagen_url": url_img, "audio_path": audio_file})
     return elementos
 
@@ -1124,7 +1035,7 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
 # MAIN
 # ================================================================
 def verificar_envs():
-    required = ["DEEPSEEK_API_KEY", "AGNES_API_KEY", "YOUTUBE_USER_TOKEN"]
+    required = ["DEEPSEEK_API_KEY", "PEXELS_API_KEY", "YOUTUBE_USER_TOKEN"]
     missing = [var for var in required if not os.getenv(var)]
     if missing:
         print(f"❌ Faltan variables: {', '.join(missing)}")
@@ -1141,13 +1052,10 @@ def main():
             sys.exit(0)
 
     print("="*70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT VERSIÓN OUTLIER")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT VERSIÓN OUTLIER (PEXELS)")
     print("   ✦ Títulos gancho (validación automática)")
-    print("   ✦ Premisas fuertes (generación de curiosidad)")
-    print("   ✦ Estructura de conflicto + tensión + clímax")
+    print("   ✦ Imágenes estables vía API de Pexels")
     print("   ✦ Miniaturas con texto neón mejorado")
-    print("   ✦ 6 intentos, 10s de espera")
-    print("   ✦ Sin títulos genéricos")
     print("="*70)
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
@@ -1205,11 +1113,13 @@ def main():
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
     # ============================================================
-    # 🖼️ GENERAR MINIATURA CON PIL (mejorada)
+    # 🖼️ GENERAR MINIATURA CON PIL (vía Pexels)
     # ============================================================
-    print("🖼️ Generando miniatura HORIZONTAL con PIL (texto neón)...")
+    print("🖼️ Buscando miniatura HORIZONTAL en Pexels y aplicando texto con PIL...")
     miniatura_path = None
-    miniatura_base_url = generar_miniatura_base(historia.get("miniatura_prompt", "Terrified face with ghostly silhouette"))
+    
+    query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night dark landscape"))
+    miniatura_base_url = buscar_miniatura_pexels(query_miniatura)
 
     if miniatura_base_url:
         try:
@@ -1234,8 +1144,8 @@ def main():
             import traceback
             traceback.print_exc()
             try:
-                if os.path.exists(temp_base):
-                    with Image.open(temp_base) as img:
+                if os.path.exists("miniatura_base.jpg"):
+                    with Image.open("miniatura_base.jpg") as img:
                         img.save("miniatura.jpg", "JPEG", quality=85)
                     miniatura_path = "miniatura.jpg"
                     print(f"⚠️ Fallback: miniatura guardada SIN texto en miniatura.jpg")
@@ -1243,7 +1153,7 @@ def main():
                 print(f"❌ Fallback también falló: {e2}")
                 miniatura_path = None
     else:
-        print("❌ No se pudo generar la imagen base de la miniatura.")
+        print("❌ No se pudo encontrar la imagen base de la miniatura en Pexels.")
         miniatura_path = None
 
     # ============================================================
