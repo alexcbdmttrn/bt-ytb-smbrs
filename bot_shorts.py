@@ -26,7 +26,7 @@ import pytz
 # CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-AGNES_API_KEY = os.getenv("AGNES_API_KEY")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 YOUTUBE_USER_TOKEN = (
     json.loads(os.getenv("YOUTUBE_USER_TOKEN"))
     if os.getenv("YOUTUBE_USER_TOKEN")
@@ -246,8 +246,6 @@ FONDOS_DISPONIBLES = [
 ]
 
 def seleccionar_fondo_disponible(estado):
-    """Escanea el disco una vez, construye un diccionario de canciones existentes
-    y elige aleatoriamente entre ellas (menos la última usada)."""
     encontrados = {}
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
@@ -269,7 +267,7 @@ def seleccionar_fondo_disponible(estado):
     return encontrados[seleccionado]
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS
+# 🧼 LIMPIADOR DE PROMPTS Y TEXTO
 # ================================================================
 def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -297,9 +295,6 @@ def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     )
     return prompt_base + modificadores
 
-# ================================================================
-# 🧹 LIMPIAR CARACTERES PARA TTS
-# ================================================================
 def limpiar_caracteres_para_tts(texto):
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
     texto = re.sub(r'\s+', ' ', texto)
@@ -316,76 +311,6 @@ def limpiar_respuesta_json(respuesta):
         json_str = re.sub(r",\s*\]", "]", json_str)
         return json_str
     return respuesta
-
-# ================================================================
-# 🗂️ ESTADO
-# ================================================================
-def cargar_estado():
-    try:
-        with open(ESTADO_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if "publicaciones_hoy" not in data:
-                data["publicaciones_hoy"] = None
-            return data
-    except Exception:
-        return {"ultimo_fondo": None, "publicaciones_hoy": None}
-
-def guardar_estado(estado):
-    with open(ESTADO_FILE, "w", encoding="utf-8") as f:
-        json.dump({
-            "ultimo_fondo": estado.get("ultimo_fondo"),
-            "publicaciones_hoy": estado.get("publicaciones_hoy")
-        }, f, indent=2, ensure_ascii=False)
-
-def cargar_titulos_publicados():
-    try:
-        with open(TITULOS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"titulos": []}
-
-def guardar_titulo_publicado(titulo):
-    data = cargar_titulos_publicados()
-    if titulo not in data["titulos"]:
-        data["titulos"].append(titulo)
-        with open(TITULOS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-
-def titulo_ya_publicado(titulo):
-    data = cargar_titulos_publicados()
-    titulo_norm = titulo.lower().strip()
-    for t in data["titulos"]:
-        t_norm = t.lower().strip()
-        if titulo_norm == t_norm:
-            return True
-        palabras1 = set(re.findall(r'\w+', titulo_norm))
-        palabras2 = set(re.findall(r'\w+', t_norm))
-        if len(palabras1) > 3 and len(palabras2) > 3:
-            interseccion = palabras1.intersection(palabras2)
-            similitud = len(interseccion) / min(len(palabras1), len(palabras2))
-            if similitud > 0.7:
-                return True
-    return False
-
-def obtener_publicaciones_hoy():
-    estado = cargar_estado()
-    pub = estado.get("publicaciones_hoy")
-    if not pub:
-        return 0
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
-    if pub.get("fecha") == hoy:
-        return pub.get("cantidad", 0)
-    return 0
-
-def incrementar_publicaciones_hoy():
-    estado = cargar_estado()
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
-    pub = estado.get("publicaciones_hoy")
-    if pub and pub.get("fecha") == hoy:
-        pub["cantidad"] = pub.get("cantidad", 0) + 1
-    else:
-        estado["publicaciones_hoy"] = {"fecha": hoy, "cantidad": 1}
-    guardar_estado(estado)
 
 def limpiar_texto_para_audio(texto):
     texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
@@ -457,11 +382,9 @@ def generar_historia_completa():
             temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
         temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar que los listados.\n"
 
-    # Seleccionar outliers de referencia
     outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
     outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
 
-    # Hashtags de estrategia (adicionales)
     hashtags_estrategia = random.choice([
         "#DesafioParanormal #RestriccionTerror #Transformacion",
         "#Supervivencia #TerrorActivo #ObjetivoClaro",
@@ -583,16 +506,13 @@ Devuelve ESTRICTAMENTE este JSON válido:
 
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
 
-            # ---- TÍTULO CON ESTRUCTURA DE OUTLIER ----
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
 
-            # Verificar que el título tenga estructura de outlier (contiene "Intenté", "¿", "De...a...", "Sin", etc.)
             palabras_outlier = ["intenté", "¿", "de ", "a ", "sin", "sobreviví", "lograré", "pasé", "escapar", "encontré"]
             tiene_estructura = any(palabra in titulo.lower() for palabra in palabras_outlier)
             if not tiene_estructura and len(titulo) > 10:
-                # Forzar estructura de restricción si no tiene
                 keywords = data.get("palabras_clave", [])
                 primera_kw = keywords[0] if keywords else "terror"
                 lugar = ESTADO_HISTORIA_SHORTS
@@ -608,7 +528,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
                 raise ValueError("Título duplicado")
 
-            # ---- GANCHO Y CONTEXTO ----
             gancho = data.get("gancho_descripcion", "").strip()
             if not gancho or len(gancho) > 110:
                 gancho = f"Sin recursos, en {ESTADO_HISTORIA_SHORTS}..."[:100]
@@ -624,7 +543,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
 
-            # ---- TAGS INCORPORANDO KEYWORDS Y ESTRATEGIA ----
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:12]
 
@@ -635,7 +553,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                     if kw_lower not in [t.lower() for t in tags_list]:
                         tags_list.append(kw_lower)
 
-            # Agregar tags de estrategia
             tags_estrategia = [
                 "desafio paranormal",
                 "restriccion terror",
@@ -672,7 +589,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 total_chars += costo
             data["tags"] = ", ".join(tags_final)
 
-            # ---- HASHTAGS DINÁMICOS CON ESTRATEGIA ----
             hashtag_base = "#Shorts"
             hashtag_lugar = f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}"
             hashtag_keywords = []
@@ -687,7 +603,6 @@ Devuelve ESTRICTAMENTE este JSON válido:
                 "#LeyendasUrbanas", "#CasosReales", "#TerrorMexicano",
                 "#HistoriasDeTerror", "#Sobrenatural", "#ExperienciasReales"
             ])
-            # Agregar hashtag de estrategia según la estructura del título
             if "intenté" in titulo.lower() or "sin" in titulo.lower():
                 hashtag_estrategia = "#RestriccionTerror"
             elif "?" in titulo or "¿" in titulo:
@@ -715,6 +630,134 @@ Devuelve ESTRICTAMENTE este JSON válido:
 
     print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
+
+def titulo_ya_publicado(titulo):
+    data = cargar_titulos_publicados()
+    titulo_norm = titulo.lower().strip()
+    for t in data["titulos"]:
+        t_norm = t.lower().strip()
+        if titulo_norm == t_norm:
+            return True
+        palabras1 = set(re.findall(r'\w+', titulo_norm))
+        palabras2 = set(re.findall(r'\w+', t_norm))
+        if len(palabras1) > 3 and len(palabras2) > 3:
+            interseccion = palabras1.intersection(palabras2)
+            similitud = len(interseccion) / min(len(palabras1), len(palabras2))
+            if similitud > 0.7:
+                return True
+    return False
+
+def obtener_publicaciones_hoy():
+    estado = cargar_estado()
+    pub = estado.get("publicaciones_hoy")
+    if not pub:
+        return 0
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
+    if pub.get("fecha") == hoy:
+        return pub.get("cantidad", 0)
+    return 0
+
+def incrementar_publicaciones_hoy():
+    estado = cargar_estado()
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
+    pub = estado.get("publicaciones_hoy")
+    if pub and pub.get("fecha") == hoy:
+        pub["cantidad"] = pub.get("cantidad", 0) + 1
+    else:
+        estado["publicaciones_hoy"] = {"fecha": hoy, "cantidad": 1}
+    guardar_estado(estado)
+
+def cargar_estado():
+    try:
+        with open(ESTADO_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if "publicaciones_hoy" not in data:
+                data["publicaciones_hoy"] = None
+            return data
+    except Exception:
+        return {"ultimo_fondo": None, "publicaciones_hoy": None}
+
+def guardar_estado(estado):
+    with open(ESTADO_FILE, "w", encoding="utf-8") as f:
+        json.dump({
+            "ultimo_fondo": estado.get("ultimo_fondo"),
+            "publicaciones_hoy": estado.get("publicaciones_hoy")
+        }, f, indent=2, ensure_ascii=False)
+
+def cargar_titulos_publicados():
+    try:
+        with open(TITULOS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"titulos": []}
+
+def guardar_titulo_publicado(titulo):
+    data = cargar_titulos_publicados()
+    if titulo not in data["titulos"]:
+        data["titulos"].append(titulo)
+        with open(TITULOS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+# ================================================================
+# 🔍 GENERAR QUERY DE BÚSQUEDA PARA PEXELS (Optimizado para Shorts)
+# ================================================================
+def generar_query_pexels_shorts(segmento_texto, etapa, ubicacion_escena, index_segmento=0, total_segmentos=1):
+    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto de stock VERTICAL en Pexels.
+    Contexto: {etapa} en {ubicacion_escena}.
+    Fragmento: "{segmento_texto[:80]}"
+    Reglas: Solo palabras separadas por espacio, sin comas, enfocado en ambiente nocturno, terror, paisaje o interiores. Ej: "dark forest night fog" o "empty house interior night".
+    """
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.5,
+        "max_tokens": 30,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=30)
+        r.raise_for_status()
+        query = r.json()["choices"][0]["message"]["content"].strip().replace('"', '').replace(',', '').replace('.', '')
+        query = " ".join(query.split())
+        if len(query) < 5:
+            query = "dark night landscape scary"
+        return query
+    except Exception as e:
+        print(f"⚠️ Error generando query Pexels: {e}")
+        return "dark night landscape scary"
+
+# ================================================================
+# 🖼️ BUSCAR IMAGEN EN PEXELS (Reemplazo de Agnes)
+# ================================================================
+def buscar_imagen_pexels_shorts(query, intentos=3):
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    params = {
+        "query": query,
+        "orientation": "portrait", # CRUCIAL PARA SHORTS
+        "per_page": 5,
+        "page": random.randint(1, 5) # Aleatoriedad para evitar repetir la misma foto
+    }
+    for intento in range(intentos):
+        try:
+            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query}' (vertical)...")
+            r = requests.get(url, headers=headers, params=params, timeout=30)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("photos") and len(data["photos"]) > 0:
+                    foto = random.choice(data["photos"])
+                    return foto["src"]["original"]
+                else:
+                    print("⚠️ No se encontraron fotos en Pexels para esta consulta.")
+            else:
+                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+        except Exception as e:
+            print(f"⚠️ Error conexión Pexels: {e}")
+        if intento < intentos - 1:
+            print("⏳ Esperando 5 segundos antes de reintentar...")
+            time.sleep(5)
+    return None
 
 # ================================================================
 # 🔄 DIVIDIR TEXTO POR ORACIONES
@@ -769,120 +812,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN CON MEMORIA VISUAL + ÉPOCA + VARIEDAD DE ÁNGULO
-# ================================================================
-def generar_prompt_con_contexto(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, perfil=None, estilo_visual=None, paleta_color=None, index_segmento=0, total_segmentos=1):
-    estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
-    paleta = paleta_color or PALETA_COLOR_ACTUAL
-    perfil = perfil or PERFIL_PERSONAJE_SHORTS
-
-    contexto_previo = ""
-    if segmento_anterior_texto:
-        contexto_previo = f"\nPREVIOUS SCENE: The character was just in: '{segmento_anterior_texto[:120]}'"
-
-    instrucciones_etapa = {
-        "inicio_casa": "Show the environment of a home interior (furniture, rooms, objects). If the person is mentioned, show them SMALL at distance (max 20% of frame). If not mentioned, show ONLY the environment without people.",
-        "desplazamiento": "Show the environment of movement (street, vehicle, road). Vehicles and surroundings are the MAIN subject. If person is mentioned, show them small at distance (max 20% of frame).",
-        "lugar_destino": "Show the environment of the specific location. Cars, trees, houses, buildings are the MAIN subject. If person is mentioned, show them small at distance (max 20% of frame).",
-        "climax_evento": "Show the environment where the event happens. The LOCATION is the main subject. If person is mentioned, show them small at distance (max 20% of frame). NO close-up faces.",
-        "resolucion": "Show the environment of departure/return. Calmer atmosphere. If person is mentioned, show them small at distance (max 20% of frame).",
-    }
-    instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["lugar_destino"])
-
-    angulos = ["low angle", "high angle", "eye level", "dutch angle", "overhead", "wide establishing shot"]
-    angulo_elegido = angulos[index_segmento % len(angulos)]
-    if total_segmentos > 1 and index_segmento == total_segmentos - 1:
-        angulo_elegido = "eye level"
-
-    prompt = f"""You are an expert cinematographer specializing in narrative visual continuity.
-Story segment:
-\"\"\"
-{segmento_texto}
-\"\"\"
-{contexto_previo}
-
-Generate an ENGLISH PROMPT for a vertical (9:16) photo of this scene.
-
-CONTINUITY INSTRUCTIONS:
-- Current stage: {etapa}
-- Current location: {ubicacion_escena}
-- DIRECTIVE: {instruccion}
-- CAMERA ANGLE: {angulo_elegido} (to give visual variety between segments)
-- Ensure the scene is LEGIBLE on small screens: clear composition, main subject (if any) well centered in the frame, no clutter.
-
-STRICT COMPOSITION RULES:
-- SHOT: Wide shot or extreme wide shot. ABSOLUTELY NO close-up, NO portrait, NO headshot.
-- MAIN SUBJECT: The ENVIRONMENT, objects and location (cars, trees, houses, streets, buildings, forests, gardens).
-- If a person is mentioned: include them occupying AT MOST 20% of the frame, small and at distance.
-- If NO person is mentioned: show ONLY the environment without people.
-- Style: professional hyperrealistic photography, sharp focus.
-- Color palette: {paleta}
-- ERA: {EPOCA_MOD}. Period-accurate vehicles, architecture, clothing and technology.
-- ABSOLUTE PROHIBITIONS: NO clones, NO duplicates, NO twins, NO double faces, NO close-up faces, NO gore, NO blood.
-
-Return ONLY the English prompt, no explanations.
-"""
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6,
-        "max_tokens": 300,
-    }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=60)
-        r.raise_for_status()
-        prompt_imagen = r.json()["choices"][0]["message"]["content"].strip()
-        prompt_imagen += f", {estilo}, vertical 9:16, wide establishing shot, environment as main subject, no close-up face, no portrait, no gore, no blood, {EPOCA_MOD}, exactly one person if mentioned, no clones, no duplicates"
-        return prompt_imagen
-    except Exception as e:
-        print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Wide establishing shot of {ubicacion_escena}, {estilo}, vertical 9:16, environment as main subject, no close-up face, {EPOCA_MOD}"
-
-# ================================================================
-# 🖼️ GENERAR IMAGEN VERTICAL (con espera de 10s en fallos)
-# ================================================================
-def generar_imagen_vertical(prompt, intentos=3):
-    prompt_limpio = limpiar_prompt_base(prompt, ESTILO_VISUAL_ACTUAL, PALETA_COLOR_ACTUAL)
-    url = "https://apihub.agnes-ai.com/v1/images/generations"
-    headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
-    negative = (
-        "multiple people, duplicate people, cloned faces, two people, three people, crowd, "
-        "cut off body, cropped body, partial body, limbs outside frame, truncated person, "
-        "deformed, mutated, bad anatomy, extra limbs, extra fingers, missing limbs, missing fingers, "
-        "asymmetrical eyes, cross-eyed, malformed features, uncanny valley, "
-        "close-up face, portrait, headshot, person filling frame, face occupying more than 20% of image, "
-        "gore, blood, bloody, wounds, cuts, bruises, gaunt, emaciated, "
-        "sickly, decayed skin, rotting, zombie-like, corpse-like, grotesque, ugly, "
-        "dual face, split face, two faces, double face, mirror face, two heads, "
-        "cloned face, duplicate person, twin, twins, doppelganger, siamese, conjoined, "
-        "floating objects, illogical elements, impossible physics, "
-        "ghost doubles, transparent figures, multiple versions of same person, "
-        "over-saturated, oversharpened, low quality, blurry, text, watermark, logo"
-    )
-    payload = {
-        "model": "agnes-image-2.1-flash",
-        "prompt": prompt_limpio,
-        "negative_prompt": negative,
-        "width": 1080,
-        "height": 1920,
-        "num_images": 1
-    }
-    for intento in range(intentos):
-        try:
-            r = requests.post(url, headers=headers, json=payload, timeout=90)
-            if r.status_code == 200:
-                return r.json()["data"][0]["url"]
-            print(f"   ⚠️ Imagen devolvió {r.status_code}, esperando 10s...")
-            time.sleep(10)
-        except Exception as e:
-            print(f"   ⚠️ Error en imagen: {e}, esperando 10s...")
-            time.sleep(10)
-    return None
-
-# ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO
+# 🎬 GENERAR RECURSOS POR SEGMENTO (ACTUALIZADO A PEXELS)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
@@ -893,35 +823,25 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
 
-        seg_anterior = segmentos[idx-1] if idx > 0 else None
-        prompt_imagen = generar_prompt_con_contexto(
-            segmento_texto=seg,
-            etapa=etapa,
-            ubicacion_escena=ubic_escena,
-            segmento_anterior_texto=seg_anterior,
-            perfil=perfil,
-            estilo_visual=estilo,
-            paleta_color=paleta,
-            index_segmento=idx,
-            total_segmentos=total_seg
-        )
-        print(f"    📝 Prompt generado: {prompt_imagen[:100]}...")
+        # Generar query optimizada para Pexels
+        query = generar_query_pexels_shorts(seg, etapa, ubic_escena, idx, total_seg)
+        print(f"    🔍 Query Pexels: {query}")
 
         img_url = None
         for intento in range(intentos_por_imagen):
             try:
-                img_url = generar_imagen_vertical(prompt_imagen, intentos=1)
+                img_url = buscar_imagen_pexels_shorts(query, intentos=1)
                 if img_url:
-                    print(f"    ✅ Imagen generada (intento {intento+1})")
+                    print(f"    ✅ Imagen encontrada en Pexels (intento {intento+1})")
                     break
             except Exception:
                 pass
             if intento < intentos_por_imagen - 1:
-                print(f"    ⏳ Esperando 10s antes de reintentar imagen...")
-                time.sleep(10)
+                print(f"    ⏳ Esperando 5s antes de reintentar imagen...")
+                time.sleep(5)
 
         if not img_url:
-            print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible")
+            print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible o fallback")
 
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
@@ -942,8 +862,8 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         })
 
         if idx < len(segmentos) - 1:
-            print(f"    ⏳ Esperando 10s antes del siguiente segmento...")
-            time.sleep(10)
+            print(f"    ⏳ Esperando 5s antes del siguiente segmento...")
+            time.sleep(5)
 
     # Reparar imágenes fallidas
     for i, res in enumerate(resultados_temporales):
@@ -1372,7 +1292,7 @@ def main():
     segmentos = dividir_en_segmentos(texto_completo, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
 
-    print(f"\n🖼️ Generando {len(segmentos)} imágenes con continuidad narrativa...")
+    print(f"\n🖼️ Buscando {len(segmentos)} imágenes verticales en Pexels con continuidad narrativa...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
         print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
 
