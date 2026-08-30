@@ -90,10 +90,10 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎤 VOCES NEURALES VÁLIDAS (fallback automático)
+#  VOCES NEURALES VÁLIDAS (fallback automático)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
@@ -256,7 +256,7 @@ def seleccionar_fondo_disponible():
                 full_path = os.path.join(root, fondo)
                 print(f"⚠️ Fallback: {full_path}")
                 return full_path
-    print("⚠️ No se encontró ningún archivo de fondo.")
+    print("️ No se encontró ningún archivo de fondo.")
     return None
 
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
@@ -391,7 +391,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎬 GENERAR HISTORIA (TEXTO CONTINUO)
+#  GENERAR HISTORIA (TEXTO CONTINUO)
 # ================================================================
 def generar_historia_completa():
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
@@ -425,7 +425,7 @@ EJEMPLOS DE TÍTULOS GANADORES (30-75 caracteres):
 🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
 "palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales y ESPECÍFICAS del relato.
 
-🎯 REGLA DE ÉPOCA Y AMBIENTACIÓN:
+ REGLA DE ÉPOCA Y AMBIENTACIÓN:
 "anio_suceso": año específico del suceso (1970-2020).
 
 🎯 REGLA DE PERSONAJE:
@@ -520,12 +520,12 @@ Responde ESTRICTAMENTE en este JSON:
                 actualizar_epoca(anio_suceso)
                 print(f"✅ Historia generada: {palabras} palabras.")
                 print(f"🏷️ Título GANCHO: {titulo_generado}")
-                print(f"🖼️ Texto miniatura: {data.get('palabras_portada', 'N/A')}")
+                print(f"️ Texto miniatura: {data.get('palabras_portada', 'N/A')}")
                 print(f"🔑 Keywords: {data.get('palabras_clave', [])}")
                 print(f"📝 Título alternativo: {data.get('titulo_alternativo', 'N/A')}")
                 return data
             else:
-                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
+                print(f"️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
                 raise ValueError("Texto insuficiente")
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
@@ -583,7 +583,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🔍 GENERAR QUERY PARA PEXELS (USANDO DEEPSEEK)
+#  GENERAR QUERY PARA PEXELS (USANDO DEEPSEEK)
 # ================================================================
 def generar_query_pexels(segmento_texto, etapa, ubicacion_escena):
     prompt = f"""Eres un EXPERTO EN BÚSQUEDA DE FOTOGRAFÍA DE STOCK. Genera SOLO 4-6 palabras clave en inglés para buscar una foto VERTICAL (9:16) en Pexels que represente esta escena.
@@ -616,7 +616,7 @@ Devuelve SOLO las palabras clave en inglés, sin puntos, sin comillas.
         query = re.sub(r'\s+', ' ', query)
         if len(query.split()) < 3:
             query = "dark night landscape scary"
-        print(f"🧠 Query Pexels: '{query}'")
+        print(f" Query Pexels: '{query}'")
         return query
     except Exception as e:
         print(f"⚠️ Error generando query: {e}. Usando fallback.")
@@ -647,14 +647,14 @@ def generar_query_miniatura_pexels(miniatura_prompt):
         return "horror night dark landscape"
 
 # ================================================================
-# 🖼️ BUSCAR IMAGEN EN PEXELS (CON REINTENTOS Y FALLBACK)
+# ️ BUSCAR IMAGEN EN PEXELS (CON REINTENTOS Y FALLBACK)
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
 def buscar_imagen_pexels(query, orientation="portrait", intentos=3):
     global ULTIMA_URL_PEXELS
     if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada.")
+        print("️ PEXELS_API_KEY no configurada.")
         return None
 
     # Añadir variación a la query para evitar repeticiones
@@ -663,7 +663,8 @@ def buscar_imagen_pexels(query, orientation="portrait", intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    # CORREGIDO: Pexels no usa "Bearer", solo la API Key directa
+    headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query_variada,
         "orientation": orientation,
@@ -689,13 +690,13 @@ def buscar_imagen_pexels(query, orientation="portrait", intentos=3):
                     print(f"✅ Imagen encontrada: {image_url[:80]}...")
                     return image_url
                 else:
-                    print("⚠️ No se encontraron fotos para esta consulta.")
+                    print("️ No se encontraron fotos para esta consulta.")
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
         except requests.exceptions.Timeout:
             print("⏰ Timeout en Pexels. Reintentando...")
         except Exception as e:
-            print(f"⚠️ Error conexión Pexels: {e}")
+            print(f"️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
             print(f"   ⏳ Esperando 5s antes de reintentar...")
             time.sleep(5)
@@ -705,7 +706,8 @@ def buscar_imagen_pexels(query, orientation="portrait", intentos=3):
 
 def buscar_miniatura_pexels(query, intentos=3):
     url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    # CORREGIDO: Pexels no usa "Bearer", solo la API Key directa
+    headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query,
         "orientation": "landscape",
@@ -762,7 +764,7 @@ Devuelve SOLO el texto de continuación.
         except Exception as e:
             print(f"❌ Expansión intento {intento+1}/2 falló: {e}")
         if intento < 1:
-            print("⏳ Esperando 10 segundos...")
+            print(" Esperando 10 segundos...")
             time.sleep(10)
     return ""
 
@@ -943,7 +945,7 @@ def montar_video(elementos, salida="video_final.mp4"):
             fondo_clip = fondo_clip.audio_fadein(2).audio_fadeout(2)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
         except Exception as e:
-            print(f"⚠️ Error en audio fondo: {e}")
+            print(f"️ Error en audio fondo: {e}")
             audio_final = audio_narracion
     else:
         audio_final = audio_narracion
@@ -1060,14 +1062,14 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
             imagen_ultimo_recurso = url_img
         else:
             if imagen_ultimo_recurso:
-                print(f"⚠️ Reutilizando imagen anterior para segmento {idx+1}.")
+                print(f"️ Reutilizando imagen anterior para segmento {idx+1}.")
                 url_img = imagen_ultimo_recurso
             else:
                 # Si no hay imagen anterior, intentar con una consulta más genérica
                 query_fallback = "mexican night landscape dark"
                 url_img = buscar_imagen_pexels(query_fallback, orientation="portrait")
                 if url_img:
-                    print(f"⚠️ Usando imagen genérica para segmento {idx+1}.")
+                    print(f"️ Usando imagen genérica para segmento {idx+1}.")
                     imagen_ultimo_recurso = url_img
                 else:
                     continue
@@ -1100,7 +1102,7 @@ def main():
             sys.exit(0)
 
     print("="*70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT VERSIÓN OUTLIER (PEXELS)")
+    print(" SOMBRAS DE MEDIANOCHE - BOT VERSIÓN OUTLIER (PEXELS)")
     print("   ✦ Títulos gancho (validación automática)")
     print("   ✦ Imágenes estables vía API de Pexels")
     print("   ✦ Miniaturas con texto neón mejorado")
@@ -1161,9 +1163,9 @@ def main():
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
     # ============================================================
-    # 🖼️ GENERAR MINIATURA CON PIL (vía Pexels)
+    # ️ GENERAR MINIATURA CON PIL (vía Pexels)
     # ============================================================
-    print("🖼️ Buscando miniatura HORIZONTAL en Pexels y aplicando texto con PIL...")
+    print("️ Buscando miniatura HORIZONTAL en Pexels y aplicando texto con PIL...")
     miniatura_path = None
     
     query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night dark landscape"))
@@ -1196,7 +1198,7 @@ def main():
                     with Image.open("miniatura_base.jpg") as img:
                         img.save("miniatura.jpg", "JPEG", quality=85)
                     miniatura_path = "miniatura.jpg"
-                    print(f"⚠️ Fallback: miniatura guardada SIN texto")
+                    print(f"️ Fallback: miniatura guardada SIN texto")
             except Exception as e2:
                 print(f"❌ Fallback también falló: {e2}")
                 miniatura_path = None
@@ -1209,7 +1211,7 @@ def main():
     # ============================================================
     print("🎬 Montando video VERTICAL...")
     video_path, duracion_final = montar_video(elementos_validos)
-    print(f"⏱️ Duración final: {duracion_final/60:.1f} minutos")
+    print(f"️ Duración final: {duracion_final/60:.1f} minutos")
 
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(video_path, miniatura_path, titulo_video, descripcion_video, tags_video, capitulos_video)
@@ -1226,7 +1228,7 @@ def main():
 
     marcar_publicacion_exitosa()
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado (video vertical + miniatura con PIL).")
+    print(" Proceso completado (video vertical + miniatura con PIL).")
 
 if __name__ == "__main__":
     try:
