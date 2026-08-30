@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "aparicion",
-      "lugar": "casa abandonada",
-      "contexto": "miedo"
-    },
-    {
       "tipo": "fantasma",
       "lugar": "centro comercial",
       "contexto": "persecucion"
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "malecón",
       "contexto": "comunicación"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "autopista",
+      "contexto": "persecucion"
     }
   ]
 }
