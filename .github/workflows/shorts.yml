@@ -41,6 +41,21 @@ jobs:
           pip install pytz
           pip install urllib3
 
+      - name: Verificar API Key de Pexels
+        run: |
+          if [ -z "${{ secrets.PEXELS_API_KEY }}" ]; then
+            echo "⚠️ PEXELS_API_KEY no está configurada en Secrets. Se usarán placeholders."
+          else
+            echo "✅ PEXELS_API_KEY está configurada."
+            # Probar la API Key con una solicitud de prueba
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: ${{ secrets.PEXELS_API_KEY }}" "https://api.pexels.com/v1/search?query=test&per_page=1")
+            if [ "$RESPONSE" -eq 200 ]; then
+              echo "✅ API Key de Pexels válida."
+            else
+              echo "⚠️ API Key de Pexels devolvió código $RESPONSE. Verifica que sea correcta."
+            fi
+          fi
+
       - name: Ejecutar bot de Shorts
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
