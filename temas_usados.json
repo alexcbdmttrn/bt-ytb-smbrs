@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "malecón",
-      "contexto": "comunicación"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "autopista",
       "contexto": "persecucion"
     },
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "panteón",
       "contexto": "comunicacion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "centro comercial",
+      "contexto": "persecucion"
     }
   ]
 }
