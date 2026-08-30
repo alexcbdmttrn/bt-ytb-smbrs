@@ -55,7 +55,7 @@ def validar_pexels_api_key():
         print("⚠️ PEXELS_API_KEY no configurada en variables de entorno.")
         return False
     try:
-        headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+        headers = {"Authorization": PEXELS_API_KEY}
         r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
         if r.status_code == 200:
             print("✅ API Key de Pexels válida.")
@@ -661,7 +661,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query_variada,
         "orientation": "portrait",
