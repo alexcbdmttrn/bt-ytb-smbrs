@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "autopista",
-      "contexto": "choque"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "terminal de autobuses",
       "contexto": "persecucion"
     },
@@ -28,6 +23,11 @@
     {
       "tipo": "fantasma",
       "lugar": "autopista",
+      "contexto": "persecucion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "carretera",
       "contexto": "persecucion"
     },
     {
