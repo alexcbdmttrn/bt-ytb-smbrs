@@ -12,6 +12,7 @@ permissions:
 jobs:
   publicar:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repositorio
         uses: actions/checkout@v4
@@ -26,7 +27,12 @@ jobs:
           pip cache purge
           echo "✅ Caché de pip limpiada"
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias del sistema (ffmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Instalar dependencias de Python
         run: |
           pip install --upgrade pip
           pip install "Pillow<10.0.0"
@@ -34,8 +40,7 @@ jobs:
           pip install requests google-auth google-api-python-client google-auth-oauthlib
           pip install edge-tts
           pip install json5
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          pip install urllib3
 
       - name: Verificar instalación
         run: |
@@ -45,7 +50,7 @@ jobs:
           python -c "import edge_tts; print('edge-tts OK')"
           python -c "import json5; print('json5 OK')"
 
-      - name: Ejecutar bot de YouTube
+      - name: Ejecutar bot de YouTube (videos largos)
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -53,17 +58,28 @@ jobs:
           FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python bot_youtube.py
 
-      - name: Commit y push del estado de música, títulos y temas
+      - name: Commit y push del estado
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add estado_musica.json titulos_largos_publicados.json temas_shorts.json
+
+          # Añadir todos los archivos de estado
+          git add estado_musica.json titulos_largos_publicados.json temas_shorts.json || true
+
           if git diff-index --quiet HEAD; then
             echo "✅ No hay cambios en los archivos de estado."
-          else
-            git commit -m "Actualizar estado [skip ci]"
-            git pull origin main --rebase
-            git push
+            exit 0
           fi
+
+          git commit -m "Actualizar estado [skip ci]"
+
+          for i in 1 2 3 4 5; do
+            if git pull --rebase --autostash origin main && git push; then
+              echo "✅ Push exitoso"
+              break
+            fi
+            echo "⚠️ Intento $i/5 falló, reintentando en 10s..."
+            sleep 10
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
