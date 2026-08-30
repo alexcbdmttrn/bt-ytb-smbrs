@@ -23,19 +23,20 @@ import edge_tts
 import pytz
 import urllib3
 
-# Silenciar advertencias de SSL (inofensivas)
+# Silenciar advertencias de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
 # CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")  # <--- NUEVO
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 YOUTUBE_USER_TOKEN = (
     json.loads(os.getenv("YOUTUBE_USER_TOKEN"))
     if os.getenv("YOUTUBE_USER_TOKEN")
     else {}
 )
+
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
@@ -47,7 +48,7 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
-# 🚀 LISTA DE OUTLIERS (temas que ya funcionaron en canales pequeños)
+# 🚀 LISTA DE OUTLIERS
 # ================================================================
 OUTLIERS_TERROR = [
     "Intenté sobrevivir 7 días en el hotel más embrujado de México",
@@ -239,7 +240,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (CORREGIDO)
+# 🎵 AUDIO DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -674,7 +675,7 @@ def guardar_titulo_publicado(titulo):
             json.dump(data, f, indent=2, ensure_ascii=False)
 
 # ================================================================
-# 🔍 GENERAR QUERY PARA PEXELS (USANDO DEEPSEEK)
+# 🔍 GENERAR QUERY PARA PEXELS
 # ================================================================
 def generar_query_pexels_shorts(segmento_texto, etapa, ubicacion_escena, index_segmento=0, total_segmentos=1):
     prompt = f"""Eres un EXPERTO EN BÚSQUEDA DE FOTOGRAFÍA DE STOCK. Genera SOLO 4-6 palabras clave en inglés para buscar una foto VERTICAL (9:16) en Pexels que represente esta escena.
@@ -715,23 +716,24 @@ Devuelve SOLO las palabras clave en inglés, sin puntos, sin comillas.
         return "dark night landscape scary"
 
 # ================================================================
-# 🖼️ BUSCAR IMAGEN EN PEXELS (CON REINTENTOS Y FALLBACK)
+# 🖼️ BUSCAR IMAGEN EN PEXELS (CON REINTENTOS)
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
 def buscar_imagen_pexels_shorts(query, intentos=3):
     global ULTIMA_URL_PEXELS
+    
     if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada. Usando placeholder.")
+        print("❌ PEXELS_API_KEY no configurada. Usando placeholder.")
         return None
 
-    url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
     # Añadir variación a la query para evitar repeticiones
     variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
     variacion = random.choice(variantes)
     query_variada = f"{query} {variacion}"
     
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
     params = {
         "query": query_variada,
         "orientation": "portrait",  # CRUCIAL para vertical
@@ -770,7 +772,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
             print(f"   ⏳ Esperando 5s antes de reintentar...")
             time.sleep(5)
     
-    print("❌ No se pudo obtener imagen de Pexels. Se usará la imagen de respaldo del segmento anterior/posterior.")
+    print("❌ No se pudo obtener imagen de Pexels.")
     return None
 
 # ================================================================
@@ -826,7 +828,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO (ACTUALIZADO CON PEXELS)
+# 🎬 GENERAR RECURSOS POR SEGMENTO (CON PEXELS)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
@@ -846,21 +848,27 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
         
         if not img_url:
-            print(f"    ⚠️ Imagen falló para segmento {idx+1}. Se usará la imagen del segmento anterior o posterior.")
+            print(f"    ⚠️ Imagen falló para segmento {idx+1}.")
             # Buscar imagen de respaldo (anterior o posterior)
             if idx > 0 and resultados_temporales[idx-1].get("imagen_url"):
                 img_url = resultados_temporales[idx-1]["imagen_url"]
                 print(f"    🔄 Usando imagen del segmento anterior ({idx})")
             elif idx < total_seg - 1:
-                # Intentar generar la imagen del siguiente segmento primero (recursivo pero evitamos bucle)
-                # Aquí simplemente usaremos placeholder genérico
+                # Intentar con una consulta genérica
+                query_fallback = "mexican night landscape dark"
+                img_url = buscar_imagen_pexels_shorts(query_fallback, intentos=2)
+                if img_url:
+                    print(f"    🔄 Usando imagen genérica para segmento {idx+1}")
+                else:
+                    print(f"    🔄 Usando placeholder genérico")
+                    img_url = generar_placeholder_local("Terror", (1080, 1920))
+                    if not img_url:
+                        img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+            else:
                 print(f"    🔄 Usando placeholder genérico")
                 img_url = generar_placeholder_local("Terror", (1080, 1920))
                 if not img_url:
                     img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-            else:
-                placeholder = generar_placeholder_local("Terror", (1080, 1920))
-                img_url = placeholder if placeholder else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
 
         # 3. Generar audio
         audio_path = generar_audio(seg, f"seg_{idx}")
