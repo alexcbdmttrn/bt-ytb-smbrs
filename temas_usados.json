@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "terminal de autobuses",
-      "contexto": "persecucion"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "taller",
       "contexto": "comunicacion"
     },
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "carretera",
       "contexto": "persecucion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "carretera",
+      "contexto": "comunicacion"
     }
   ]
 }
