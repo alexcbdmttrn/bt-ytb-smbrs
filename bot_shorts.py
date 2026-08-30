@@ -21,12 +21,16 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
 import pytz
+import urllib3
+
+# Silenciar advertencias de SSL (inofensivas)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
 # CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")  # <--- NUEVO
 YOUTUBE_USER_TOKEN = (
     json.loads(os.getenv("YOUTUBE_USER_TOKEN"))
     if os.getenv("YOUTUBE_USER_TOKEN")
@@ -69,7 +73,7 @@ OUTLIERS_TERROR = [
 ]
 
 # ================================================================
-# 📚 HISTORIAL DE TEMAS PARA EVITAR REPETICIONES
+# 📚 HISTORIAL DE TEMAS
 # ================================================================
 def cargar_temas_usados():
     try:
@@ -91,7 +95,7 @@ def obtener_temas_recientes():
     return data["temas"]
 
 # ================================================================
-# ÉPOCA DEL SUCESO (dinámica según el relato)
+# ÉPOCA DEL SUCESO
 # ================================================================
 ANIO_SUCESO = None
 EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
@@ -133,7 +137,7 @@ def actualizar_epoca(anio):
     print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎤 SOLO 4 VOCES MASCULINAS QUE FUNCIONAN
+# 🎤 VOCES NEURALES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
@@ -144,7 +148,7 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS
+# 🎨 PALETAS Y ESTILOS
 # ================================================================
 PALETAS_COLOR = [
     "Cold cyan blue LED fog, navy blue shadows, crisp white moonlight",
@@ -162,9 +166,6 @@ PALETAS_COLOR = [
 ]
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
-# ================================================================
-# 📷 ESTILOS VISUALES
-# ================================================================
 ESTILOS_VISUALES = [
     "Cinematic photograph, dramatic lighting, sharp focus, film still",
     "Thriller photography, soft ambient diffusion, high contrast",
@@ -238,7 +239,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO - FUNCIÓN CORREGIDA (ALEATORIEDAD REAL)
+# 🎵 AUDIO DE FONDO (CORREGIDO)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -267,7 +268,7 @@ def seleccionar_fondo_disponible(estado):
     return encontrados[seleccionado]
 
 # ================================================================
-# 🧼 LIMPIADOR DE PROMPTS Y TEXTO
+# 🧼 LIMPIADORES
 # ================================================================
 def limpiar_prompt_base(prompt, estilo_visual=None, paleta_color=None):
     estilo = estilo_visual or ESTILO_VISUAL_ACTUAL
@@ -339,7 +340,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🔄 EXPANDIR / TRUNCAR TEXTO (CON REFUERZO DE CONFLICTO)
+# 🔄 EXPANDIR / TRUNCAR TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     prompt = f"""Expande el siguiente relato a 150-170 palabras con detalles sensoriales de {ubicacion}.
@@ -368,7 +369,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🎬 GENERAR HISTORIA CON SEO + OUTLIERS + ESTRATEGIAS DE GAMING
+# 🎬 GENERAR HISTORIA CON OUTLIERS
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -384,13 +385,6 @@ def generar_historia_completa():
 
     outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
     outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
-
-    hashtags_estrategia = random.choice([
-        "#DesafioParanormal #RestriccionTerror #Transformacion",
-        "#Supervivencia #TerrorActivo #ObjetivoClaro",
-        "#Outlier #RompiendoElAlgoritmo #Curiosidad",
-        "#Restriccion #Desafio #Transformacion",
-    ])
 
     prompt = f"""Eres un CURADOR Y ADAPTADOR DE RELATOS PARANORMALES REALES de internet, especializado en continuidad visual cinematográfica y EXPERTO EN SEO PARA YOUTUBE SHORTS 2026.
 
@@ -409,7 +403,7 @@ inicio_casa, desplazamiento, lugar_destino, climax_evento, resolucion.
 Trayectoria lógica y entorno coherente entre segmentos consecutivos.
 
 PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-AMBIENTACIÓN: Si el relato menciona un AÑO específico, úsalo para la época (autos, ropa, tecnología). Si no, usa la actualidad.
+AMBIENTACIÓN: Si el relato menciona un AÑO específico, úsalo para la época. Si no, usa la actualidad.
 
 🎯 REGLA CRÍTICA DE LONGITUD:
 - EXACTAMENTE entre 150 y 170 palabras.
@@ -424,32 +418,18 @@ La historia NO debe ser solo un relato de miedo pasivo. Debe tener:
 🎯 REGLA CRÍTICA 1: TÍTULO CON ESTRATEGIA DE OUTLIER (ALTO CTR)
 FÓRMULAS PROBADAS PARA CANALES PEQUEÑOS:
 - RESTRICCIÓN: "Intenté [acción] sin [recurso] en [lugar] y [resultado inesperado]"
-  Ej: "Intenté dormir en la casa más embrujada de México sin linterna"
 - DESAFÍO: "¿[Acción imposible] en [tiempo límite] en [lugar]?"
-  Ej: "¿Lograré salir del sanatorio abandonado antes del amanecer?"
 - TRANSFORMACIÓN: "De [estado inicial] a [estado final] en [lugar]"
-  Ej: "De escéptico a creyente en la carretera fantasma de Zacatecas"
 
 Longitud: 55-75 caracteres, primera persona, lugar específico de {ESTADO_HISTORIA_SHORTS}.
 ❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
-IMPORTANTE: El título DEBE tener UNA de estas tres estructuras. No se permite título genérico.
 
-🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA
-"palabras_portada": TEXTO GANCHO de MÁXIMO 2 palabras cortas. Ej: "SIN LUZ", "ATRAPADO", "ESCAPA".
-
-🎯 REGLA CRÍTICA 3: DESCRIPCIÓN SEO
-Línea 1 (GANCHO, máx 90 chars), Línea 2 (CONTEXTO), Línea 3 (CTA canal), Línea 4 (FUENTE), Línea 5 (FACEBOOK), Línea 6 (HASHTAGS máx 5 + hashtags de estrategia).
-
+🎯 REGLA CRÍTICA 2: PALABRAS DE PORTADA (máx 2 palabras)
+🎯 REGLA CRÍTICA 3: DESCRIPCIÓN SEO (líneas con gancho, contexto, CTA, fuente, Facebook, hashtags)
 🎯 REGLA CRÍTICA 4: TAGS SEO (10-15, máx 480 chars)
-Incluye tags relacionados con la estrategia: desafi paranormal, restriccion terror, transformacion, terror activo.
-
-🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3) - serán usadas en el título, descripción y tags.
-🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO (A/B testing)
+🎯 REGLA CRÍTICA 5: PALABRAS CLAVE (2-3)
+🎯 REGLA CRÍTICA 6: TÍTULO ALTERNATIVO
 🎯 REGLA CRÍTICA 7: AÑO DEL SUCESO
-"anio_suceso": año específico (ej: 1998). Si no hay fecha clara, usa la actualidad (2024).
-
-🎯 REGLA CRÍTICA 8: GANCHO (máx 5 palabras) que plantee el conflicto.
-Ej: "Sin linterna, en la oscuridad total..."
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
@@ -554,13 +534,8 @@ Devuelve ESTRICTAMENTE este JSON válido:
                         tags_list.append(kw_lower)
 
             tags_estrategia = [
-                "desafio paranormal",
-                "restriccion terror",
-                "transformacion",
-                "terror activo",
-                "supervivencia",
-                "objetivo claro",
-                "shorts terror"
+                "desafio paranormal", "restriccion terror", "transformacion",
+                "terror activo", "supervivencia", "objetivo claro", "shorts terror"
             ]
             for tag in tags_estrategia:
                 if tag not in tags_list and len(tags_list) < 15:
@@ -699,64 +674,103 @@ def guardar_titulo_publicado(titulo):
             json.dump(data, f, indent=2, ensure_ascii=False)
 
 # ================================================================
-# 🔍 GENERAR QUERY DE BÚSQUEDA PARA PEXELS (Optimizado para Shorts)
+# 🔍 GENERAR QUERY PARA PEXELS (USANDO DEEPSEEK)
 # ================================================================
 def generar_query_pexels_shorts(segmento_texto, etapa, ubicacion_escena, index_segmento=0, total_segmentos=1):
-    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto de stock VERTICAL en Pexels.
-    Contexto: {etapa} en {ubicacion_escena}.
-    Fragmento: "{segmento_texto[:80]}"
-    Reglas: Solo palabras separadas por espacio, sin comas, enfocado en ambiente nocturno, terror, paisaje o interiores. Ej: "dark forest night fog" o "empty house interior night".
-    """
+    prompt = f"""Eres un EXPERTO EN BÚSQUEDA DE FOTOGRAFÍA DE STOCK. Genera SOLO 4-6 palabras clave en inglés para buscar una foto VERTICAL (9:16) en Pexels que represente esta escena.
+
+ESCENA: "{segmento_texto[:100]}"
+ETAPA: {etapa}
+UBICACIÓN: {ubicacion_escena}
+
+REGLAS:
+- Palabras clave separadas por espacio, sin comas.
+- Enfócate en: tipo de lugar, ambiente (noche, niebla, lluvia), objetos clave (puerta, ventana, auto, etc.).
+- Ejemplos: "abandoned church night fog", "old house interior darkness", "lonely road rain night".
+- La imagen debe ser ATMOSFÉRICA y coherente con el relato de terror.
+
+Devuelve SOLO las palabras clave en inglés, sin puntos, sin comillas.
+"""
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.5,
-        "max_tokens": 30,
+        "temperature": 0.6,
+        "max_tokens": 40,
     }
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=30)
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
         r.raise_for_status()
-        query = r.json()["choices"][0]["message"]["content"].strip().replace('"', '').replace(',', '').replace('.', '')
-        query = " ".join(query.split())
-        if len(query) < 5:
+        query = r.json()["choices"][0]["message"]["content"].strip()
+        query = re.sub(r'["\']', '', query)
+        query = re.sub(r',', ' ', query)
+        query = re.sub(r'\s+', ' ', query)
+        if len(query.split()) < 3:
             query = "dark night landscape scary"
+        print(f"🧠 Query Pexels (DeepSeek): '{query}'")
         return query
     except Exception as e:
-        print(f"⚠️ Error generando query Pexels: {e}")
+        print(f"⚠️ Error generando query con DeepSeek: {e}. Usando fallback.")
         return "dark night landscape scary"
 
 # ================================================================
-# 🖼️ BUSCAR IMAGEN EN PEXELS (Reemplazo de Agnes)
+# 🖼️ BUSCAR IMAGEN EN PEXELS (CON REINTENTOS Y FALLBACK)
 # ================================================================
+ULTIMA_URL_PEXELS = None
+
 def buscar_imagen_pexels_shorts(query, intentos=3):
+    global ULTIMA_URL_PEXELS
+    if not PEXELS_API_KEY:
+        print("⚠️ PEXELS_API_KEY no configurada. Usando placeholder.")
+        return None
+
     url = "https://api.pexels.com/v1/search"
     headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    # Añadir variación a la query para evitar repeticiones
+    variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
+    variacion = random.choice(variantes)
+    query_variada = f"{query} {variacion}"
+    
     params = {
-        "query": query,
-        "orientation": "portrait", # CRUCIAL PARA SHORTS
-        "per_page": 5,
-        "page": random.randint(1, 5) # Aleatoriedad para evitar repetir la misma foto
+        "query": query_variada,
+        "orientation": "portrait",  # CRUCIAL para vertical
+        "per_page": 10,
+        "page": random.randint(1, 8)  # Aleatoriedad
     }
+
     for intento in range(intentos):
         try:
-            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query}' (vertical)...")
-            r = requests.get(url, headers=headers, params=params, timeout=30)
+            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}' (vertical)...")
+            r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
                 if data.get("photos") and len(data["photos"]) > 0:
-                    foto = random.choice(data["photos"])
-                    return foto["src"]["original"]
+                    # Seleccionar una foto aleatoria de las primeras 5 para variedad
+                    fotos = data["photos"][:min(5, len(data["photos"]))]
+                    foto = random.choice(fotos)
+                    image_url = foto["src"]["large2x"] or foto["src"]["large"] or foto["src"]["original"]
+                    # Verificar que no sea la misma URL que la última usada
+                    if ULTIMA_URL_PEXELS and image_url == ULTIMA_URL_PEXELS:
+                        print("   ⚠️ URL repetida, buscando otra página...")
+                        params["page"] = (params["page"] % 8) + 1
+                        continue
+                    ULTIMA_URL_PEXELS = image_url
+                    print(f"✅ Imagen encontrada: {image_url[:80]}...")
+                    return image_url
                 else:
                     print("⚠️ No se encontraron fotos en Pexels para esta consulta.")
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+        except requests.exceptions.Timeout:
+            print("⏰ Timeout en Pexels. Reintentando...")
         except Exception as e:
             print(f"⚠️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
-            print("⏳ Esperando 5 segundos antes de reintentar...")
+            print(f"   ⏳ Esperando 5s antes de reintentar...")
             time.sleep(5)
+    
+    print("❌ No se pudo obtener imagen de Pexels. Se usará la imagen de respaldo del segmento anterior/posterior.")
     return None
 
 # ================================================================
@@ -812,37 +826,43 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO (ACTUALIZADO A PEXELS)
+# 🎬 GENERAR RECURSOS POR SEGMENTO (ACTUALIZADO CON PEXELS)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados_temporales = []
     total_seg = len(segmentos)
+    
     for idx, seg in enumerate(segmentos):
         etapa = etapas[idx] if idx < len(etapas) else "lugar_destino"
         ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ubicacion
         print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
 
-        # Generar query optimizada para Pexels
+        # 1. Generar query con DeepSeek
         query = generar_query_pexels_shorts(seg, etapa, ubic_escena, idx, total_seg)
         print(f"    🔍 Query Pexels: {query}")
 
-        img_url = None
-        for intento in range(intentos_por_imagen):
-            try:
-                img_url = buscar_imagen_pexels_shorts(query, intentos=1)
-                if img_url:
-                    print(f"    ✅ Imagen encontrada en Pexels (intento {intento+1})")
-                    break
-            except Exception:
-                pass
-            if intento < intentos_por_imagen - 1:
-                print(f"    ⏳ Esperando 5s antes de reintentar imagen...")
-                time.sleep(5)
-
+        # 2. Intentar obtener imagen de Pexels
+        img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
+        
         if not img_url:
-            print(f"    ⚠️ Imagen falló, se usará la siguiente imagen disponible o fallback")
+            print(f"    ⚠️ Imagen falló para segmento {idx+1}. Se usará la imagen del segmento anterior o posterior.")
+            # Buscar imagen de respaldo (anterior o posterior)
+            if idx > 0 and resultados_temporales[idx-1].get("imagen_url"):
+                img_url = resultados_temporales[idx-1]["imagen_url"]
+                print(f"    🔄 Usando imagen del segmento anterior ({idx})")
+            elif idx < total_seg - 1:
+                # Intentar generar la imagen del siguiente segmento primero (recursivo pero evitamos bucle)
+                # Aquí simplemente usaremos placeholder genérico
+                print(f"    🔄 Usando placeholder genérico")
+                img_url = generar_placeholder_local("Terror", (1080, 1920))
+                if not img_url:
+                    img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+            else:
+                placeholder = generar_placeholder_local("Terror", (1080, 1920))
+                img_url = placeholder if placeholder else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
 
+        # 3. Generar audio
         audio_path = generar_audio(seg, f"seg_{idx}")
         if not audio_path:
             print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
@@ -865,28 +885,10 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
             print(f"    ⏳ Esperando 5s antes del siguiente segmento...")
             time.sleep(5)
 
-    # Reparar imágenes fallidas
-    for i, res in enumerate(resultados_temporales):
-        if res["imagen_url"] is None:
-            siguiente_imagen = None
-            for j in range(i + 1, len(resultados_temporales)):
-                if resultados_temporales[j]["imagen_url"] is not None:
-                    siguiente_imagen = resultados_temporales[j]["imagen_url"]
-                    break
-            if siguiente_imagen is not None:
-                res["imagen_url"] = siguiente_imagen
-            else:
-                if i > 0 and resultados_temporales[i-1]["imagen_url"] is not None:
-                    res["imagen_url"] = resultados_temporales[i-1]["imagen_url"]
-                else:
-                    img_url = generar_placeholder_local("Terror", (1080, 1920))
-                    if not img_url:
-                        img_url = "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-                    res["imagen_url"] = img_url
     return resultados_temporales
 
 # ================================================================
-# ✅ GENERAR AUDIO (con 10s de espera en fallos)
+# ✅ GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -1141,7 +1143,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         sys.exit(1)
 
 # ================================================================
-# 🔄 SUBIR VIDEO A HOST TEMPORAL
+# 🔄 SUBIR VIDEO A HOST TEMPORAL (para Facebook)
 # ================================================================
 def subir_video_temporal(video_path, intentos=2):
     for _ in range(intentos):
@@ -1216,7 +1218,7 @@ def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
         return False
 
 # ================================================================
-# LIMPIEZA DE TEMPORALES
+# 🧹 LIMPIEZA DE TEMPORALES
 # ================================================================
 def limpiar_temporales_shorts():
     for f in os.listdir("."):
@@ -1236,13 +1238,16 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Micro-relatos con ESTRATEGIA DE OUTLIER)")
+    print("🎬 Iniciando Bot de SHORTS (Pexels + Estrategia de Outlier)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial seleccionada: {CONFIG_VOZ_ACTUAL['voz']}")
 
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN.")
         sys.exit(1)
+
+    if not PEXELS_API_KEY:
+        print("⚠️ PEXELS_API_KEY no configurada. Se usarán placeholders.")
 
     publicadas_hoy = obtener_publicaciones_hoy()
     if publicadas_hoy >= META_DIARIA_SHORTS:
