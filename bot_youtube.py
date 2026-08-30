@@ -21,6 +21,10 @@ from moviepy.editor import (
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 import edge_tts
+import urllib3
+
+# Silenciar advertencias de SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
 # CONFIGURACIÓN
@@ -89,7 +93,7 @@ def actualizar_epoca(anio):
     print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎤 VOCES NEURALES VÁLIDAS (fallback automático, sin gTTS)
+# 🎤 VOCES NEURALES VÁLIDAS (fallback automático)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
@@ -196,7 +200,7 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🎵 AUDIO DE FONDO (sin repetir los últimos 3)
+# 🎵 AUDIO DE FONDO (sin repetir los últimos 3) - CORREGIDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -258,7 +262,7 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS (sin repetir)
+# 🆕 GESTIÓN DE TÍTULOS PUBLICADOS
 # ================================================================
 def cargar_titulos_largos():
     try:
@@ -292,7 +296,7 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
-# 🆕 GESTIÓN DE TEMAS SHORTS (evitar repetición temática)
+# 🆕 GESTIÓN DE TEMAS
 # ================================================================
 def cargar_temas_shorts():
     try:
@@ -329,33 +333,45 @@ def tema_ya_usado(tema, umbral=0.5):
     return False
 
 # ================================================================
-# 🆕 VALIDACIÓN DE TÍTULO GANCHO (Outlier Strategy)
+# 🆕 VALIDACIÓN DE TÍTULO GANCHO (CORREGIDA - MENOS ESTRICTA)
 # ================================================================
 def validar_titulo_gancho(titulo):
-    if not titulo or len(titulo) < 30:
+    if not titulo or len(titulo) < 25:
         return False
     
-    genericas = ["misterio", "leyenda", "relato", "historia", "caso", "real", "terror", "miedo", "espanto", "susto"]
-    if any(p in titulo.lower() for p in genericas):
+    # Palabras genéricas que indican título débil
+    genericas = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
+    # Si empieza con estas, es muy genérico
+    if any(titulo.lower().startswith(g) for g in genericas):
         return False
     
-    ganchos = [
+    # Palabras gancho que indican un buen título
+    ganchos_fuertes = [
         "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví", 
-        "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "vi", "oí", "sentí",
-        "3:33", "3:00", "medianoche", "nunca", "jamás", "solo", "único", "primero",
+        "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "oí", "sentí",
+        "3:33", "3:00", "medianoche", "nunca", "jamás", "solo", "primero",
         "último", "desapareció", "regresó", "volvió", "entró", "salió", "huyó",
         "escapé", "corrí", "grité", "lloré", "rogué", "supliqué"
     ]
-    if not any(g in titulo.lower() for g in ganchos):
-        return False
+    # Si tiene alguna palabra gancho, es válido (menos restrictivo)
+    tiene_gancho = any(g in titulo.lower() for g in ganchos_fuertes)
     
-    if len(titulo) < 40 or len(titulo) > 70:
-        return False
+    # Longitud aceptable: 30-75 caracteres
+    longitud_ok = 30 <= len(titulo) <= 75
     
-    if ":" not in titulo and "," not in titulo and "-" not in titulo and "|" not in titulo:
-        return False
+    # Tiene separador (:, -, |, ,) - opcional, no obligatorio
+    tiene_separador = any(c in titulo for c in [":", "-", "|", ","])
     
-    return True
+    # Si tiene gancho y longitud ok, pasa. Si tiene separador también suma puntos
+    if tiene_gancho and longitud_ok:
+        return True
+    if longitud_ok and tiene_separador and len(titulo) > 35:
+        return True
+    # Títulos que empiezan con "Trabajé", "Fui", "El pozo" etc. suelen ser buenos
+    if any(titulo.startswith(p) for p in ["Trabajé", "Fui", "El pozo", "Encontré", "Vi lo que"]):
+        return True
+        
+    return False
 
 # ================================================================
 # LIMPIAR RESPUESTA JSON
@@ -395,66 +411,53 @@ Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para Y
 
 🎯 REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
 La premisa debe responder a: "¿Qué pasaría si...?" o "¿Qué ocurriría si alguien...?".
-✅ Ejemplos de premisas ganadoras en terror:
-- "El único sobreviviente de la masacre regresó al lugar. Esto pasó."
-- "Un niño desapareció y al volver años después hablaba un idioma desconocido."
-- "Cada noche en esa casa ocurre algo diferente. Nadie sabe por qué."
-- "El espejo del hotel reflejaba algo que no estaba en la habitación."
 
-🎯 REGLA DE TÍTULO SEO (CRÍTICA - DETERMINA EL ÉXITO DEL VIDEO):
-El título debe ser un GANCHO que genere CURIOSIDAD, NO una descripción genérica.
-FÓRMULA GANADORA: [GANCHO EMOCIONAL] + [LUGAR/EVENTO] + [CONSECUENCIA]
-✅ EJEMPLOS DE TÍTULOS GANADORES (50-65 caracteres):
-- "Fui velador en Oaxaca y vi algo que no debí ver" (61 chars)
-- "Trabajé de noche en un manicomio de Puebla. Nunca volví." (62 chars)
-- "El GPS me llevó a un cenote que no existe en ningún mapa" (56 chars)
-- "A las 3 AM escuché esto en el bosque. No volví a dormir." (58 chars)
-- "Mi abuela me contó un secreto que nadie debía saber" (53 chars)
-- "Sobreviví 7 días en un pueblo fantasma de Chihuahua" (55 chars)
-- "El único testigo de la masacre de la casa del lago" (50 chars)
-❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de...", "Caso real...", "Historia de terror..."
+🎯 REGLA DE TÍTULO SEO (CRÍTICA):
+El título debe ser un GANCHO que genere CURIOSIDAD. NO descripciones genéricas.
+EJEMPLOS DE TÍTULOS GANADORES (30-75 caracteres):
+- "Fui velador en Oaxaca y vi algo que no debí ver" 
+- "Trabajé de noche en un manicomio de Puebla. Nunca volví."
+- "El pozo de mi pueblo no tenía fondo. Hasta que lo vi."
+- "Encontré un diario enterrado en Tlaxcala. La última página no era para mí"
+- "Vi lo que había bajo el altar de una iglesia en Querétaro"
+❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
 
 🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
 "palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales y ESPECÍFICAS del relato.
-✅ EJEMPLOS: "LO VI", "NO ENTRES", "3:33 AM", "JAMÁS VOLVÍ", "NO ERA HUMANO", "ME SIGUIÓ"
-❌ NUNCA: "CASO REAL", "TERROR", "MISTERIO" (genéricos)
 
 🎯 REGLA DE ÉPOCA Y AMBIENTACIÓN:
-"anio_suceso": año específico del suceso (1970-2020). Las imágenes se adaptarán.
-Si no tienes referencia, inventa un año coherente.
+"anio_suceso": año específico del suceso (1970-2020).
 
 🎯 REGLA DE PERSONAJE:
 Personaje principal fijo: "{PERFIL_PERSONAJE}"
 
 🎯 ESTRUCTURA DEL RELATO (texto_completo - 1400-1600 palabras):
-1. GANCHO (1-2 párrafos): Presenta el conflicto central de forma impactante.
-2. CONTEXTO: Quién, dónde, cuándo. Introduce el escenario y la época.
-3. DESARROLLO: Aumento de tensión. Detalles sensoriales (sonidos, olores, sensaciones). Pequeños giros.
-4. CLÍMAX: El momento más aterrador o revelador. El punto de no retorno.
-5. DESENLACE: Resolución o reflexión. Puede ser abierto o con un giro final.
+1. GANCHO (1-2 párrafos): Presenta el conflicto central.
+2. CONTEXTO: Quién, dónde, cuándo.
+3. DESARROLLO: Aumento de tensión. Detalles sensoriales.
+4. CLÍMAX: El momento más aterrador.
+5. DESENLACE: Resolución o reflexión.
 - Tono: Natural, coloquial, en primera persona.
-- IMPORTANTE: Describe ENTORNOS (carros, casas, bosques, árboles, jardines, calles) porque las imágenes mostrarán esos entornos.
+- IMPORTANTE: Describe ENTORNOS (carros, casas, bosques, calles).
 
 🎯 REGLA DE CAPÍTULOS:
-Genera 4-6 capítulos con timestamps (00:00, 02:15, 04:30, 06:45, etc.) y títulos descriptivos.
+Genera 4-6 capítulos con timestamps.
 
 Responde ESTRICTAMENTE en este JSON:
 {{
-  "titulo": "Título GANCHO de 50-65 caracteres (debe pasar la validación)",
-  "titulo_alternativo": "Título alternativo con otro ángulo",
+  "titulo": "Título GANCHO de 30-75 caracteres",
+  "titulo_alternativo": "Título alternativo",
   "anio_suceso": 1998,
   "palabras_clave": ["keyword1", "keyword2", "keyword3"],
   "palabras_portada": "TEXTO GANCHO 2-3 palabras",
-  "descripcion": "Descripción SEO completa (gancho + contexto + CTA + capítulos + hashtags)",
-  "tags": "15-20 tags separados por coma (máx 500 caracteres)",
-  "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena impactante del relato], high contrast, dark clean area on the right side for text, no text, no watermark",
+  "descripcion": "Descripción SEO completa",
+  "tags": "15-20 tags separados por coma",
+  "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena impactante del relato]",
   "capitulos": [
     {{"tiempo": "00:00", "titulo": "El Comienzo"}},
-    {{"tiempo": "02:15", "titulo": "El Encuentro"}},
-    {{"tiempo": "04:30", "titulo": "El Miedo"}},
-    {{"tiempo": "06:45", "titulo": "La Verdad"}}
+    {{"tiempo": "02:15", "titulo": "El Encuentro"}}
   ],
-  "texto_completo": "Relato completo de 1400-1600 palabras en párrafos, primera persona, coloquial"
+  "texto_completo": "Relato completo de 1400-1600 palabras"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -497,8 +500,9 @@ Responde ESTRICTAMENTE en este JSON:
             if "texto_completo" in data and palabras >= 500:
                 titulo_generado = data.get("titulo", "")
                 
+                # Validación menos estricta
                 if not validar_titulo_gancho(titulo_generado):
-                    print(f"⚠️ Título genérico: '{titulo_generado}'. No pasa validación. Reintentando...")
+                    print(f"⚠️ Título no pasa validación: '{titulo_generado}'. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
                 
                 if titulo_largo_ya_publicado(titulo_generado):
@@ -532,7 +536,7 @@ Responde ESTRICTAMENTE en este JSON:
     sys.exit(1)
 
 # ================================================================
-# 🆕 DIVIDIR TEXTO EN SEGMENTOS (por código)
+# 🆕 DIVIDIR TEXTO EN SEGMENTOS
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -556,7 +560,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS (continuidad narrativa)
+# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -579,38 +583,49 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🔍 GENERAR QUERY DE BÚSQUEDA PARA PEXELS (Optimizado)
+# 🔍 GENERAR QUERY PARA PEXELS (USANDO DEEPSEEK)
 # ================================================================
 def generar_query_pexels(segmento_texto, etapa, ubicacion_escena):
-    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto de stock en Pexels.
-    Contexto: {etapa} en {ubicacion_escena}.
-    Fragmento: "{segmento_texto[:100]}"
-    Reglas: Solo palabras separadas por espacio, sin comas, enfocado en ambiente nocturno, terror, paisaje o interiores. Ej: "dark forest night fog" o "empty house interior night".
-    """
+    prompt = f"""Eres un EXPERTO EN BÚSQUEDA DE FOTOGRAFÍA DE STOCK. Genera SOLO 4-6 palabras clave en inglés para buscar una foto VERTICAL (9:16) en Pexels que represente esta escena.
+
+ESCENA: "{segmento_texto[:100]}"
+ETAPA: {etapa}
+UBICACIÓN: {ubicacion_escena}
+
+REGLAS:
+- Palabras clave separadas por espacio, sin comas.
+- Enfócate en: tipo de lugar, ambiente (noche, niebla, lluvia), objetos clave.
+- Ejemplos: "abandoned church night fog", "old house interior darkness", "lonely road rain night".
+
+Devuelve SOLO las palabras clave en inglés, sin puntos, sin comillas.
+"""
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.5,
-        "max_tokens": 30,
+        "temperature": 0.6,
+        "max_tokens": 40,
     }
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=30)
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
         r.raise_for_status()
-        query = r.json()["choices"][0]["message"]["content"].strip().replace('"', '').replace(',', '').replace('.', '')
-        query = " ".join(query.split())
-        if len(query) < 5:
+        query = r.json()["choices"][0]["message"]["content"].strip()
+        query = re.sub(r'["\']', '', query)
+        query = re.sub(r',', ' ', query)
+        query = re.sub(r'\s+', ' ', query)
+        if len(query.split()) < 3:
             query = "dark night landscape scary"
+        print(f"🧠 Query Pexels: '{query}'")
         return query
     except Exception as e:
-        print(f"⚠️ Error generando query Pexels: {e}")
+        print(f"⚠️ Error generando query: {e}. Usando fallback.")
         return "dark night landscape scary"
 
 def generar_query_miniatura_pexels(miniatura_prompt):
-    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto de stock horizontal en Pexels para una miniatura de YouTube de terror.
+    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto HORIZONTAL (16:9) en Pexels para una miniatura de YouTube de terror.
     Idea: "{miniatura_prompt[:150]}"
-    Reglas: Solo palabras separadas por espacio, sin comas. Ej: "scary dark forest night fog" o "creepy abandoned house night".
+    Devuelve SOLO las palabras clave.
     """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -621,44 +636,71 @@ def generar_query_miniatura_pexels(miniatura_prompt):
         "max_tokens": 30,
     }
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=30)
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
         r.raise_for_status()
-        query = r.json()["choices"][0]["message"]["content"].strip().replace('"', '').replace(',', '').replace('.', '')
-        query = " ".join(query.split())
+        query = r.json()["choices"][0]["message"]["content"].strip()
+        query = re.sub(r'["\']', '', query)
+        query = re.sub(r',', ' ', query)
+        query = re.sub(r'\s+', ' ', query)
         return query if len(query) > 5 else "horror night dark landscape"
     except Exception as e:
         return "horror night dark landscape"
 
 # ================================================================
-# 🖼️ BUSCAR IMAGEN EN PEXELS (Reemplazo de Agnes)
+# 🖼️ BUSCAR IMAGEN EN PEXELS (CON REINTENTOS Y FALLBACK)
 # ================================================================
+ULTIMA_URL_PEXELS = None
+
 def buscar_imagen_pexels(query, orientation="portrait", intentos=3):
+    global ULTIMA_URL_PEXELS
+    if not PEXELS_API_KEY:
+        print("⚠️ PEXELS_API_KEY no configurada.")
+        return None
+
+    # Añadir variación a la query para evitar repeticiones
+    variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
+    variacion = random.choice(variantes)
+    query_variada = f"{query} {variacion}"
+
     url = "https://api.pexels.com/v1/search"
     headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
     params = {
-        "query": query,
+        "query": query_variada,
         "orientation": orientation,
-        "per_page": 5,
-        "page": random.randint(1, 5)
+        "per_page": 10,
+        "page": random.randint(1, 8)
     }
+
     for intento in range(intentos):
         try:
-            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query}' ({orientation})...")
-            r = requests.get(url, headers=headers, params=params, timeout=30)
+            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}' ({orientation})...")
+            r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
                 if data.get("photos") and len(data["photos"]) > 0:
-                    foto = random.choice(data["photos"])
-                    return foto["src"]["original"]
+                    fotos = data["photos"][:min(5, len(data["photos"]))]
+                    foto = random.choice(fotos)
+                    image_url = foto["src"]["large2x"] or foto["src"]["large"] or foto["src"]["original"]
+                    if ULTIMA_URL_PEXELS and image_url == ULTIMA_URL_PEXELS:
+                        print("   ⚠️ URL repetida, buscando otra página...")
+                        params["page"] = (params["page"] % 8) + 1
+                        continue
+                    ULTIMA_URL_PEXELS = image_url
+                    print(f"✅ Imagen encontrada: {image_url[:80]}...")
+                    return image_url
                 else:
-                    print("⚠️ No se encontraron fotos en Pexels para esta consulta.")
+                    print("⚠️ No se encontraron fotos para esta consulta.")
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+        except requests.exceptions.Timeout:
+            print("⏰ Timeout en Pexels. Reintentando...")
         except Exception as e:
             print(f"⚠️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
-            print("⏳ Esperando 5 segundos antes de reintentar...")
+            print(f"   ⏳ Esperando 5s antes de reintentar...")
             time.sleep(5)
+    
+    print("❌ No se pudo obtener imagen de Pexels.")
     return None
 
 def buscar_miniatura_pexels(query, intentos=3):
@@ -673,22 +715,22 @@ def buscar_miniatura_pexels(query, intentos=3):
     for intento in range(intentos):
         try:
             print(f"🔍 Intento {intento+1}/{intentos} buscando miniatura en Pexels: '{query}'...")
-            r = requests.get(url, headers=headers, params=params, timeout=30)
+            r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
                 if data.get("photos") and len(data["photos"]) > 0:
-                    return random.choice(data["photos"])["src"]["original"]
+                    return random.choice(data["photos"])["src"]["large2x"] or random.choice(data["photos"])["src"]["large"]
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
         except Exception as e:
             print(f"⚠️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
-            print("⏳ Esperando 5 segundos antes de reintentar...")
+            print("⏳ Esperando 5s...")
             time.sleep(5)
     return None
 
 # ================================================================
-# 🆕 EXPANDIR TEXTO (continuación)
+# 🆕 EXPANDIR TEXTO
 # ================================================================
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Historia: "{titulo}"
@@ -698,8 +740,8 @@ Final actual del relato:
 {texto_actual[-400:]}
 \"\"\"
 
-Continúa la historia con 300-400 palabras más en primera persona, mismo tono, manteniendo coherencia.
-Devuelve SOLO el texto de continuación, sin título ni explicaciones.
+Continúa la historia con 300-400 palabras más en primera persona, mismo tono.
+Devuelve SOLO el texto de continuación.
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -720,7 +762,7 @@ Devuelve SOLO el texto de continuación, sin título ni explicaciones.
         except Exception as e:
             print(f"❌ Expansión intento {intento+1}/2 falló: {e}")
         if intento < 1:
-            print("⏳ Esperando 10 segundos antes del siguiente intento de expansión...")
+            print("⏳ Esperando 10 segundos...")
             time.sleep(10)
     return ""
 
@@ -933,7 +975,7 @@ def limpiar_archivos_temporales():
                 pass
 
 # ================================================================
-# SUBIR A YOUTUBE (con capítulos automáticos)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, capitulos=None):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
@@ -997,7 +1039,7 @@ def marcar_publicacion_exitosa():
     guardar_estado_musica(estado)
 
 # ================================================================
-# 🎬 PROCESAR SEGMENTOS (imágenes verticales + audio + continuidad)
+# 🎬 PROCESAR SEGMENTOS (con fallback a imagen anterior)
 # ================================================================
 def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
     elementos = []
@@ -1008,7 +1050,6 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
         ubic = ubicaciones[i] if i < len(ubicaciones) else UBICACION_HISTORIA
         print(f"\n📍 Segmento {idx+1} - Etapa: {etapa} | {ubic}")
         
-        # Generar query optimizada para Pexels
         query = generar_query_pexels(seg_texto, etapa, ubic)
         
         if i > 0:
@@ -1022,7 +1063,14 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
                 print(f"⚠️ Reutilizando imagen anterior para segmento {idx+1}.")
                 url_img = imagen_ultimo_recurso
             else:
-                continue
+                # Si no hay imagen anterior, intentar con una consulta más genérica
+                query_fallback = "mexican night landscape dark"
+                url_img = buscar_imagen_pexels(query_fallback, orientation="portrait")
+                if url_img:
+                    print(f"⚠️ Usando imagen genérica para segmento {idx+1}.")
+                    imagen_ultimo_recurso = url_img
+                else:
+                    continue
                 
         audio_file = generar_audio(seg_texto, idx)
         if not audio_file:
@@ -1148,7 +1196,7 @@ def main():
                     with Image.open("miniatura_base.jpg") as img:
                         img.save("miniatura.jpg", "JPEG", quality=85)
                     miniatura_path = "miniatura.jpg"
-                    print(f"⚠️ Fallback: miniatura guardada SIN texto en miniatura.jpg")
+                    print(f"⚠️ Fallback: miniatura guardada SIN texto")
             except Exception as e2:
                 print(f"❌ Fallback también falló: {e2}")
                 miniatura_path = None
