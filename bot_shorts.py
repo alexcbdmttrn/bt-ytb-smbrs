@@ -55,6 +55,7 @@ def validar_pexels_api_key():
         print("⚠️ PEXELS_API_KEY no configurada en variables de entorno.")
         return False
     try:
+        # CORREGIDO: Pexels no usa "Bearer", solo la API Key directa
         headers = {"Authorization": PEXELS_API_KEY}
         r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
         if r.status_code == 200:
@@ -351,7 +352,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA CON OUTLIERS (sin cambios)
+# GENERAR HISTORIA CON OUTLIERS
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -661,6 +662,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
+    # CORREGIDO: Pexels no usa "Bearer", solo la API Key directa
     headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query_variada,
@@ -786,7 +788,7 @@ def generar_audio_cta_final():
     return None
 
 # ================================================================
-# GENERAR RECURSOS POR SEGMENTO (con verificación de Pexels)
+# GENERAR RECURSOS POR SEGMENTO
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados = []
