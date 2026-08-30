@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "taller",
-      "contexto": "comunicacion"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "carretera",
       "contexto": "persecucion"
     },
@@ -33,6 +28,11 @@
     {
       "tipo": "fantasma",
       "lugar": "carretera",
+      "contexto": "comunicacion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "panteón",
       "contexto": "comunicacion"
     }
   ]
