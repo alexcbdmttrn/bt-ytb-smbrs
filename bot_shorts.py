@@ -23,7 +23,7 @@ import edge_tts
 import pytz
 import urllib3
 
-# Silenciar advertencias de SSL (inofensivas)
+# Silenciar advertencias de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
@@ -45,6 +45,29 @@ META_DIARIA_SHORTS = 3
 MAX_TEMAS_HISTORIAL = 7
 ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
+
+# ================================================================
+# VALIDAR PEXELS API KEY AL INICIO
+# ================================================================
+def validar_pexels_api_key():
+    """Prueba la API key de Pexels y retorna True si es válida."""
+    if not PEXELS_API_KEY:
+        print("⚠️ PEXELS_API_KEY no configurada en variables de entorno.")
+        return False
+    try:
+        headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+        r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
+        if r.status_code == 200:
+            print("✅ API Key de Pexels válida.")
+            return True
+        else:
+            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}). Usando placeholders.")
+            return False
+    except Exception as e:
+        print(f"⚠️ Error probando API Key de Pexels: {e}")
+        return False
+
+PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
 # 🚀 LISTA DE OUTLIERS
@@ -328,7 +351,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA CON OUTLIERS
+# GENERAR HISTORIA CON OUTLIERS (sin cambios)
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -628,8 +651,9 @@ ULTIMA_URL_PEXELS = None
 
 def buscar_imagen_pexels_shorts(query, intentos=3):
     global ULTIMA_URL_PEXELS
-    if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada. Usando placeholder.")
+    # Si la API key no es válida, saltar inmediatamente
+    if not PEXELS_VALIDA:
+        print("⚠️ API Key de Pexels inválida. No se buscarán imágenes.")
         return None
 
     variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
@@ -663,7 +687,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
                     print(f"✅ Imagen encontrada: {image_url[:80]}...")
                     return image_url
                 else:
-                    print("⚠️ No se encontraron fotos.")
+                    print("⚠️ No se encontraron fotos para esta consulta.")
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
                 if r.status_code == 401:
@@ -762,7 +786,7 @@ def generar_audio_cta_final():
     return None
 
 # ================================================================
-# GENERAR RECURSOS POR SEGMENTO
+# GENERAR RECURSOS POR SEGMENTO (con verificación de Pexels)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicacion, estilo, paleta, intentos_por_imagen=3):
     resultados = []
@@ -1039,8 +1063,8 @@ def main():
         print("❌ No se encontró YOUTUBE_USER_TOKEN.")
         sys.exit(1)
 
-    if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada. Se usarán placeholders.")
+    if not PEXELS_VALIDA:
+        print("⚠️ PEXELS_API_KEY inválida o no configurada. Se usarán placeholders.")
 
     if obtener_publicaciones_hoy() >= META_DIARIA_SHORTS:
         print(f"✅ Meta de {META_DIARIA_SHORTS} shorts alcanzada.")
