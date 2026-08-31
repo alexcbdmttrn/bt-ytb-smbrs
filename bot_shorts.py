@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 import random
@@ -41,34 +41,72 @@ CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 ESTADO_FILE = "estado_shorts.json"
 TITULOS_FILE = "titulos_shorts_publicados.json"
 TEMAS_FILE = "temas_usados.json"
-META_DIARIA_SHORTS = 3
 MAX_TEMAS_HISTORIAL = 7
 ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
-# VALIDAR PEXELS API KEY AL INICIO
+# 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA
+# ================================================================
+# Probabilidad de publicar en cada ejecución (0.0 - 1.0)
+PROBABILIDAD_PUBLICAR = 0.65  # 65% de probabilidad de publicar
+
+# Número máximo de shorts por día (variable)
+MAX_SHORTS_DIA = random.randint(1, 3)  # 1, 2 o 3 shorts al día
+
+# Probabilidad de "descansar" un día (no publicar nada)
+PROBABILIDAD_DESCANSO = 0.15  # 15% de probabilidad de no publicar en todo el día
+
+# ================================================================
+# VALIDAR PEXELS API KEY
 # ================================================================
 def validar_pexels_api_key():
-    """Prueba la API key de Pexels y retorna True si es válida."""
     if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada en variables de entorno.")
+        print("⚠️ PEXELS_API_KEY no configurada.")
         return False
     try:
-        # CORREGIDO: Pexels no usa "Bearer", solo la API Key directa
-        headers = {"Authorization": PEXELS_API_KEY}
+        headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
         r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
         if r.status_code == 200:
             print("✅ API Key de Pexels válida.")
             return True
         else:
-            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}). Usando placeholders.")
+            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"⚠️ Error probando API Key de Pexels: {e}")
+        print(f"⚠️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
+
+# ================================================================
+# 🧠 DECISIONES DE PUBLICACIÓN (MODO HUMANO)
+# ================================================================
+def deberia_publicar_hoy():
+    """
+    Decide si el bot debe publicar hoy, basado en:
+    - Probabilidad de descanso (15%)
+    - Límite de shorts diarios (1-3)
+    - Publicaciones ya hechas hoy
+    """
+    # 1. Verificar si ya se alcanzó el límite diario
+    publicadas_hoy = obtener_publicaciones_hoy()
+    if publicadas_hoy >= MAX_SHORTS_DIA:
+        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
+        return False
+
+    # 2. Probabilidad de descanso (15% de no publicar nada hoy)
+    if random.random() < PROBABILIDAD_DESCANSO:
+        print("🛌 Día de descanso (probabilidad activada). No se publicará nada.")
+        return False
+
+    # 3. Probabilidad de publicar en esta ejecución (65%)
+    if random.random() < PROBABILIDAD_PUBLICAR:
+        print("✅ Decisión: Publicar short.")
+        return True
+    else:
+        print("⏸️ Decisión: No publicar en esta ejecución (probabilidad).")
+        return False
 
 # ================================================================
 # 🚀 LISTA DE OUTLIERS
@@ -646,15 +684,14 @@ Devuelve SOLO las palabras clave, sin comas, sin puntos."""
         return "dark night landscape"
 
 # ================================================================
-# BUSCAR IMAGEN EN PEXELS (con reintentos y fallback)
+# BUSCAR IMAGEN EN PEXELS
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
 def buscar_imagen_pexels_shorts(query, intentos=3):
     global ULTIMA_URL_PEXELS
-    # Si la API key no es válida, saltar inmediatamente
     if not PEXELS_VALIDA:
-        print("⚠️ API Key de Pexels inválida. No se buscarán imágenes.")
+        print("⚠️ API Key de Pexels inválida.")
         return None
 
     variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
@@ -662,8 +699,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
-    # CORREGIDO: Pexels no usa "Bearer", solo la API Key directa
-    headers = {"Authorization": PEXELS_API_KEY}
+    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
     params = {
         "query": query_variada,
         "orientation": "portrait",
@@ -689,14 +725,12 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
                     print(f"✅ Imagen encontrada: {image_url[:80]}...")
                     return image_url
                 else:
-                    print("⚠️ No se encontraron fotos para esta consulta.")
+                    print("⚠️ No se encontraron fotos.")
             else:
-                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+                print(f"⚠️ Error Pexels: {r.status_code}")
                 if r.status_code == 401:
-                    print("❌ API key inválida. Verifica tu PEXELS_API_KEY.")
+                    print("❌ API key inválida.")
                     break
-        except requests.exceptions.Timeout:
-            print("⏰ Timeout en Pexels. Reintentando...")
         except Exception as e:
             print(f"⚠️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
@@ -807,7 +841,6 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
         
         if not img_url:
-            # Intentar con una consulta más genérica
             query_fallback = "mexican night landscape dark"
             print(f"    🔄 Intentando con fallback: {query_fallback}")
             img_url = buscar_imagen_pexels_shorts(query_fallback, intentos=2)
@@ -989,7 +1022,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         "status": {
             "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,
+            "containsSyntheticMedia": True,  # Etiqueta IA
         },
     }
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
@@ -1057,7 +1090,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Pexels + Estrategia de Outlier)")
+    print("🎬 Iniciando Bot de SHORTS (Modo humano - Publicación variable)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1068,9 +1101,19 @@ def main():
     if not PEXELS_VALIDA:
         print("⚠️ PEXELS_API_KEY inválida o no configurada. Se usarán placeholders.")
 
-    if obtener_publicaciones_hoy() >= META_DIARIA_SHORTS:
-        print(f"✅ Meta de {META_DIARIA_SHORTS} shorts alcanzada.")
+    # ============================================================
+    # 🧠 DECISIÓN HUMANA DE PUBLICAR
+    # ============================================================
+    print(f"📊 Límite diario configurado: {MAX_SHORTS_DIA} shorts")
+    if not deberia_publicar_hoy():
+        print("⏸️ Decisión: No publicar en esta ejecución.")
+        # Guardar estado actual sin cambios
         sys.exit(0)
+
+    # Pequeño retraso aleatorio para simular comportamiento humano (0-15 minutos)
+    retraso_segundos = random.randint(0, 900)
+    print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
+    time.sleep(retraso_segundos)
 
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
