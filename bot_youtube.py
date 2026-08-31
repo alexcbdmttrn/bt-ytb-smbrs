@@ -51,7 +51,119 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n\n🤖 Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
 
 # ================================================================
-# ️ ÉPOCA DEL SUCESO
+# 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA (VIDEOS LARGOS)
+# ================================================================
+# Máximo 1 video por día (puede ser menos si el bot decide descansar)
+MAX_VIDEOS_DIA = 1
+
+# Probabilidad de "día de descanso" (0.0 - 1.0) – 20% de no publicar nada en todo el día
+PROBABILIDAD_DESCANSO = 0.20
+
+# Capricho: aunque se cumplan condiciones, 15% de no publicar
+PROBABILIDAD_CAPRICHO = 0.15
+
+# Intervalo mínimo y máximo entre publicaciones (en horas) – entre 24 y 72 horas
+INTERVALO_MIN_HORAS = 24
+INTERVALO_MAX_HORAS = 72
+
+# Retraso aleatorio antes de publicar (0-45 minutos) para evitar horas exactas
+RETRASO_MAX_MINUTOS = 45
+
+# ================================================================
+# 🧠 DECISIONES DE PUBLICACIÓN
+# ================================================================
+def deberia_publicar_ahora(estado):
+    """
+    Decide si publicar un video largo hoy:
+    - Máximo 1 video por día.
+    - Días de descanso (20% de probabilidad).
+    - Intervalo aleatorio de 24-72 horas desde la última publicación.
+    - Capricho aleatorio (15% de no publicar aunque todo esté listo).
+    - Retraso aleatorio de 0-45 minutos para simular comportamiento humano.
+    """
+    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
+    fecha_hoy = hoy.isoformat()
+
+    # 1. Verificar si es un nuevo día (reiniciar contador)
+    if estado.get("fecha") != fecha_hoy:
+        estado["fecha"] = fecha_hoy
+        estado["publicaciones_hoy"] = 0
+        # Decidir si es día de descanso (20%)
+        if random.random() < PROBABILIDAD_DESCANSO:
+            estado["dia_descanso"] = fecha_hoy
+            print("🛌 Día de descanso activado. No se publicará nada hoy.")
+        else:
+            estado["dia_descanso"] = None
+        print(f"📅 Nuevo día. Contador reiniciado.")
+
+    # 2. Si es día de descanso, no publicar
+    if estado.get("dia_descanso") == fecha_hoy:
+        return False
+
+    # 3. Verificar si ya se alcanzó el límite (1 video al día)
+    publicadas_hoy = estado.get("publicaciones_hoy", 0)
+    if publicadas_hoy >= MAX_VIDEOS_DIA:
+        print(f"✅ Límite de {MAX_VIDEOS_DIA} video diario alcanzado.")
+        return False
+
+    # 4. Verificar intervalo desde la última publicación
+    ultima_hora = estado.get("ultima_publicacion")
+    if ultima_hora:
+        ultima_hora = datetime.fromisoformat(ultima_hora)
+        hora_actual = datetime.now(ZoneInfo("America/Mexico_City"))
+        diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
+
+        # Intervalo aleatorio entre 24 y 72 horas
+        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
+
+        if diff_horas < intervalo_requerido:
+            print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
+            print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
+            return False
+        else:
+            print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
+
+    # 5. Capricho aleatorio (15% de no publicar aunque todo esté listo)
+    if random.random() < PROBABILIDAD_CAPRICHO:
+        print("🎲 Capricho aleatorio: no publicar esta vez.")
+        return False
+
+    # 6. ¡Decisión de publicar!
+    print("✅ Decisión: Publicar video largo.")
+
+    # 7. Retraso aleatorio para que la hora no sea exacta
+    retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
+    if retraso_segundos > 0:
+        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
+        time.sleep(retraso_segundos)
+
+    return True
+
+# ================================================================
+# VALIDAR PEXELS API KEY
+# ================================================================
+def validar_pexels_api_key():
+    if not PEXELS_API_KEY:
+        print("⚠️ PEXELS_API_KEY no configurada.")
+        return False
+    try:
+        # Pexels no usa "Bearer"
+        headers = {"Authorization": PEXELS_API_KEY}
+        r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
+        if r.status_code == 200:
+            print("✅ API Key de Pexels válida.")
+            return True
+        else:
+            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
+            return False
+    except Exception as e:
+        print(f"⚠️ Error probando API Key: {e}")
+        return False
+
+PEXELS_VALIDA = validar_pexels_api_key()
+
+# ================================================================
+# ÉPOCA DEL SUCESO
 # ================================================================
 ANIO_SUCESO = None
 EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
@@ -78,7 +190,7 @@ def actualizar_epoca(anio):
     print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎤 VOCES NEURALES
+# VOCES NEURALES (con fallback automático)
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
@@ -99,7 +211,7 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# 🎨 PALETAS
+# PALETAS Y ESTILOS
 # ================================================================
 PALETAS_COLOR = [
     "Cold cyan blue LED fog, navy blue modern shadows, crisp white moonlight",
@@ -117,9 +229,6 @@ PALETAS_COLOR = [
 ]
 PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
 
-# ================================================================
-# 📷 ESTILOS VISUALES
-# ================================================================
 ESTILOS_VISUALES = [
     "Cinematic photograph, dramatic lighting, sharp focus, film still",
     "Thriller photography, soft ambient diffusion, high contrast",
@@ -131,7 +240,7 @@ ESTILOS_VISUALES = [
 ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
 
 # ================================================================
-# ️ ESTADOS DE MÉXICO
+# ESTADOS DE MÉXICO
 # ================================================================
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -142,7 +251,7 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# 🧑 GENERADOR DE PERSONAJES
+# GENERADOR DE PERSONAJES
 # ================================================================
 def generar_perfil_personaje():
     edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
@@ -185,7 +294,7 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# 🎵 AUDIO DE FONDO
+# AUDIO DE FONDO (sin repetir los últimos 3)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -238,7 +347,7 @@ def seleccionar_fondo_disponible():
                 continue
             if fondo in files:
                 full_path = os.path.join(root, fondo)
-                print(f"️ Fallback: {full_path}")
+                print(f"⚠️ Fallback: {full_path}")
                 return full_path
     print("⚠️ No se encontró ningún archivo de fondo.")
     return None
@@ -246,7 +355,7 @@ def seleccionar_fondo_disponible():
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
 
 # ================================================================
-# 📋 GESTIÓN DE TÍTULOS PUBLICADOS
+# GESTIÓN DE TÍTULOS PUBLICADOS
 # ================================================================
 def cargar_titulos_largos():
     try:
@@ -279,7 +388,7 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
-# 📋 GESTIÓN DE TEMAS
+# GESTIÓN DE TEMAS (para evitar repeticiones)
 # ================================================================
 def cargar_temas_shorts():
     try:
@@ -315,18 +424,18 @@ def tema_ya_usado(tema, umbral=0.5):
     return False
 
 # ================================================================
-# ✅ VALIDACIÓN DE TÍTULO GANCHO
+# VALIDACIÓN DE TÍTULO GANCHO
 # ================================================================
 def validar_titulo_gancho(titulo):
     if not titulo or len(titulo) < 25:
         return False
-    
+
     genericas = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
     if any(titulo.lower().startswith(g) for g in genericas):
         return False
-    
+
     ganchos_fuertes = [
-        "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví", 
+        "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví",
         "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "oí", "sentí",
         "3:33", "3:00", "medianoche", "nunca", "jamás", "solo", "primero",
         "último", "desapareció", "regresó", "volvió", "entró", "salió", "huyó",
@@ -335,18 +444,18 @@ def validar_titulo_gancho(titulo):
     tiene_gancho = any(g in titulo.lower() for g in ganchos_fuertes)
     longitud_ok = 30 <= len(titulo) <= 75
     tiene_separador = any(c in titulo for c in [":", "-", "|", ","])
-    
+
     if tiene_gancho and longitud_ok:
         return True
     if longitud_ok and tiene_separador and len(titulo) > 35:
         return True
     if any(titulo.startswith(p) for p in ["Trabajé", "Fui", "El pozo", "Encontré", "Vi lo que"]):
         return True
-        
+
     return False
 
 # ================================================================
-# 🧹 LIMPIAR RESPUESTA JSON
+# LIMPIAR RESPUESTA JSON
 # ================================================================
 def limpiar_respuesta_json(respuesta):
     if not respuesta:
@@ -363,7 +472,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-#  GENERAR HISTORIA
+# GENERAR HISTORIA
 # ================================================================
 def generar_historia_completa():
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
@@ -378,15 +487,15 @@ Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para Y
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
 
- TEMAS YA PUBLICADOS (EVITAR ESTAS TEMÁTICAS):
+🚫 TEMAS YA PUBLICADOS (EVITAR ESTAS TEMÁTICAS):
 {temas_texto}
 
- REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
+🎯 REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
 
 🎯 REGLA DE TÍTULO SEO (CRÍTICA):
 El título debe ser un GANCHO que genere CURIOSIDAD. NO descripciones genéricas.
 EJEMPLOS DE TÍTULOS GANADORES (30-75 caracteres):
-- "Fui velador en Oaxaca y vi algo que no debí ver" 
+- "Fui velador en Oaxaca y vi algo que no debí ver"
 - "Trabajé de noche en un manicomio de Puebla. Nunca volví."
 - "El pozo de mi pueblo no tenía fondo. Hasta que lo vi."
 ❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
@@ -461,26 +570,26 @@ Responde ESTRICTAMENTE en este JSON:
 
             texto = data.get("texto_completo", "")
             palabras = len(texto.split())
-            print(f" Palabras del relato: {palabras}")
+            print(f"📊 Palabras del relato: {palabras}")
 
             if "texto_completo" in data and palabras >= 500:
                 titulo_generado = data.get("titulo", "")
-                
+
                 if not validar_titulo_gancho(titulo_generado):
                     print(f"⚠️ Título no pasa validación: '{titulo_generado}'. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
-                
+
                 if titulo_largo_ya_publicado(titulo_generado):
                     print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
                     raise ValueError("Título duplicado")
-                
+
                 keywords = data.get("palabras_clave", [])
                 if keywords:
                     tema = " ".join(keywords)
                     if tema_ya_usado(tema):
                         print(f"⚠️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
                         raise ValueError("Tema duplicado")
-                
+
                 anio_suceso = data.get("anio_suceso", None)
                 actualizar_epoca(anio_suceso)
                 print(f"✅ Historia generada: {palabras} palabras.")
@@ -497,7 +606,7 @@ Responde ESTRICTAMENTE en este JSON:
     sys.exit(1)
 
 # ================================================================
-# 📝 DIVIDIR TEXTO EN SEGMENTOS
+# DIVIDIR TEXTO EN SEGMENTOS
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -521,7 +630,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# 🎬 ASIGNAR ETAPAS VISUALES A SEGMENTOS
+# ASIGNAR ETAPAS VISUALES A SEGMENTOS
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -544,7 +653,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🔍 GENERAR QUERY PARA PEXELS
+# GENERAR QUERY PARA PEXELS (HORIZONTAL)
 # ================================================================
 def generar_query_pexels(segmento_texto, etapa, ubicacion_escena):
     prompt = f"""Eres un EXPERTO EN BÚSQUEDA DE FOTOGRAFÍA DE STOCK. Genera SOLO 4-6 palabras clave en inglés para buscar una foto HORIZONTAL (16:9) en Pexels que represente esta escena.
@@ -608,18 +717,14 @@ def generar_query_miniatura_pexels(miniatura_prompt):
         return "horror night dark landscape"
 
 # ================================================================
-# 🖼️ BUSCAR IMAGEN EN PEXELS (CORREGIDO - HORIZONTAL 16:9)
+# BUSCAR IMAGEN EN PEXELS (HORIZONTAL)
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
 def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
-    """
-    orientation="landscape" para videos largos (16:9)
-    orientation="portrait" para shorts (9:16)
-    """
     global ULTIMA_URL_PEXELS
-    if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada.")
+    if not PEXELS_VALIDA:
+        print("⚠️ Pexels no disponible.")
         return None
 
     variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
@@ -627,11 +732,10 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
-    # CORREGIDO: Pexels no usa "Bearer"
     headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query_variada,
-        "orientation": orientation,  # landscape para videos largos
+        "orientation": orientation,
         "per_page": 10,
         "page": random.randint(1, 8)
     }
@@ -664,13 +768,12 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
         if intento < intentos - 1:
             print(f"   ⏳ Esperando 5s antes de reintentar...")
             time.sleep(5)
-    
+
     print("❌ No se pudo obtener imagen de Pexels.")
     return None
 
 def buscar_miniatura_pexels(query, intentos=3):
     url = "https://api.pexels.com/v1/search"
-    # CORREGIDO: Pexels no usa "Bearer"
     headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query,
@@ -696,7 +799,7 @@ def buscar_miniatura_pexels(query, intentos=3):
     return None
 
 # ================================================================
-# 📝 EXPANDIR TEXTO
+# EXPANDIR TEXTO
 # ================================================================
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Historia: "{titulo}"
@@ -733,7 +836,7 @@ Devuelve SOLO el texto de continuación.
     return ""
 
 # ================================================================
-# 🎨 DIBUJAR TEXTO EN MINIATURA CON PIL
+# DIBUJAR TEXTO EN MINIATURA CON PIL
 # ================================================================
 def dibujar_texto_miniatura(img_path, texto, output_path):
     colores_texto = [
@@ -827,7 +930,7 @@ def dibujar_texto_miniatura(img_path, texto, output_path):
     print(f"✅ Texto '{texto}' dibujado con PIL en {output_path}")
 
 # ================================================================
-# ✅ GENERAR AUDIO CON FALLBACK
+# GENERAR AUDIO CON FALLBACK
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -864,11 +967,11 @@ def generar_audio(texto, index, intentos_por_voz=2):
             os.remove(filename)
         except:
             pass
-    print(" Todas las voces neurales fallaron.")
+    print("❌ Todas las voces neurales fallaron.")
     return None
 
 # ================================================================
-# 🎬 MONTAR VIDEO HORIZONTAL (1920x1080) - CORREGIDO
+# MONTAR VIDEO HORIZONTAL (1920x1080)
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
@@ -882,7 +985,6 @@ def montar_video(elementos, salida="video_final.mp4"):
             img_path = f"temp_img_{i}.jpg"
             with open(img_path, "wb") as f:
                 f.write(r.content)
-            # CORREGIDO: Imágenes horizontales 16:9 (1920x1080)
             with Image.open(img_path) as img:
                 ImageOps.fit(img, (1920, 1080), Image.LANCZOS).save(img_path)
             if duracion > 35:
@@ -925,7 +1027,7 @@ def montar_video(elementos, salida="video_final.mp4"):
     return salida, duracion_total
 
 # ================================================================
-# 🧹 LIMPIEZA
+# LIMPIEZA
 # ================================================================
 def limpiar_archivos_temporales():
     for f in os.listdir("."):
@@ -942,15 +1044,14 @@ def limpiar_archivos_temporales():
                 pass
 
 # ================================================================
-# ⬆️ SUBIR A YOUTUBE
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, capitulos=None, duracion_real_minutos=0):
     creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
     youtube = build("youtube", "v3", credentials=creds)
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
-    
-    # CORREGIDO: Generar capítulos basados en la duración real
+
     if capitulos and "⏰ Capítulos" not in descripcion:
         capitulos_texto = "\n⏰ Capítulos del relato:\n"
         for cap in capitulos:
@@ -960,10 +1061,10 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, 
             descripcion = partes[0] + capitulos_texto + "#" + partes[1]
         else:
             descripcion += capitulos_texto
-    
+
     if ACTIVAR_DISCLOSURE_IA:
         descripcion += DISCLOSURE_TEXT
-    
+
     body = {
         "snippet": {
             "title": titulo[:100],
@@ -993,7 +1094,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, 
             print(f"⚠️ Error miniatura: {e}")
 
 # ================================================================
-# 📅 PUBLICACIÓN DIARIA
+# PUBLICACIÓN DIARIA
 # ================================================================
 def verificar_publicacion_hoy():
     estado = cargar_estado_musica()
@@ -1010,7 +1111,7 @@ def marcar_publicacion_exitosa():
     guardar_estado_musica(estado)
 
 # ================================================================
-# 🎬 PROCESAR SEGMENTOS (IMÁGENES HORIZONTALES)
+# PROCESAR SEGMENTOS (IMÁGENES HORIZONTALES)
 # ================================================================
 def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
     elementos = []
@@ -1020,13 +1121,12 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
         etapa = etapas[i] if i < len(etapas) else "lugar_destino"
         ubic = ubicaciones[i] if i < len(ubicaciones) else UBICACION_HISTORIA
         print(f"\n📍 Segmento {idx+1} - Etapa: {etapa} | {ubic}")
-        
+
         query = generar_query_pexels(seg_texto, etapa, ubic)
-        
+
         if i > 0:
             time.sleep(3)
-        
-        # CORREGIDO: orientation="landscape" para videos largos horizontales
+
         url_img = buscar_imagen_pexels(query, orientation="landscape")
         if url_img:
             imagen_ultimo_recurso = url_img
@@ -1042,16 +1142,16 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
                     imagen_ultimo_recurso = url_img
                 else:
                     continue
-                
+
         audio_file = generar_audio(seg_texto, idx)
         if not audio_file:
             continue
-            
+
         elementos.append({"imagen_url": url_img, "audio_path": audio_file})
     return elementos
 
 # ================================================================
-# 🎬 MAIN
+# MAIN
 # ================================================================
 def verificar_envs():
     required = ["DEEPSEEK_API_KEY", "PEXELS_API_KEY", "YOUTUBE_USER_TOKEN"]
@@ -1063,13 +1163,29 @@ def verificar_envs():
 def main():
     verificar_envs()
 
+    # Forzar publicación si es workflow_dispatch
     if os.getenv("FORCE_PUBLISH") == "true":
         print("🚀 FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
     else:
+        # Si ya se publicó hoy y no es forzado, salir
+        estado_musica = cargar_estado_musica()
         if verificar_publicacion_hoy():
             print("✅ Ya se publicó hoy. Saliendo.")
             sys.exit(0)
 
+    # ============================================================
+    # 🧠 DECISIÓN DE PUBLICAR (MODO HUMANO)
+    # ============================================================
+    estado_publicacion = cargar_estado_musica()  # reutilizamos el mismo archivo para estado
+
+    if not deberia_publicar_ahora(estado_publicacion):
+        print("⏸️ Decisión: No publicar en esta ejecución.")
+        guardar_estado_musica(estado_publicacion)
+        sys.exit(0)
+
+    # ============================================================
+    # GENERAR VIDEO
+    # ============================================================
     print("="*70)
     print("👻 SOMBRAS DE MEDIANOCHE - BOT VIDEOS LARGOS (HORIZONTAL 16:9)")
     print("   ✦ Títulos gancho (validación automática)")
@@ -1077,7 +1193,7 @@ def main():
     print("   ✦ Miniaturas con texto neón mejorado")
     print("   ✦ Capítulos con timestamps realistas")
     print("="*70)
-    print(f" Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
+    print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
@@ -1094,7 +1210,7 @@ def main():
     capitulos_video = historia.get("capitulos", [])
     texto_completo = historia.get("texto_completo", "")
 
-    # CORREGIDO: Construir descripción completa con links
+    # Construir descripción completa
     descripcion_completa = f"""{descripcion_base}
 
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
@@ -1103,7 +1219,7 @@ def main():
 {hashtags_video}"""
 
     print(f"\n📊 SEO GENERADO:")
-    print(f"   ️ Título GANCHO: {titulo_video}")
+    print(f"   🏷️ Título GANCHO: {titulo_video}")
     print(f"   🖼️ Texto miniatura: {palabras_portada}")
     print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
     print(f"   📚 Capítulos: {len(capitulos_video)}")
@@ -1114,7 +1230,7 @@ def main():
 
     elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, offset=0)
     if not elementos_validos:
-        print(" No hay elementos válidos.")
+        print("❌ No hay elementos válidos.")
         sys.exit(1)
 
     duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
@@ -1146,7 +1262,7 @@ def main():
     # ============================================================
     print("🖼️ Buscando miniatura HORIZONTAL en Pexels y aplicando texto con PIL...")
     miniatura_path = None
-    
+
     query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night dark landscape"))
     miniatura_base_url = buscar_miniatura_pexels(query_miniatura)
 
@@ -1177,7 +1293,7 @@ def main():
                     with Image.open("miniatura_base.jpg") as img:
                         img.save("miniatura.jpg", "JPEG", quality=85)
                     miniatura_path = "miniatura.jpg"
-                    print(f"️ Fallback: miniatura guardada SIN texto")
+                    print(f"⚠️ Fallback: miniatura guardada SIN texto")
             except Exception as e2:
                 print(f"❌ Fallback también falló: {e2}")
                 miniatura_path = None
@@ -1195,11 +1311,11 @@ def main():
 
     print("⬆️ Subiendo a YouTube...")
     subir_a_youtube(
-        video_path, 
-        miniatura_path, 
-        titulo_video, 
-        descripcion_completa,  # Descripción con links completos
-        tags_video, 
+        video_path,
+        miniatura_path,
+        titulo_video,
+        descripcion_completa,
+        tags_video,
         capitulos_video,
         duracion_real_minutos=duracion_minutos
     )
@@ -1214,7 +1330,12 @@ def main():
         tema = f"{UBICACION_HISTORIA} {titulo_video.split()[0]}"
         guardar_tema_shorts(tema)
 
+    # Marcar publicación exitosa
+    estado_publicacion["publicaciones_hoy"] = estado_publicacion.get("publicaciones_hoy", 0) + 1
+    estado_publicacion["ultima_publicacion"] = datetime.now(ZoneInfo("America/Mexico_City")).isoformat()
     marcar_publicacion_exitosa()
+    guardar_estado_musica(estado_publicacion)
+
     limpiar_archivos_temporales()
     print("🎉 Proceso completado (video HORIZONTAL 16:9 + miniatura con PIL).")
 
