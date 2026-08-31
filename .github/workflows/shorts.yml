@@ -1,13 +1,10 @@
-name: Bot YouTube - Shorts (Publicación humana)
+name: Bot YouTube - Shorts (2 al día, horarios aleatorios)
 
 on:
   schedule:
-    # Ejecución cada 3 horas, pero el bot decide si publicar
-    - cron: '0 */3 * * *'   # Cada 3 horas (00:00, 03:00, 06:00...)
-    # También algunas ejecuciones en horarios menos predecibles
-    - cron: '15 1,7,13,19 * * *'   # 1:15, 7:15, 13:15, 19:15
-    - cron: '45 4,10,16,22 * * *'   # 4:45, 10:45, 16:45, 22:45
-  workflow_dispatch:  # Para pruebas manuales
+    # 8 ejecuciones al día (cada 3 horas)
+    - cron: '0 */3 * * *'   # 0, 3, 6, 9, 12, 15, 18, 21 UTC
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -42,21 +39,7 @@ jobs:
           pip install pytz
           pip install urllib3
 
-      - name: Verificar API Key de Pexels
-        run: |
-          if [ -z "${{ secrets.PEXELS_API_KEY }}" ]; then
-            echo "⚠️ PEXELS_API_KEY no está configurada en Secrets. Se usarán placeholders."
-          else
-            echo "✅ PEXELS_API_KEY está configurada."
-            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: ${{ secrets.PEXELS_API_KEY }}" "https://api.pexels.com/v1/search?query=test&per_page=1")
-            if [ "$RESPONSE" -eq 200 ]; then
-              echo "✅ API Key de Pexels válida."
-            else
-              echo "⚠️ API Key de Pexels devolvió código $RESPONSE."
-            fi
-          fi
-
-      - name: Ejecutar bot de Shorts (modo humano)
+      - name: Ejecutar bot de Shorts
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -67,16 +50,12 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
           git add estado_shorts.json titulos_shorts_publicados.json temas_usados.json estado_musica.json || true
-
           if git diff-index --quiet HEAD; then
-            echo "✅ No hay cambios en el estado"
+            echo "✅ No hay cambios"
             exit 0
           fi
-
           git commit -m "Actualizar estado shorts [skip ci]"
-
           for i in 1 2 3 4 5; do
             if git pull --rebase --autostash origin main && git push; then
               echo "✅ Push exitoso"
