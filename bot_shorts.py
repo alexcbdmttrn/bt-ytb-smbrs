@@ -46,16 +46,12 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
-# 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA
+# 🧠 CONFIGURACIÓN DE PUBLICACIÓN (2 AL DÍA - HORARIOS ALEATORIOS)
 # ================================================================
-# Probabilidad de publicar en cada ejecución (0.0 - 1.0)
-PROBABILIDAD_PUBLICAR = 0.65  # 65% de probabilidad de publicar
-
-# Número máximo de shorts por día (variable)
-MAX_SHORTS_DIA = random.randint(1, 3)  # 1, 2 o 3 shorts al día
-
-# Probabilidad de "descansar" un día (no publicar nada)
-PROBABILIDAD_DESCANSO = 0.15  # 15% de probabilidad de no publicar en todo el día
+MAX_SHORTS_DIA = 2
+INTERVALO_MIN_HORAS = 4
+INTERVALO_MAX_HORAS = 8
+RETRASO_MAX_MINUTOS = 30
 
 # ================================================================
 # VALIDAR PEXELS API KEY
@@ -80,33 +76,56 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# 🧠 DECISIONES DE PUBLICACIÓN (MODO HUMANO)
+# 🧠 DECISIONES DE PUBLICACIÓN
 # ================================================================
-def deberia_publicar_hoy():
+def deberia_publicar_ahora(estado):
     """
-    Decide si el bot debe publicar hoy, basado en:
-    - Probabilidad de descanso (15%)
-    - Límite de shorts diarios (1-3)
-    - Publicaciones ya hechas hoy
+    Decide si publicar ahora:
+    - Máximo 2 publicaciones al día
+    - Intervalo aleatorio de 4-8 horas entre publicaciones
+    - Retraso aleatorio de 0-30 minutos para evitar horas exactas
     """
-    # 1. Verificar si ya se alcanzó el límite diario
-    publicadas_hoy = obtener_publicaciones_hoy()
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
+    fecha_hoy = hoy.isoformat()
+    
+    # 1. Verificar si es un nuevo día (reiniciar contador)
+    if estado.get("fecha") != fecha_hoy:
+        estado["fecha"] = fecha_hoy
+        estado["publicaciones_hoy"] = 0
+        print(f"📅 Nuevo día. Contador reiniciado.")
+    
+    # 2. Verificar si ya se alcanzó el límite de 2 publicaciones
+    publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
         print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
         return False
 
-    # 2. Probabilidad de descanso (15% de no publicar nada hoy)
-    if random.random() < PROBABILIDAD_DESCANSO:
-        print("🛌 Día de descanso (probabilidad activada). No se publicará nada.")
-        return False
-
-    # 3. Probabilidad de publicar en esta ejecución (65%)
-    if random.random() < PROBABILIDAD_PUBLICAR:
-        print("✅ Decisión: Publicar short.")
-        return True
-    else:
-        print("⏸️ Decisión: No publicar en esta ejecución (probabilidad).")
-        return False
+    # 3. Verificar intervalo desde la última publicación
+    ultima_hora = estado.get("ultima_publicacion")
+    if ultima_hora:
+        ultima_hora = datetime.fromisoformat(ultima_hora)
+        hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
+        diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
+        
+        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
+        
+        if diff_horas < intervalo_requerido:
+            print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
+            print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
+            return False
+        else:
+            print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
+    
+    # 4. ¡Decisión de publicar!
+    print("✅ Decisión: Publicar.")
+    
+    # 5. Retraso aleatorio para que la hora no sea exacta
+    retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
+    if retraso_segundos > 0:
+        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
+        time.sleep(retraso_segundos)
+    
+    return True
 
 # ================================================================
 # 🚀 LISTA DE OUTLIERS
@@ -1022,7 +1041,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         "status": {
             "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,  # Etiqueta IA
+            "containsSyntheticMedia": True,
         },
     }
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
@@ -1090,7 +1109,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (Modo humano - Publicación variable)")
+    print("🎬 Iniciando Bot de SHORTS (2 al día - Horarios aleatorios)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1099,23 +1118,21 @@ def main():
         sys.exit(1)
 
     if not PEXELS_VALIDA:
-        print("⚠️ PEXELS_API_KEY inválida o no configurada. Se usarán placeholders.")
+        print("⚠️ PEXELS_API_KEY inválida. Se usarán placeholders.")
 
     # ============================================================
-    # 🧠 DECISIÓN HUMANA DE PUBLICAR
+    # 🧠 DECISIÓN DE PUBLICAR
     # ============================================================
-    print(f"📊 Límite diario configurado: {MAX_SHORTS_DIA} shorts")
-    if not deberia_publicar_hoy():
+    estado = cargar_estado()
+    
+    if not deberia_publicar_ahora(estado):
         print("⏸️ Decisión: No publicar en esta ejecución.")
-        # Guardar estado actual sin cambios
+        guardar_estado(estado)
         sys.exit(0)
 
-    # Pequeño retraso aleatorio para simular comportamiento humano (0-15 minutos)
-    retraso_segundos = random.randint(0, 900)
-    print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
-    time.sleep(retraso_segundos)
-
-    estado = cargar_estado()
+    # ============================================================
+    # GENERAR Y PUBLICAR
+    # ============================================================
     fondo_path = seleccionar_fondo_disponible(estado)
 
     historia_raw = generar_historia_completa()
@@ -1192,28 +1209,14 @@ def main():
         guardar_tema_usado(historia_raw["tema"])
         print(f"✅ Tema guardado: {historia_raw['tema']}")
 
-    publicaciones_antes = obtener_publicaciones_hoy()
-    if publicaciones_antes < 2:
-        print(f"\n📘 Reel #{publicaciones_antes + 1}: enviando a Facebook...")
-        video_url_temporal = subir_video_temporal(video_final)
-        if video_url_temporal:
-            descripcion_facebook = f"""{historia_raw['gancho_descripcion']}
-{historia_raw['contexto_descripcion']}
-🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
-📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real.')}
-📱 Síguenos: {FACEBOOK_LINK}
-{historia_raw['hashtags_descripcion']}"""
-            enviar_a_make(
-                titulo=historia_raw["titulo"],
-                descripcion=descripcion_facebook,
-                video_url=video_url_temporal,
-                url_youtube=f"https://youtu.be/{video_id_youtube}"
-            )
-        else:
-            print("⚠️ No se pudo subir al host temporal.")
-
-    incrementar_publicaciones_hoy()
+    # Actualizar estado de publicación
+    estado["publicaciones_hoy"] = estado.get("publicaciones_hoy", 0) + 1
+    estado["ultima_publicacion"] = datetime.now(pytz.timezone("America/Mexico_City")).isoformat()
     guardar_estado(estado)
+
+    # Facebook solo para los 2 primeros Shorts del día (ya no aplica)
+    # Se puede mantener o eliminar la parte de Facebook
+
     limpiar_temporales_shorts()
     print("✨ Ejecución completada.")
 
