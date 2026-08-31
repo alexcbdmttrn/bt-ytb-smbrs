@@ -8,11 +8,6 @@
     {
       "tipo": "fantasma",
       "lugar": "carretera",
-      "contexto": "persecucion"
-    },
-    {
-      "tipo": "fantasma",
-      "lugar": "carretera",
       "contexto": "comunicacion"
     },
     {
@@ -33,6 +28,11 @@
     {
       "tipo": "fantasma",
       "lugar": "hospital",
+      "contexto": "comunicacion"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "centro comercial",
       "contexto": "comunicacion"
     }
   ]
