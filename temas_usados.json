@@ -7,11 +7,6 @@
     },
     {
       "tipo": "fantasma",
-      "lugar": "panteón",
-      "contexto": "comunicacion"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "centro comercial",
       "contexto": "persecucion"
     },
@@ -34,6 +29,11 @@
       "tipo": "sombra",
       "lugar": "hospital",
       "contexto": "salvamento"
+    },
+    {
+      "tipo": "entidad",
+      "lugar": "tunel",
+      "contexto": "jalon"
     }
   ]
 }
