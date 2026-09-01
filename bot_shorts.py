@@ -54,15 +54,14 @@ INTERVALO_MAX_HORAS = 8
 RETRASO_MAX_MINUTOS = 30
 
 # ================================================================
-# VALIDAR PEXELS API KEY (CORREGIDO: SIN "Bearer")
+# VALIDAR PEXELS API KEY (SIN "Bearer")
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
         print("⚠️ PEXELS_API_KEY no configurada.")
         return False
     try:
-        # CORREGIDO: Sin "Bearer"
-        headers = {"Authorization": PEXELS_API_KEY}
+        headers = {"Authorization": PEXELS_API_KEY}  # CORREGIDO: Sin "Bearer"
         r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
         if r.status_code == 200:
             print("✅ API Key de Pexels válida.")
@@ -77,25 +76,19 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# 🧠 DECISIONES DE PUBLICACIÓN
+# 🧠 DECISIÓN DE PUBLICAR
 # ================================================================
 def deberia_publicar_ahora(estado):
-    """
-    Decide si publicar ahora:
-    - Máximo 2 publicaciones al día
-    - Intervalo aleatorio de 4-8 horas entre publicaciones
-    - Retraso aleatorio de 0-30 minutos para evitar horas exactas
-    """
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
     fecha_hoy = hoy.isoformat()
-    
-    # 1. Verificar si es un nuevo día (reiniciar contador)
+
+    # 1. Reiniciar contador diario
     if estado.get("fecha") != fecha_hoy:
         estado["fecha"] = fecha_hoy
         estado["publicaciones_hoy"] = 0
         print(f"📅 Nuevo día. Contador reiniciado.")
-    
-    # 2. Verificar si ya se alcanzó el límite de 2 publicaciones
+
+    # 2. Verificar límite de 2 publicaciones
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
         print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
@@ -107,29 +100,139 @@ def deberia_publicar_ahora(estado):
         ultima_hora = datetime.fromisoformat(ultima_hora)
         hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
         diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
-        
         intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
-        
         if diff_horas < intervalo_requerido:
             print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
             print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
             return False
         else:
             print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
-    
-    # 4. ¡Decisión de publicar!
+
+    # 4. Decisión de publicar
     print("✅ Decisión: Publicar.")
-    
-    # 5. Retraso aleatorio para que la hora no sea exacta
+
+    # 5. Retraso aleatorio para evitar horas exactas
     retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
     if retraso_segundos > 0:
         print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
         time.sleep(retraso_segundos)
-    
+
     return True
 
 # ================================================================
-# 🚀 LISTA DE OUTLIERS
+# 🧠 GENERAR TÍTULO CON MÁS DE 40 ESTRUCTURAS VARIADAS
+# ================================================================
+def generar_titulo_con_variacion(keywords, lugar):
+    """
+    Genera un título aleatorio usando una de las 40+ estructuras.
+    """
+    import random
+
+    # Asegurar keywords como lista
+    if not keywords:
+        keywords = ["miedo", "sombras", "paranormal", "secreto", "misterio"]
+    if isinstance(keywords, str):
+        keywords = [keywords]
+
+    # Palabras clave para completar las estructuras
+    kw = random.choice(keywords) if keywords else "algo"
+    kw_cap = kw.capitalize()
+    kw_lower = kw.lower()
+
+    # Acciones comunes
+    acciones = [
+        "cruzar", "entrar", "salir", "subir", "bajar", "correr", "escapar",
+        "grabar", "fotografiar", "tocar", "mirar", "escuchar", "hablar", "gritar",
+        "rezar", "esconderse", "conducir", "caminar", "detenerse", "huir",
+        "salvar", "ayudar", "encontrar", "descubrir", "enfrentar", "sobrevivir",
+        "regresar", "volver", "quedarse", "despertar", "dormir", "soñar"
+    ]
+    accion = random.choice(acciones)
+    accion_pasado = accion + ("ó" if accion.endswith("ar") else "ió")
+
+    # Recursos comunes
+    recursos = ["luz", "linterna", "gasolina", "frenos", "radio", "señal",
+                "batería", "dinero", "mapa", "llaves", "arma", "celular"]
+    recurso = random.choice(recursos)
+
+    # Hora común
+    horas = ["3:33 AM", "medianoche", "las 2:00 AM", "las 4:00 AM", "el amanecer"]
+    hora = random.choice(horas)
+
+    # Más de 40 estructuras
+    estructuras = [
+        # Restricción
+        lambda: f"Intenté {accion_pasado} en {lugar} sin {recurso}",
+        lambda: f"Sin {recurso}, {accion} en {lugar}",
+        lambda: f"{accion.capitalize()} en {lugar} sin {recurso}",
+        lambda: f"No podía {accion} en {lugar} y {kw_lower} me detuvo",
+
+        # Desafío / Pregunta
+        lambda: f"¿{accion.capitalize()} en {lugar}?",
+        lambda: f"¿Qué {accion} en {lugar}?",
+        lambda: f"¿Lograré {accion} en {lugar}?",
+        lambda: f"¿{accion.capitalize()} en {lugar} sin {recurso}?",
+
+        # Transformación
+        lambda: f"De {kw_lower} a {accion} en {lugar}",
+        lambda: f"El día que {accion_pasado} en {lugar}",
+        lambda: f"La noche que {accion_pasado} en {lugar}",
+        lambda: f"Cuando {accion_pasado} en {lugar}",
+
+        # Primera persona impactante
+        lambda: f"Vi {kw_lower} en {lugar}",
+        lambda: f"Escuché {kw_lower} en {lugar}",
+        lambda: f"Encontré {kw_lower} en {lugar}",
+        lambda: f"Sentí {kw_lower} en {lugar}",
+        lambda: f"Sobreviví a {kw_lower} en {lugar}",
+
+        # Gancho emocional
+        lambda: f"Lo que {accion_pasado} en {lugar}",
+        lambda: f"El secreto de {lugar}",
+        lambda: f"El misterio de {lugar} a {hora}",
+        lambda: f"El silencio de {lugar}",
+
+        # Ubicación + evento
+        lambda: f"{lugar}: {kw_cap} sin {recurso}",
+        lambda: f"{lugar} a {hora}",
+        lambda: f"{lugar} bajo {kw_lower}",
+
+        # Acción directa
+        lambda: f"{accion.capitalize()} en {lugar} y {kw_lower} me siguió",
+        lambda: f"{accion.capitalize()} en {lugar} sin {recurso}",
+        lambda: f"{accion.capitalize()} en {lugar} a {hora}",
+
+        # Hipótesis/Reflexión
+        lambda: f"Por qué no debes {accion} en {lugar}",
+        lambda: f"Nunca {accion} en {lugar}",
+        lambda: f"No {accion} en {lugar}",
+
+        # Suspenso
+        lambda: f"El {kw_lower} que {accion_pasado} en {lugar}",
+        lambda: f"La {kw_lower} de {lugar}",
+        lambda: f"El {kw_lower} de {lugar} a {hora}",
+
+        # Outlier puro (clásicos)
+        lambda: f"Intenté {accion_pasado} en {lugar} y {kw_lower} me detuvo",
+        lambda: f"¿{accion.capitalize()} en {lugar}? {kw_cap}",
+        lambda: f"De {kw_lower} a {accion} en {lugar} en una noche",
+    ]
+
+    # Elegir una estructura aleatoria
+    estructura = random.choice(estructuras)
+    titulo = estructura()
+
+    # Capitalizar primera letra
+    titulo = titulo[0].upper() + titulo[1:]
+
+    # Limitar a 75 caracteres
+    if len(titulo) > 75:
+        titulo = titulo[:72] + "..."
+
+    return titulo
+
+# ================================================================
+# 🚀 LISTA DE OUTLIERS (temas que ya funcionaron)
 # ================================================================
 OUTLIERS_TERROR = [
     "Intenté sobrevivir 7 días en el hotel más embrujado de México",
@@ -303,11 +406,11 @@ def seleccionar_fondo_disponible(estado):
             for fondo in FONDOS_DISPONIBLES:
                 if file.lower() == fondo.lower():
                     encontrados[fondo] = os.path.join(root, file)
-    
+
     if not encontrados:
         print("⚠️ No se encontraron archivos de música de fondo en el repositorio.")
         return None
-    
+
     ultimo_fondo = estado.get("ultimo_fondo")
     candidatos = [f for f in encontrados if f != ultimo_fondo] or list(encontrados.keys())
     seleccionado = random.choice(candidatos)
@@ -410,7 +513,7 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA CON OUTLIERS
+# GENERAR HISTORIA CON OUTLIERS Y TÍTULOS VARIADOS
 # ================================================================
 def generar_historia_completa():
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -513,23 +616,33 @@ Devuelve ESTRICTAMENTE este JSON:
             anio_suceso = data.get("anio_suceso", None)
             actualizar_epoca(anio_suceso)
 
+            # === GENERACIÓN DE TÍTULO VARIADO ===
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
 
-            palabras_outlier = ["intenté", "¿", "sobreviví", "lograré", "pasé", "escapar", "sin", "de ", " a "]
-            tiene_estructura = any(p in titulo.lower() for p in palabras_outlier)
-            if not tiene_estructura and len(titulo) > 10:
+            # Palabras que indican buena estructura
+            palabras_fuertes = ["intenté", "sobreviví", "logré", "escapé", "vi", "escuché",
+                                "encontré", "descubrí", "fui", "estuve", "viví", "¿", "sin",
+                                "de", "a", "por qué", "nunca", "no", "el", "la", "los", "las"]
+            if not any(p in titulo.lower() for p in palabras_fuertes):
                 keywords = data.get("palabras_clave", [])
-                primera_kw = keywords[0] if keywords else "terror"
                 lugar = ESTADO_HISTORIA_SHORTS
-                titulo = f"Intenté sobrevivir en {lugar} sin {primera_kw}"
+                titulo = generar_titulo_con_variacion(keywords, lugar)
 
-            if len(titulo) < 40:
-                titulo = f"{titulo} - Testimonio real en {ESTADO_HISTORIA_SHORTS}"
-            if len(titulo) > 95:
-                titulo = titulo[:92].rsplit(' ', 1)[0] + "..."
+            if len(titulo) < 25:
+                lugar = ESTADO_HISTORIA_SHORTS
+                fallbacks = [
+                    f"¿Qué pasó en {lugar}?",
+                    f"El secreto de {lugar}",
+                    f"La noche que cambió mi vida en {lugar}",
+                    f"Lo que encontré en {lugar}",
+                    f"El misterio de {lugar} a medianoche",
+                ]
+                titulo = random.choice(fallbacks)
+
             data["titulo"] = titulo
+            # =======================================
 
             if titulo_ya_publicado(titulo):
                 print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
@@ -598,7 +711,7 @@ Devuelve ESTRICTAMENTE este JSON:
                 hashtag_estrategia = "#DesafioParanormal"
             else:
                 hashtag_estrategia = "#Outlier"
-            
+
             hashtag_final = f"{hashtag_base} {hashtag_lugar} {' '.join(hashtag_keywords[:2])} {hashtag_extra} {hashtag_estrategia}"
             data["hashtags_descripcion"] = hashtag_final
 
@@ -673,7 +786,7 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
-# GENERAR QUERY PEXELS (CORREGIDO: SIN "Bearer")
+# GENERAR QUERY PEXELS (SIN "Bearer")
 # ================================================================
 def generar_query_pexels_shorts(segmento_texto, etapa, ubicacion_escena, index_segmento=0, total_segmentos=1):
     prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto VERTICAL en Pexels.
@@ -704,7 +817,7 @@ Devuelve SOLO las palabras clave, sin comas, sin puntos."""
         return "dark night landscape"
 
 # ================================================================
-# BUSCAR IMAGEN EN PEXELS (CORREGIDO: SIN "Bearer")
+# BUSCAR IMAGEN EN PEXELS (SIN "Bearer")
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
@@ -719,8 +832,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
-    # CORREGIDO: Sin "Bearer"
-    headers = {"Authorization": PEXELS_API_KEY}
+    headers = {"Authorization": PEXELS_API_KEY}  # CORREGIDO: Sin "Bearer"
     params = {
         "query": query_variada,
         "orientation": "portrait",
@@ -757,7 +869,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
         if intento < intentos - 1:
             print(f"   ⏳ Esperando 5s...")
             time.sleep(5)
-    
+
     print("❌ No se pudo obtener imagen de Pexels.")
     return None
 
@@ -849,7 +961,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
     resultados = []
     total_seg = len(segmentos)
     imagen_anterior = None
-    
+
     for idx, seg in enumerate(segmentos):
         etapa = etapas[idx] if idx < len(etapas) else "lugar_destino"
         ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ubicacion
@@ -860,12 +972,12 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
         print(f"    🔍 Query Pexels: {query}")
 
         img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
-        
+
         if not img_url:
             query_fallback = "mexican night landscape dark"
             print(f"    🔄 Intentando con fallback: {query_fallback}")
             img_url = buscar_imagen_pexels_shorts(query_fallback, intentos=2)
-            
+
         if not img_url and imagen_anterior:
             img_url = imagen_anterior
             print(f"    🔄 Usando imagen del segmento anterior ({idx})")
@@ -1126,7 +1238,7 @@ def main():
     # 🧠 DECISIÓN DE PUBLICAR
     # ============================================================
     estado = cargar_estado()
-    
+
     if not deberia_publicar_ahora(estado):
         print("⏸️ Decisión: No publicar en esta ejecución.")
         guardar_estado(estado)
@@ -1215,6 +1327,27 @@ def main():
     estado["publicaciones_hoy"] = estado.get("publicaciones_hoy", 0) + 1
     estado["ultima_publicacion"] = datetime.now(pytz.timezone("America/Mexico_City")).isoformat()
     guardar_estado(estado)
+
+    # Facebook: solo los primeros 2 shorts del día
+    publicaciones_antes = obtener_publicaciones_hoy()
+    if publicaciones_antes < 2:
+        print(f"\n📘 Reel #{publicaciones_antes + 1}: enviando a Facebook...")
+        video_url_temporal = subir_video_temporal(video_final)
+        if video_url_temporal:
+            descripcion_facebook = f"""{historia_raw['gancho_descripcion']}
+{historia_raw['contexto_descripcion']}
+🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
+📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real.')}
+📱 Síguenos: {FACEBOOK_LINK}
+{historia_raw['hashtags_descripcion']}"""
+            enviar_a_make(
+                titulo=historia_raw["titulo"],
+                descripcion=descripcion_facebook,
+                video_url=video_url_temporal,
+                url_youtube=f"https://youtu.be/{video_id_youtube}"
+            )
+        else:
+            print("⚠️ No se pudo subir al host temporal.")
 
     limpiar_temporales_shorts()
     print("✨ Ejecución completada.")
