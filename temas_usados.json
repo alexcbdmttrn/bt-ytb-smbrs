@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "carretera",
-      "contexto": "comunicacion"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "panteón",
       "contexto": "comunicacion"
     },
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "hospital",
       "contexto": "comunicacion"
+    },
+    {
+      "tipo": "sombra",
+      "lugar": "hospital",
+      "contexto": "salvamento"
     }
   ]
 }
