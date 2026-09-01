@@ -54,14 +54,15 @@ INTERVALO_MAX_HORAS = 8
 RETRASO_MAX_MINUTOS = 30
 
 # ================================================================
-# VALIDAR PEXELS API KEY
+# VALIDAR PEXELS API KEY (CORREGIDO: SIN "Bearer")
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
         print("⚠️ PEXELS_API_KEY no configurada.")
         return False
     try:
-        headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+        # CORREGIDO: Sin "Bearer"
+        headers = {"Authorization": PEXELS_API_KEY}
         r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
         if r.status_code == 200:
             print("✅ API Key de Pexels válida.")
@@ -672,7 +673,7 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
-# GENERAR QUERY PEXELS
+# GENERAR QUERY PEXELS (CORREGIDO: SIN "Bearer")
 # ================================================================
 def generar_query_pexels_shorts(segmento_texto, etapa, ubicacion_escena, index_segmento=0, total_segmentos=1):
     prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto VERTICAL en Pexels.
@@ -703,7 +704,7 @@ Devuelve SOLO las palabras clave, sin comas, sin puntos."""
         return "dark night landscape"
 
 # ================================================================
-# BUSCAR IMAGEN EN PEXELS
+# BUSCAR IMAGEN EN PEXELS (CORREGIDO: SIN "Bearer")
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
@@ -718,7 +719,8 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     query_variada = f"{query} {variacion}"
 
     url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": f"Bearer {PEXELS_API_KEY}"}
+    # CORREGIDO: Sin "Bearer"
+    headers = {"Authorization": PEXELS_API_KEY}
     params = {
         "query": query_variada,
         "orientation": "portrait",
@@ -1213,9 +1215,6 @@ def main():
     estado["publicaciones_hoy"] = estado.get("publicaciones_hoy", 0) + 1
     estado["ultima_publicacion"] = datetime.now(pytz.timezone("America/Mexico_City")).isoformat()
     guardar_estado(estado)
-
-    # Facebook solo para los 2 primeros Shorts del día (ya no aplica)
-    # Se puede mantener o eliminar la parte de Facebook
 
     limpiar_temporales_shorts()
     print("✨ Ejecución completada.")
