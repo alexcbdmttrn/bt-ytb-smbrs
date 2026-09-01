@@ -6,7 +6,12 @@
     "Sunless Vault.mp3",
     "Ash and Marrow.mp3",
     "The Deep Rot.mp3",
-    "Sunken Dread.mp3"
+    "Sunken Dread.mp3",
+    "Hollow Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-08-30"
+  "ultima_publicacion_exitosa": "2026-08-30",
+  "fecha": "2026-08-31",
+  "publicaciones_hoy": 1,
+  "dia_descanso": null,
+  "ultima_publicacion": "2026-08-31T23:13:52.694199-06:00"
 }
