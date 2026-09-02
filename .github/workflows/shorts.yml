@@ -1,9 +1,9 @@
-name: Bot YouTube - Shorts (2 al día, horarios aleatorios)
+name: Bot YouTube - Shorts (3 al día, horarios aleatorios)
 
 on:
   schedule:
-    # 8 ejecuciones al día (cada 3 horas)
-    - cron: '0 */3 * * *'   # 0, 3, 6, 9, 12, 15, 18, 21 UTC
+    # 6 ejecuciones al día (cada 4 horas)
+    - cron: '0 */4 * * *'   # 0, 4, 8, 12, 16, 20 UTC
   workflow_dispatch:
 
 permissions:
