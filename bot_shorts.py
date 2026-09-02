@@ -82,19 +82,16 @@ def deberia_publicar_ahora(estado):
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
     fecha_hoy = hoy.isoformat()
 
-    # 1. Reiniciar contador diario
     if estado.get("fecha") != fecha_hoy:
         estado["fecha"] = fecha_hoy
         estado["publicaciones_hoy"] = 0
         print(f"📅 Nuevo día. Contador reiniciado.")
 
-    # 2. Verificar límite de 2 publicaciones
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
         print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
         return False
 
-    # 3. Verificar intervalo desde la última publicación
     ultima_hora = estado.get("ultima_publicacion")
     if ultima_hora:
         ultima_hora = datetime.fromisoformat(ultima_hora)
@@ -108,10 +105,8 @@ def deberia_publicar_ahora(estado):
         else:
             print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
 
-    # 4. Decisión de publicar
     print("✅ Decisión: Publicar.")
 
-    # 5. Retraso aleatorio para evitar horas exactas
     retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
     if retraso_segundos > 0:
         print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
@@ -120,26 +115,18 @@ def deberia_publicar_ahora(estado):
     return True
 
 # ================================================================
-# 🧠 GENERAR TÍTULO CON MÁS DE 40 ESTRUCTURAS VARIADAS
+# 🧠 GENERAR TÍTULO CON MÁS DE 20 ESTRUCTURAS VARIADAS (SIN "Intenté" por defecto)
 # ================================================================
 def generar_titulo_con_variacion(keywords, lugar):
-    """
-    Genera un título aleatorio usando una de las 40+ estructuras.
-    """
-    import random
-
-    # Asegurar keywords como lista
     if not keywords:
         keywords = ["miedo", "sombras", "paranormal", "secreto", "misterio"]
     if isinstance(keywords, str):
         keywords = [keywords]
 
-    # Palabras clave para completar las estructuras
     kw = random.choice(keywords) if keywords else "algo"
     kw_cap = kw.capitalize()
     kw_lower = kw.lower()
 
-    # Acciones comunes
     acciones = [
         "cruzar", "entrar", "salir", "subir", "bajar", "correr", "escapar",
         "grabar", "fotografiar", "tocar", "mirar", "escuchar", "hablar", "gritar",
@@ -150,82 +137,55 @@ def generar_titulo_con_variacion(keywords, lugar):
     accion = random.choice(acciones)
     accion_pasado = accion + ("ó" if accion.endswith("ar") else "ió")
 
-    # Recursos comunes
     recursos = ["luz", "linterna", "gasolina", "frenos", "radio", "señal",
                 "batería", "dinero", "mapa", "llaves", "arma", "celular"]
     recurso = random.choice(recursos)
 
-    # Hora común
     horas = ["3:33 AM", "medianoche", "las 2:00 AM", "las 4:00 AM", "el amanecer"]
     hora = random.choice(horas)
 
-    # Más de 40 estructuras
+    # Estructuras variadas, MINIMIZANDO "Intenté" al máximo
     estructuras = [
-        # Restricción
-        lambda: f"Intenté {accion_pasado} en {lugar} sin {recurso}",
-        lambda: f"Sin {recurso}, {accion} en {lugar}",
-        lambda: f"{accion.capitalize()} en {lugar} sin {recurso}",
-        lambda: f"No podía {accion} en {lugar} y {kw_lower} me detuvo",
-
-        # Desafío / Pregunta
-        lambda: f"¿{accion.capitalize()} en {lugar}?",
-        lambda: f"¿Qué {accion} en {lugar}?",
-        lambda: f"¿Lograré {accion} en {lugar}?",
-        lambda: f"¿{accion.capitalize()} en {lugar} sin {recurso}?",
-
-        # Transformación
-        lambda: f"De {kw_lower} a {accion} en {lugar}",
-        lambda: f"El día que {accion_pasado} en {lugar}",
-        lambda: f"La noche que {accion_pasado} en {lugar}",
-        lambda: f"Cuando {accion_pasado} en {lugar}",
-
-        # Primera persona impactante
-        lambda: f"Vi {kw_lower} en {lugar}",
-        lambda: f"Escuché {kw_lower} en {lugar}",
-        lambda: f"Encontré {kw_lower} en {lugar}",
-        lambda: f"Sentí {kw_lower} en {lugar}",
-        lambda: f"Sobreviví a {kw_lower} en {lugar}",
-
-        # Gancho emocional
-        lambda: f"Lo que {accion_pasado} en {lugar}",
-        lambda: f"El secreto de {lugar}",
-        lambda: f"El misterio de {lugar} a {hora}",
-        lambda: f"El silencio de {lugar}",
-
-        # Ubicación + evento
-        lambda: f"{lugar}: {kw_cap} sin {recurso}",
-        lambda: f"{lugar} a {hora}",
-        lambda: f"{lugar} bajo {kw_lower}",
-
-        # Acción directa
-        lambda: f"{accion.capitalize()} en {lugar} y {kw_lower} me siguió",
-        lambda: f"{accion.capitalize()} en {lugar} sin {recurso}",
-        lambda: f"{accion.capitalize()} en {lugar} a {hora}",
-
-        # Hipótesis/Reflexión
-        lambda: f"Por qué no debes {accion} en {lugar}",
-        lambda: f"Nunca {accion} en {lugar}",
-        lambda: f"No {accion} en {lugar}",
-
-        # Suspenso
-        lambda: f"El {kw_lower} que {accion_pasado} en {lugar}",
-        lambda: f"La {kw_lower} de {lugar}",
-        lambda: f"El {kw_lower} de {lugar} a {hora}",
-
-        # Outlier puro (clásicos)
-        lambda: f"Intenté {accion_pasado} en {lugar} y {kw_lower} me detuvo",
-        lambda: f"¿{accion.capitalize()} en {lugar}? {kw_cap}",
-        lambda: f"De {kw_lower} a {accion} en {lugar} en una noche",
+        # Sin recurso (muy fuerte)
+        lambda: f"Sin {recurso}, {accion} en {lugar} fue mi mayor error",
+        lambda: f"{accion.capitalize()} en {lugar} sin {recurso} y pasó esto",
+        lambda: f"No tenía {recurso} cuando {accion_pasado} en {lugar}",
+        
+        # Preguntas / Desafío
+        lambda: f"¿Qué {accion} en {lugar} a las {hora}?",
+        lambda: f"¿Sobrevivirías a {kw_lower} en {lugar}?",
+        lambda: f"¿Por qué nadie debe {accion} en {lugar}?",
+        
+        # Testimonio / Narrativa
+        lambda: f"La noche que {accion_pasado} en {lugar} y todo cambió",
+        lambda: f"El día que {kw_lower} me alcanzó en {lugar}",
+        lambda: f"Lo que {accion_pasado} en {lugar} me persigue hasta hoy",
+        lambda: f"Nunca olvidaré lo que vi al {accion} en {lugar}",
+        
+        # Descubrimiento / Hallazgo
+        lambda: f"Encontré {kw_lower} al {accion} en {lugar}",
+        lambda: f"Descubrí el secreto de {lugar} y fue aterrador",
+        lambda: f"Lo que escondía {lugar} salió a la luz",
+        
+        # Advertencia
+        lambda: f"Nunca {accion} en {lugar} después de {hora}",
+        lambda: f"No {accion} en {lugar} si valoras tu vida",
+        lambda: f"Advertencia: No vayas a {lugar} de noche",
+        
+        # Misterio / Suspenso
+        lambda: f"El {kw_lower} de {lugar} que nadie menciona",
+        lambda: f"Lo que realmente pasa en {lugar} a {hora}",
+        lambda: f"El secreto oscuro de {lugar}",
+        
+        # Acción directa (minoría, sin usar "Intenté")
+        lambda: f"Quise {accion} en {lugar} pero algo salió mal",
+        lambda: f"Algo me detuvo cuando {accion_pasado} en {lugar}",
     ]
 
-    # Elegir una estructura aleatoria
     estructura = random.choice(estructuras)
     titulo = estructura()
-
-    # Capitalizar primera letra
     titulo = titulo[0].upper() + titulo[1:]
 
-    # Limitar a 75 caracteres
     if len(titulo) > 75:
         titulo = titulo[:72] + "..."
 
@@ -530,6 +490,19 @@ def generar_historia_completa():
     outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
     outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
 
+    # === INYECCIÓN DE FÓRMULA ALEATORIA PARA FORZAR VARIEDAD ===
+    formulas_titulo = [
+        "SIN RECURSO: 'Sin [recurso], [acción] en [lugar] fue mi mayor error'",
+        "DESAFÍO: '¿Qué [acción] en [lugar] a las [hora]?'",
+        "TESTIMONIO: 'La noche que [acción] en [lugar] y todo cambió'",
+        "DESCUBRIMIENTO: 'Encontré [algo] al [acción] en [lugar]'",
+        "ADVERTENCIA: 'Nunca [acción] en [lugar] después de las [hora]'",
+        "MISTERIO: 'El [objeto] de [lugar] que nadie menciona'",
+        "CONSECUENCIA: '[Acción] en [lugar] sin [recurso] y pasó esto'"
+    ]
+    formula_aleatoria = random.choice(formulas_titulo)
+    # ============================================================
+
     prompt = f"""Eres un CURADOR DE RELATOS PARANORMALES REALES de internet, especializado en SEO para YouTube Shorts.
 
 🚀 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
@@ -552,11 +525,8 @@ PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 4. RESOLUCIÓN.
 
 🎯 TÍTULO CON ESTRATEGIA DE OUTLIER (55-75 caracteres):
-Fórmulas:
-- RESTRICCIÓN: "Intenté [acción] sin [recurso] en [lugar]"
-- DESAFÍO: "¿[Acción imposible] en [lugar]?"
-- TRANSFORMACIÓN: "De [estado inicial] a [estado final] en [lugar]"
-
+FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
+❌ PROHIBIDO empezar con "Intenté" a menos que la fórmula lo exija explícitamente. Varía al máximo.
 ❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
 
 🎯 PALABRAS DE PORTADA (máx 2 palabras)
@@ -616,30 +586,23 @@ Devuelve ESTRICTAMENTE este JSON:
             anio_suceso = data.get("anio_suceso", None)
             actualizar_epoca(anio_suceso)
 
-            # === GENERACIÓN DE TÍTULO VARIADO ===
+            # === GENERACIÓN DE TÍTULO VARIADO (CORREGIDO) ===
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
 
-            # Palabras que indican buena estructura
-            palabras_fuertes = ["intenté", "sobreviví", "logré", "escapé", "vi", "escuché",
-                                "encontré", "descubrí", "fui", "estuve", "viví", "¿", "sin",
-                                "de", "a", "por qué", "nunca", "no", "el", "la", "los", "las"]
-            if not any(p in titulo.lower() for p in palabras_fuertes):
+            # Si el título empieza con "Intenté" o "Intente", forzar variación el 80% de las veces
+            if titulo.lower().startswith("intenté") or titulo.lower().startswith("intente"):
+                if random.random() > 0.2:  # 80% de probabilidad de cambiarlo
+                    keywords = data.get("palabras_clave", [])
+                    lugar = ESTADO_HISTORIA_SHORTS
+                    titulo = generar_titulo_con_variacion(keywords, lugar)
+            
+            # También variar si es muy corto
+            if len(titulo) < 35:
                 keywords = data.get("palabras_clave", [])
                 lugar = ESTADO_HISTORIA_SHORTS
                 titulo = generar_titulo_con_variacion(keywords, lugar)
-
-            if len(titulo) < 25:
-                lugar = ESTADO_HISTORIA_SHORTS
-                fallbacks = [
-                    f"¿Qué pasó en {lugar}?",
-                    f"El secreto de {lugar}",
-                    f"La noche que cambió mi vida en {lugar}",
-                    f"Lo que encontré en {lugar}",
-                    f"El misterio de {lugar} a medianoche",
-                ]
-                titulo = random.choice(fallbacks)
 
             data["titulo"] = titulo
             # =======================================
