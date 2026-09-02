@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "centro comercial",
-      "contexto": "comunicacion"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "hospital",
       "contexto": "comunicacion"
     },
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "cerro",
       "contexto": "viaje"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "autopista",
+      "contexto": "persecucion"
     }
   ]
 }
