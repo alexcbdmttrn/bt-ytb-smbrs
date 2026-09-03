@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "sombra",
-      "lugar": "hospital",
-      "contexto": "salvamento"
-    },
-    {
       "tipo": "entidad",
       "lugar": "tunel",
       "contexto": "jalon"
@@ -33,6 +28,11 @@
     {
       "tipo": "entidad",
       "lugar": "carretera",
+      "contexto": "encuentro"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "centro comercial",
       "contexto": "encuentro"
     }
   ]
