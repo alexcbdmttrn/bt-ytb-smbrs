@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "fantasma",
-      "lugar": "hospital",
-      "contexto": "comunicacion"
-    },
-    {
       "tipo": "sombra",
       "lugar": "hospital",
       "contexto": "salvamento"
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "autopista",
       "contexto": "persecucion"
+    },
+    {
+      "tipo": "entidad",
+      "lugar": "carretera",
+      "contexto": "encuentro"
     }
   ]
 }
