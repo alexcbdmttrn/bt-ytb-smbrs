@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "entidad",
-      "lugar": "tunel",
-      "contexto": "jalon"
-    },
-    {
       "tipo": "fantasma",
       "lugar": "carretera",
       "contexto": "persecucion"
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "centro comercial",
       "contexto": "encuentro"
+    },
+    {
+      "tipo": "sombra",
+      "lugar": "condominio",
+      "contexto": "ronda nocturna"
     }
   ]
 }
