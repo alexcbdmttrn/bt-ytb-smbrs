@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "carretera",
-      "contexto": "persecucion"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "elevador",
       "contexto": "intervencion"
     },
@@ -34,6 +29,11 @@
       "tipo": "sombra",
       "lugar": "condominio",
       "contexto": "ronda nocturna"
+    },
+    {
+      "tipo": "luz",
+      "lugar": "autopista",
+      "contexto": "persecucion"
     }
   ]
 }
