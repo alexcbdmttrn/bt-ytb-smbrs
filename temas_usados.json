@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "cerro",
-      "contexto": "viaje"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "autopista",
       "contexto": "persecucion"
     },
@@ -34,6 +29,11 @@
       "tipo": "entidad",
       "lugar": "autopista",
       "contexto": "intervención"
+    },
+    {
+      "tipo": "ente",
+      "lugar": "brecha",
+      "contexto": "intervencion"
     }
   ]
 }
