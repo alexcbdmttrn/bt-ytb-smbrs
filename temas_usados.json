@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "fantasma",
-      "lugar": "autopista",
-      "contexto": "persecucion"
-    },
-    {
       "tipo": "entidad",
       "lugar": "carretera",
       "contexto": "encuentro"
@@ -34,6 +29,11 @@
       "tipo": "ente",
       "lugar": "brecha",
       "contexto": "intervencion"
+    },
+    {
+      "tipo": "entidad",
+      "lugar": "autopista",
+      "contexto": "encuentro"
     }
   ]
 }
