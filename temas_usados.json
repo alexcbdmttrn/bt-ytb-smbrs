@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "entidad",
-      "lugar": "carretera",
-      "contexto": "encuentro"
-    },
-    {
       "tipo": "fantasma",
       "lugar": "centro comercial",
       "contexto": "encuentro"
@@ -34,6 +29,11 @@
       "tipo": "entidad",
       "lugar": "autopista",
       "contexto": "encuentro"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "sotano",
+      "contexto": "ronda nocturna"
     }
   ]
 }
