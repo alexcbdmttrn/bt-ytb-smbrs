@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "luz",
-      "lugar": "autopista",
-      "contexto": "persecucion"
-    },
-    {
       "tipo": "entidad",
       "lugar": "autopista",
       "contexto": "intervención"
@@ -33,6 +28,11 @@
     {
       "tipo": "fantasma",
       "lugar": "centro comercial",
+      "contexto": "encuentro"
+    },
+    {
+      "tipo": "sombra",
+      "lugar": "hospital",
       "contexto": "encuentro"
     }
   ]
