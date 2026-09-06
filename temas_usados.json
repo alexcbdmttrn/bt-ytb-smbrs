@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "entidad",
-      "lugar": "autopista",
-      "contexto": "intervención"
-    },
-    {
       "tipo": "ente",
       "lugar": "brecha",
       "contexto": "intervencion"
@@ -34,6 +29,11 @@
       "tipo": "sombra",
       "lugar": "hospital",
       "contexto": "encuentro"
+    },
+    {
+      "tipo": "aparición",
+      "lugar": "panteón",
+      "contexto": "ronda nocturna"
     }
   ]
 }
