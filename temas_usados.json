@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "sombra",
-      "lugar": "condominio",
-      "contexto": "ronda nocturna"
-    },
-    {
       "tipo": "luz",
       "lugar": "autopista",
       "contexto": "persecucion"
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "taxi",
       "contexto": "pasajero desaparecido"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "centro comercial",
+      "contexto": "encuentro"
     }
   ]
 }
