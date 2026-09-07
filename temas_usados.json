@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "entidad",
-      "lugar": "autopista",
-      "contexto": "encuentro"
-    },
-    {
       "tipo": "fantasma",
       "lugar": "sotano",
       "contexto": "ronda nocturna"
@@ -34,6 +29,11 @@
       "tipo": "aparición",
       "lugar": "autopista",
       "contexto": "persecución"
+    },
+    {
+      "tipo": "entidad sin rostro",
+      "lugar": "estacionamiento de centro comercial",
+      "contexto": "ronda nocturna"
     }
   ]
 }
