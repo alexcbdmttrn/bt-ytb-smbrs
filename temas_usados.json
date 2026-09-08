@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "sotano",
-      "contexto": "ronda nocturna"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "taxi",
       "contexto": "pasajero desaparecido"
     },
@@ -34,6 +29,11 @@
       "tipo": "entidad sin rostro",
       "lugar": "estacionamiento de centro comercial",
       "contexto": "ronda nocturna"
+    },
+    {
+      "tipo": "fantasma",
+      "lugar": "hospital",
+      "contexto": "archivo"
     }
   ]
 }
