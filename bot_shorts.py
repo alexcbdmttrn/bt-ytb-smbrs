@@ -43,15 +43,15 @@ TITULOS_FILE = "titulos_shorts_publicados.json"
 TEMAS_FILE = "temas_usados.json"
 MAX_TEMAS_HISTORIAL = 7
 ACTIVAR_DISCLOSURE_IA = True
-DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
+DISCLOSURE_TEXT = "\n Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
 # 🧠 CONFIGURACIÓN DE PUBLICACIÓN (3 AL DÍA - HORARIOS ALEATORIOS)
 # ================================================================
-MAX_SHORTS_DIA = 3  # CORREGIDO: Ahora 3 shorts por día
-INTERVALO_MIN_HORAS = 3  # Reducido para permitir 3 publicaciones
-INTERVALO_MAX_HORAS = 6  # Reducido para permitir 3 publicaciones
-RETRASO_MAX_MINUTOS = 45  # Aumentado para más variabilidad
+MAX_SHORTS_DIA = 3
+INTERVALO_MIN_HORAS = 3
+INTERVALO_MAX_HORAS = 6
+RETRASO_MAX_MINUTOS = 45
 
 # ================================================================
 # VALIDAR PEXELS API KEY (SIN "Bearer")
@@ -67,7 +67,7 @@ def validar_pexels_api_key():
             print("✅ API Key de Pexels válida.")
             return True
         else:
-            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
+            print(f"️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
         print(f"⚠️ Error probando API Key: {e}")
@@ -82,32 +82,26 @@ def deberia_publicar_ahora(estado):
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
     fecha_hoy = hoy.isoformat()
 
-    # 1. Reiniciar contador diario
     if estado.get("fecha") != fecha_hoy:
         estado["fecha"] = fecha_hoy
         estado["publicaciones_hoy"] = 0
         print(f"📅 Nuevo día. Contador reiniciado.")
 
-    # 2. Verificar límite de 3 publicaciones
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
         print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
         return False
 
-    # 3. Verificar intervalo desde la última publicación
     ultima_hora = estado.get("ultima_publicacion")
     if ultima_hora:
         ultima_hora = datetime.fromisoformat(ultima_hora)
         hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
         diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
         
-        # Intervalo dinámico según cuántos shorts faltan
         shorts_restantes = MAX_SHORTS_DIA - publicadas_hoy
         if shorts_restantes == 1:
-            # Último short del día: intervalo más largo
             intervalo_requerido = random.uniform(5, 8)
         else:
-            # Shorts intermedios: intervalo medio
             intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
         
         if diff_horas < intervalo_requerido:
@@ -118,10 +112,8 @@ def deberia_publicar_ahora(estado):
         else:
             print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
 
-    # 4. Decisión de publicar
     print(f"✅ Decisión: Publicar. (Short {publicadas_hoy + 1}/{MAX_SHORTS_DIA} del día)")
 
-    # 5. Retraso aleatorio para evitar horas exactas
     retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
     if retraso_segundos > 0:
         print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
@@ -445,6 +437,167 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
+#  CREAR MINIATURA PROFESIONAL PARA SHORTS (PRIMERA IMAGEN)
+# ================================================================
+def crear_miniatura_shorts_profesional(img_path, texto, output_path):
+    """
+    Crea una miniatura profesional para la PRIMERA imagen del Short con:
+    - Texto grande y legible
+    - Fondo oscuro semitransparente
+    - Contorno grueso negro
+    - Sombra pronunciada
+    - Máximo impacto visual
+    """
+    colores_impacto = [
+        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},
+        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},
+        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},
+        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},
+        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},
+        {"texto": (255, 0, 255), "fondo": (0, 0, 0)},
+    ]
+    
+    color_elegido = random.choice(colores_impacto)
+    color_texto = color_elegido["texto"]
+    
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]
+    
+    try:
+        with Image.open(img_path) as img:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            img = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
+            draw = ImageDraw.Draw(img)
+            width, height = img.size
+            
+            texto_final = texto.upper().strip()
+            palabras = texto_final.split()
+            
+            if len(palabras) > 3:
+                mitad = len(palabras) // 2
+                linea1 = " ".join(palabras[:mitad])
+                linea2 = " ".join(palabras[mitad:])
+                lineas = [linea1, linea2]
+            else:
+                lineas = [texto_final]
+            
+            font_size = 100
+            font = None
+            
+            for size in range(140, 60, -5):
+                try:
+                    font = ImageFont.truetype(font_paths[0], size)
+                    max_width = 0
+                    total_height = 0
+                    for linea in lineas:
+                        bbox = draw.textbbox((0, 0), linea, font=font)
+                        w = bbox[2] - bbox[0]
+                        h = bbox[3] - bbox[1]
+                        max_width = max(max_width, w)
+                        total_height += h + 20
+                    
+                    if max_width < width * 0.85 and total_height < height * 0.35:
+                        font_size = size
+                        break
+                except:
+                    continue
+            
+            if font is None:
+                try:
+                    font = ImageFont.truetype(font_paths[0], font_size)
+                except:
+                    font = ImageFont.load_default()
+            
+            total_height = 0
+            for linea in lineas:
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                h = bbox[3] - bbox[1]
+                total_height += h + 20
+            
+            y_start = (height - total_height) // 2 + 100
+            
+            padding = 40
+            max_line_width = 0
+            for linea in lineas:
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                w = bbox[2] - bbox[0]
+                max_line_width = max(max_line_width, w)
+            
+            rect_x = (width - max_line_width) // 2 - padding
+            rect_y = y_start - padding
+            rect_w = max_line_width + (padding * 2)
+            rect_h = total_height + (padding * 2)
+            
+            draw.rectangle(
+                [rect_x, rect_y, rect_x + rect_w, rect_y + rect_h],
+                fill=(0, 0, 0, 220)
+            )
+            
+            y_current = y_start
+            for linea in lineas:
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                w = bbox[2] - bbox[0]
+                h = bbox[3] - bbox[1]
+                x = (width - w) // 2
+                
+                for offset in range(-6, 7):
+                    for offset_y in range(-6, 7):
+                        if offset != 0 or offset_y != 0:
+                            draw.text(
+                                (x + offset, y_current + offset_y),
+                                linea,
+                                font=font,
+                                fill=(0, 0, 0, 220)
+                            )
+                
+                for dx in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]:
+                    for dy in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]:
+                        draw.text(
+                            (x + dx, y_current + dy),
+                            linea,
+                            font=font,
+                            fill=(0, 0, 0)
+                        )
+                
+                draw.text(
+                    (x, y_current),
+                    linea,
+                    font=font,
+                    fill=color_texto
+                )
+                
+                y_current += h + 20
+            
+            overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
+            
+            for i in range(250):
+                alpha = int(180 * (i / 250))
+                draw_overlay.rectangle(
+                    [i, i, width-i, height-i],
+                    fill=(0, 0, 0, alpha//5)
+                )
+            
+            img = Image.alpha_composite(img.convert('RGBA'), overlay)
+            img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
+            
+            print(f"✅ Miniatura profesional Shorts creada: {output_path}")
+            print(f"   📝 Texto: '{texto}'")
+            print(f"   🎨 Color: {color_texto}")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Error creando miniatura Shorts: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# ================================================================
 # EXPANDIR / TRUNCAR TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
@@ -530,10 +683,10 @@ FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
 
 🎯 PALABRAS DE PORTADA (máx 2 palabras)
 🎯 DESCRIPCIÓN SEO
-🎯 TAGS (10-15)
+ TAGS (10-15)
 🎯 AÑO DEL SUCESO
 
-🚫 TÍTULOS YA PUBLICADOS:
+ TÍTULOS YA PUBLICADOS:
 {titulos_referencia}
 
 {temas_bloqueo}
@@ -823,7 +976,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
                     print("❌ API key inválida.")
                     break
         except Exception as e:
-            print(f"⚠️ Error conexión Pexels: {e}")
+            print(f"️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
             print(f"   ⏳ Esperando 5s...")
             time.sleep(5)
@@ -970,19 +1123,20 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, perfil, ubicac
     return resultados
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO (CON MINIATURA PROFESIONAL EN PRIMERA IMAGEN)
 # ================================================================
-def montar_video_shorts(recursos, fondo_path, salida="short_final.mp4"):
+def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_final.mp4"):
     if not recursos:
         raise ValueError("No hay recursos para montar el video")
 
     clips_video, clips_audio = [], []
+    
     for i, recurso in enumerate(recursos):
         try:
             audio_clip = AudioFileClip(recurso["audio_path"])
             clips_audio.append(audio_clip)
         except Exception as e:
-            print(f"⚠️ Error cargando audio {i}: {e}")
+            print(f"️ Error cargando audio {i}: {e}")
             continue
 
         try:
@@ -997,9 +1151,23 @@ def montar_video_shorts(recursos, fondo_path, salida="short_final.mp4"):
             else:
                 img_path = recurso["imagen_url"]
 
-            with Image.open(img_path) as img:
-                img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
-                img_fitted.save(img_path)
+            # ============================================
+            # PRIMERA IMAGEN: Miniatura profesional clickable
+            # ============================================
+            if i == 0 and palabras_portada:
+                print(f" Aplicando miniatura profesional a la PRIMERA imagen...")
+                img_path_procesada = f"temp_short_{i}_pro.jpg"
+                if crear_miniatura_shorts_profesional(img_path, palabras_portada, img_path_procesada):
+                    img_path = img_path_procesada
+                else:
+                    with Image.open(img_path) as img:
+                        img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
+                        img_fitted.save(img_path)
+            else:
+                # Otras imágenes: solo redimensionar
+                with Image.open(img_path) as img:
+                    img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
+                    img_fitted.save(img_path)
 
             duracion = recurso["duracion"]
             video_clip = ImageClip(img_path).set_duration(duracion)
@@ -1094,7 +1262,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
 
 📖 {fuente_relato}
 
-📱 Facebook: {FACEBOOK_LINK}
+ Facebook: {FACEBOOK_LINK}
 
 {hashtags_descripcion}"""
 
@@ -1124,7 +1292,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         print(f"✅ Short subido: https://youtu.be/{video_id}")
         return video_id
     except Exception as e:
-        print(f"❌ Error subiendo a YouTube: {e}")
+        print(f" Error subiendo a YouTube: {e}")
         sys.exit(1)
 
 # ================================================================
@@ -1181,7 +1349,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS (3 al día - Horarios aleatorios)")
+    print(" Iniciando Bot de SHORTS (3 al día - Horarios aleatorios)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']}")
 
@@ -1217,6 +1385,7 @@ def main():
     ubicacion = ESTADO_HISTORIA_SHORTS
     paleta = PALETA_COLOR_ACTUAL
     estilo = ESTILO_VISUAL_ACTUAL
+    palabras_portada = historia_raw.get("palabras_portada", "TERROR")
 
     print(f"\n📊 RESUMEN SEO:")
     print(f"   🏷️ Título: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
@@ -1226,6 +1395,7 @@ def main():
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
     print(f"   🧩 Hashtags: {historia_raw['hashtags_descripcion']}")
+    print(f"    Texto portada: {palabras_portada}")
     if "tema" in historia_raw:
         print(f"   🧩 Tema: {historia_raw['tema']}")
     print(f"\n   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
@@ -1253,12 +1423,12 @@ def main():
         sys.exit(1)
 
     try:
-        video_final = montar_video_shorts(recursos, fondo_path)
+        video_final = montar_video_shorts(recursos, fondo_path, palabras_portada)
     except Exception as e:
-        print(f"❌ Error montando video: {e}")
+        print(f" Error montando video: {e}")
         sys.exit(1)
 
-    print(f"\n🚀 Subiendo Short a YouTube...")
+    print(f"\n Subiendo Short a YouTube...")
     video_id_youtube = subir_a_youtube(
         video_path=video_final,
         titulo=historia_raw["titulo"],
@@ -1288,7 +1458,7 @@ def main():
 {historia_raw['contexto_descripcion']}
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
 📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real.')}
-📱 Síguenos: {FACEBOOK_LINK}
+ Síguenos: {FACEBOOK_LINK}
 {historia_raw['hashtags_descripcion']}"""
             enviar_a_make(
                 titulo=historia_raw["titulo"],
