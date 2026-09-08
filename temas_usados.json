@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "fantasma",
-      "lugar": "centro comercial",
-      "contexto": "encuentro"
-    },
-    {
       "tipo": "sombra",
       "lugar": "hospital",
       "contexto": "encuentro"
@@ -34,6 +29,11 @@
       "tipo": "ritual_tiktok",
       "lugar": "cementerio",
       "contexto": "ritual"
+    },
+    {
+      "tipo": "numero_maldito",
+      "lugar": "casa vacia",
+      "contexto": "telefono"
     }
   ]
 }
