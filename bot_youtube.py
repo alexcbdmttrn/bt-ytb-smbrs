@@ -48,7 +48,7 @@ DURACION_MINIMA_SEGUNDOS = 480  # 8 minutos
 MAX_INTENTOS_EXPANSION = 2
 
 ACTIVAR_DISCLOSURE_IA = True
-DISCLOSURE_TEXT = "\n\n🤖 Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
+DISCLOSURE_TEXT = "\n\n Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
 
 # ================================================================
 # 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA (VIDEOS LARGOS)
@@ -64,7 +64,7 @@ RETRASO_MAX_MINUTOS = 45
 UMBRAL_DEMANDA_VIEWS = 10000
 
 # ================================================================
-# 🧠 DECISIONES DE PUBLICACIÓN
+#  DECISIONES DE PUBLICACIÓN
 # ================================================================
 def deberia_publicar_ahora(estado):
     """Decide si publicar hoy con comportamiento humano."""
@@ -79,7 +79,7 @@ def deberia_publicar_ahora(estado):
             print("🛌 Día de descanso activado. No se publicará nada hoy.")
         else:
             estado["dia_descanso"] = None
-        print(f"📅 Nuevo día. Contador reiniciado.")
+        print(f" Nuevo día. Contador reiniciado.")
 
     if estado.get("dia_descanso") == fecha_hoy:
         return False
@@ -132,7 +132,7 @@ def validar_pexels_api_key():
             print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"⚠️ Error probando API Key: {e}")
+        print(f"️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
@@ -186,7 +186,7 @@ def verificar_demanda_youtube(tema, umbral_views=UMBRAL_DEMANDA_VIEWS):
             print(f"⛔ Demanda baja (promedio < {umbral_views:,}). Cancelando publicación.")
             return False
     except Exception as e:
-        print(f"⚠️ Error verificando demanda: {e}")
+        print(f"️ Error verificando demanda: {e}")
         # Si falla, asumimos que hay demanda para no bloquear
         return True
 
@@ -215,7 +215,7 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # VOCES NEURALES (con fallback automático)
@@ -377,7 +377,7 @@ def seleccionar_fondo_disponible():
                 full_path = os.path.join(root, fondo)
                 print(f"⚠️ Fallback: {full_path}")
                 return full_path
-    print("⚠️ No se encontró ningún archivo de fondo.")
+    print("️ No se encontró ningún archivo de fondo.")
     return None
 
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
@@ -568,7 +568,7 @@ def generar_historia_completa():
     prompt_base = f"""
 Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para YouTube.
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
+ TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
 {titulos_referencia}
 
 🚫 TEMAS YA PUBLICADOS (EVITAR ESTAS TEMÁTICAS):
@@ -662,7 +662,7 @@ Responde ESTRICTAMENTE en este JSON:
 
                 # Validación de gancho (filtro 1 básico)
                 if not validar_titulo_gancho(titulo_generado):
-                    print(f"⚠️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
+                    print(f"️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
 
                 # Evaluación de claridad con DeepSeek (filtro 1 extra)
@@ -678,7 +678,7 @@ Responde ESTRICTAMENTE en este JSON:
                 if keywords:
                     tema = " ".join(keywords)
                     if tema_ya_usado(tema):
-                        print(f"⚠️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
+                        print(f"️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
                         raise ValueError("Tema duplicado")
 
                 anio_suceso = data.get("anio_suceso", None)
@@ -687,7 +687,7 @@ Responde ESTRICTAMENTE en este JSON:
                 print(f"🏷️ Título GANCHO: {titulo_generado}")
                 return data
             else:
-                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
+                print(f"️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
                 raise ValueError("Texto insuficiente")
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
@@ -855,9 +855,9 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
         except requests.exceptions.Timeout:
-            print("⏰ Timeout en Pexels. Reintentando...")
+            print(" Timeout en Pexels. Reintentando...")
         except Exception as e:
-            print(f"⚠️ Error conexión Pexels: {e}")
+            print(f"️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
             print(f"   ⏳ Esperando 5s antes de reintentar...")
             time.sleep(5)
@@ -865,30 +865,82 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
     print("❌ No se pudo obtener imagen de Pexels.")
     return None
 
-def buscar_miniatura_pexels(query, intentos=3):
+# ================================================================
+# 🖼️ BUSCAR MINIATURA EN PEXELS (MEJORADA - CON ESPACIO PARA TEXTO)
+# ================================================================
+def buscar_miniatura_pexels(query, intentos=5):
+    """
+    Busca imágenes específicamente para miniaturas con espacio para texto.
+    """
+    # Palabras clave que ayudan a encontrar imágenes con espacio para texto
+    variantes_texto = [
+        "empty space", "copy space", "negative space", 
+        "dark background", "blurry background", "minimal"
+    ]
+    
     url = "https://api.pexels.com/v1/search"
     headers = {"Authorization": PEXELS_API_KEY}
+    
+    for intento in range(intentos):
+        try:
+            # Agregar variante aleatoria para espacio de texto
+            variante = random.choice(variantes_texto)
+            query_completa = f"{query} {variante}"
+            
+            params = {
+                "query": query_completa,
+                "orientation": "landscape",
+                "per_page": 10,
+                "page": random.randint(1, 5),
+                "size": "large"
+            }
+            
+            print(f"🔍 Intento {intento+1}/{intentos}: '{query_completa}'...")
+            r = requests.get(url, headers=headers, params=params, timeout=25)
+            
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("photos") and len(data["photos"]) > 0:
+                    # Buscar la imagen con mejor espacio para texto
+                    for foto in data["photos"][:5]:
+                        # Preferir imágenes oscuras o con espacio vacío
+                        img_url = foto["src"]["large2x"] or foto["src"]["large"]
+                        
+                        # Descargar y verificar que sea usable
+                        try:
+                            r_img = requests.get(img_url, timeout=10)
+                            if r_img.status_code == 200:
+                                print(f"✅ Miniatura encontrada: {img_url[:80]}...")
+                                return img_url
+                        except:
+                            continue
+                    
+            else:
+                print(f"⚠️ Error Pexels: {r.status_code}")
+                
+        except Exception as e:
+            print(f"⚠️ Error: {e}")
+        
+        if intento < intentos - 1:
+            time.sleep(3)
+    
+    # Fallback: buscar sin variantes
+    print("⚠️ Usando búsqueda de fallback...")
     params = {
         "query": query,
         "orientation": "landscape",
         "per_page": 5,
-        "page": random.randint(1, 3)
+        "page": 1
     }
-    for intento in range(intentos):
-        try:
-            print(f"🔍 Intento {intento+1}/{intentos} buscando miniatura en Pexels: '{query}'...")
-            r = requests.get(url, headers=headers, params=params, timeout=25)
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("photos") and len(data["photos"]) > 0:
-                    return random.choice(data["photos"])["src"]["large2x"] or random.choice(data["photos"])["src"]["large"]
-            else:
-                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
-        except Exception as e:
-            print(f"⚠️ Error conexión Pexels: {e}")
-        if intento < intentos - 1:
-            print("⏳ Esperando 5s...")
-            time.sleep(5)
+    try:
+        r = requests.get(url, headers=headers, params=params, timeout=25)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get("photos"):
+                return data["photos"][0]["src"]["large2x"]
+    except:
+        pass
+    
     return None
 
 # ================================================================
@@ -929,111 +981,197 @@ Devuelve SOLO el texto de continuación.
     return ""
 
 # ================================================================
-# DIBUJAR TEXTO EN MINIATURA CON PIL (MEJORADA - FILTRO 3)
+# 🎨 CREAR MINIATURA PROFESIONAL TIPO YOUTUBE (MEJORADA)
 # ================================================================
-def dibujar_texto_miniatura(img_path, texto, output_path):
+def crear_miniatura_profesional(img_path, texto, output_path):
     """
-    Crea una miniatura atractiva con texto grande, sombra y un círculo o rectángulo de fondo.
+    Crea una miniatura profesional con:
+    - Texto grande y legible
+    - Fondo oscuro semitransparente
+    - Contorno grueso negro
+    - Sombra pronunciada
+    - Posicionamiento optimizado
     """
-    colores_texto = [
-        (255, 50, 50), (180, 0, 255), (255, 255, 0), (255, 140, 0),
-        (255, 255, 255), (0, 0, 0), (0, 200, 255), (255, 0, 200), (50, 255, 50),
+    # Colores vibrantes para máximo impacto
+    colores_impacto = [
+        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},      # Amarillo brillante
+        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},      # Rojo brillante
+        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},      # Naranja
+        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},      # Cyan
+        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},    # Blanco
+        {"texto": (255, 0, 255), "fondo": (0, 0, 0)},      # Magenta
     ]
-    color_fill = random.choice(colores_texto)
-    brillo = sum(color_fill) / 3
-    color_outline = (255, 255, 255) if brillo < 128 else (0, 0, 0)
-
+    
+    color_elegido = random.choice(colores_impacto)
+    color_texto = color_elegido["texto"]
+    color_fondo = color_elegido["fondo"]
+    
+    # Rutas de fuentes
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "arial.ttf"
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
     ]
-    font = None
-    for fp in font_paths:
-        try:
-            font = ImageFont.truetype(fp, 120)
-            break
-        except:
-            continue
-    if font is None:
-        font = ImageFont.load_default()
-
-    with Image.open(img_path) as img:
-        img = img.convert("RGBA")
-        w, h = img.size
-
-        # Texto a dibujar (mayúsculas)
-        texto_limpio = texto.upper().strip()
-        palabras = texto_limpio.split()
-        if len(palabras) > 3:
-            mitad = len(palabras) // 2
-            linea1 = " ".join(palabras[:mitad])
-            linea2 = " ".join(palabras[mitad:])
-            lineas = [linea1, linea2]
-        else:
-            lineas = [texto_limpio]
-
-        # Ajustar tamaño de fuente
-        font_size = 120
-        for intento in range(5):
-            try:
-                font = ImageFont.truetype(font_paths[0], font_size)
-            except:
-                font = ImageFont.load_default()
-            max_w = 0
-            total_h = 0
-            for lin in lineas:
-                bbox = ImageDraw.Draw(Image.new('RGBA', (1,1))).textbbox((0,0), lin, font=font)
-                w_lin = bbox[2] - bbox[0]
-                h_lin = bbox[3] - bbox[1]
-                if w_lin > max_w:
-                    max_w = w_lin
-                total_h += h_lin + 10
-            if max_w > w * 0.8:
-                font_size = int(font_size * 0.9)
-            elif max_w < w * 0.25:
-                font_size = int(font_size * 1.1)
+    
+    # Cargar la imagen base
+    try:
+        with Image.open(img_path) as img:
+            # Asegurar formato RGB
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Redimensionar a 1280x720 (HD YouTube)
+            img = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
+            
+            # Crear capa para dibujar
+            draw = ImageDraw.Draw(img)
+            width, height = img.size
+            
+            # Preparar texto (MAYÚSCULAS para impacto)
+            texto_final = texto.upper().strip()
+            
+            # Dividir en 2 líneas si es muy largo
+            palabras = texto_final.split()
+            if len(palabras) > 4:
+                mitad = len(palabras) // 2
+                linea1 = " ".join(palabras[:mitad])
+                linea2 = " ".join(palabras[mitad:])
+                lineas = [linea1, linea2]
             else:
-                break
-
-        try:
-            font = ImageFont.truetype(font_paths[0], font_size)
-        except:
-            font = ImageFont.load_default()
-
-        draw = ImageDraw.Draw(img)
-        y_offset = (h - total_h) // 2
-        x_base = int(w * 0.55)
-
-        # Dibujar fondo semitransparente para legibilidad
-        rect_width = int(w * 0.4)
-        rect_height = total_h + 60
-        rect_x = w - rect_width - 20
-        rect_y = (h - rect_height) // 2
-        draw.rectangle([rect_x, rect_y, w-10, rect_y+rect_height], fill=(0, 0, 0, 150))
-
-        for lin in lineas:
-            bbox = draw.textbbox((0,0), lin, font=font)
-            w_lin = bbox[2] - bbox[0]
-            h_lin = bbox[3] - bbox[1]
-            x = x_base + (w - x_base - w_lin) // 2
-            y = y_offset
-
-            # Sombra
-            for dx in range(-6, 7):
-                for dy in range(-6, 7):
-                    if dx == 0 and dy == 0:
-                        continue
-                    if abs(dx) > 4 or abs(dy) > 4:
-                        draw.text((x+dx, y+dy), lin, font=font, fill=(0, 0, 0, 180))
-                    else:
-                        draw.text((x+dx, y+dy), lin, font=font, fill=color_outline)
-            draw.text((x, y), lin, font=font, fill=color_fill)
-            y_offset += h_lin + 15
-
-        img.convert("RGB").save(output_path, "JPEG", quality=95)
-    print(f"✅ Miniatura mejorada con texto '{texto}' guardada en {output_path}")
+                lineas = [texto_final]
+            
+            # Encontrar el tamaño de fuente óptimo
+            font_size = 90
+            font = None
+            
+            for size in range(120, 40, -5):
+                try:
+                    font = ImageFont.truetype(font_paths[0], size)
+                    # Verificar que quepa
+                    max_width = 0
+                    total_height = 0
+                    for linea in lineas:
+                        bbox = draw.textbbox((0, 0), linea, font=font)
+                        w = bbox[2] - bbox[0]
+                        h = bbox[3] - bbox[1]
+                        max_width = max(max_width, w)
+                        total_height += h + 15
+                    
+                    if max_width < width * 0.9 and total_height < height * 0.5:
+                        font_size = size
+                        break
+                except:
+                    continue
+            
+            # Si no encontró fuente, usar la por defecto
+            if font is None:
+                try:
+                    font = ImageFont.truetype(font_paths[0], font_size)
+                except:
+                    font = ImageFont.load_default()
+            
+            # Calcular posición centrada
+            total_height = 0
+            heights = []
+            for linea in lineas:
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                h = bbox[3] - bbox[1]
+                heights.append(h)
+                total_height += h + 15
+            
+            # Posición: centro vertical con un poco hacia abajo
+            y_start = (height - total_height) // 2 + 50
+            
+            # Crear fondo oscuro semitransparente detrás del texto
+            padding = 30
+            max_line_width = 0
+            for linea in lineas:
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                w = bbox[2] - bbox[0]
+                max_line_width = max(max_line_width, w)
+            
+            rect_x = (width - max_line_width) // 2 - padding
+            rect_y = y_start - padding
+            rect_w = max_line_width + (padding * 2)
+            rect_h = total_height + (padding * 2)
+            
+            # Dibujar rectángulo de fondo (negro semitransparente)
+            draw.rectangle(
+                [rect_x, rect_y, rect_x + rect_w, rect_y + rect_h],
+                fill=(0, 0, 0, 200)
+            )
+            
+            # Dibujar cada línea con contorno y sombra
+            y_current = y_start
+            for linea in lineas:
+                # Obtener dimensiones
+                bbox = draw.textbbox((0, 0), linea, font=font)
+                w = bbox[2] - bbox[0]
+                h = bbox[3] - bbox[1]
+                
+                # Centrar horizontalmente
+                x = (width - w) // 2
+                
+                # Sombra muy pronunciada (offset grande)
+                for offset in range(-5, 6):
+                    for offset_y in range(-5, 6):
+                        if offset != 0 or offset_y != 0:
+                            draw.text(
+                                (x + offset, y_current + offset_y),
+                                linea,
+                                font=font,
+                                fill=(0, 0, 0, 200)
+                            )
+                
+                # Contorno grueso negro (4 píxeles en cada dirección)
+                for dx in [-4, -3, -2, -1, 1, 2, 3, 4]:
+                    for dy in [-4, -3, -2, -1, 1, 2, 3, 4]:
+                        draw.text(
+                            (x + dx, y_current + dy),
+                            linea,
+                            font=font,
+                            fill=(0, 0, 0)
+                        )
+                
+                # Texto principal en color brillante
+                draw.text(
+                    (x, y_current),
+                    linea,
+                    font=font,
+                    fill=color_texto
+                )
+                
+                y_current += h + 15
+            
+            # Agregar viñeta oscura en las esquinas (efecto cinematográfico)
+            overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
+            
+            # Esquinas oscuras
+            for i in range(200):
+                alpha = int(150 * (i / 200))
+                draw_overlay.rectangle(
+                    [i, i, width-i, height-i],
+                    fill=(0, 0, 0, alpha//4)
+                )
+            
+            # Combinar con la imagen original
+            img = Image.alpha_composite(img.convert('RGBA'), overlay)
+            
+            # Guardar como JPG de alta calidad
+            img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
+            
+            print(f"✅ Miniatura profesional creada: {output_path}")
+            print(f"   📝 Texto: '{texto}'")
+            print(f"   🎨 Color: {color_texto}")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Error creando miniatura: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 # ================================================================
 # GENERAR AUDIO CON FALLBACK
@@ -1061,11 +1199,11 @@ def generar_audio(texto, index, intentos_por_voz=2):
                 asyncio.run(_generar())
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
                     if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f"🔄 Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
+                        print(f" Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
                     CONFIG_VOZ_ACTUAL = voz_config
                     return filename
             except Exception as e:
-                print(f"❌ Falló {voz}: {e}")
+                print(f" Falló {voz}: {e}")
             if intento < intentos_por_voz - 1:
                 time.sleep(3 * (intento + 1))
     if os.path.exists(filename):
@@ -1158,7 +1296,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, 
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    if capitulos and "⏰ Capítulos" not in descripcion:
+    if capitulos and " Capítulos" not in descripcion:
         capitulos_texto = "\n⏰ Capítulos del relato:\n"
         for cap in capitulos:
             capitulos_texto += f"{cap['tiempo']} - {cap['titulo']}\n"
@@ -1295,15 +1433,15 @@ def main():
     print("👻 SOMBRAS DE MEDIANOCHE - BOT VIDEOS LARGOS (HORIZONTAL 16:9)")
     print("   ✦ Títulos gancho (validación automática + evaluación de claridad)")
     print("   ✦ Imágenes HORIZONTALES 16:9 para YouTube")
-    print("   ✦ Miniaturas con texto mejorado (filtro 3)")
-    print("   ✦ Verificación de demanda real en YouTube (filtro 2)")
+    print("   ✦ Miniaturas profesionales tipo YouTube (sin texto cortado)")
+    print("    Verificación de demanda real en YouTube (filtro 2)")
     print("   ✦ Capítulos con timestamps realistas")
     print("="*70)
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
-    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
-    print(f"🎵 Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
+    print(f" Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
+    print(f" Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-"*70)
 
@@ -1318,7 +1456,7 @@ def main():
     keywords = historia.get("palabras_clave", [])
 
     # ============================================================
-    # 🧠 VERIFICAR DEMANDA REAL (FILTRO 2)
+    #  VERIFICAR DEMANDA REAL (FILTRO 2)
     # ============================================================
     if keywords:
         tema_busqueda = keywords[0]
@@ -1339,7 +1477,7 @@ def main():
 {hashtags_video}"""
 
     print(f"\n📊 SEO GENERADO:")
-    print(f"   🏷️ Título GANCHO: {titulo_video}")
+    print(f"   ️ Título GANCHO: {titulo_video}")
     print(f"   🖼️ Texto miniatura: {palabras_portada}")
     print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
     print(f"   📚 Capítulos: {len(capitulos_video)}")
@@ -1379,53 +1517,50 @@ def main():
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
     # ============================================================
-    # 🖼️ GENERAR MINIATURA HORIZONTAL (FILTRO 3)
+    # ️ GENERAR MINIATURA PROFESIONAL (NUEVO)
     # ============================================================
-    print("🖼️ Buscando miniatura HORIZONTAL en Pexels y aplicando texto con PIL...")
+    print("🖼️ Creando miniatura profesional tipo YouTube...")
     miniatura_path = None
-
-    query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night dark landscape"))
+    
+    query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night"))
     miniatura_base_url = buscar_miniatura_pexels(query_miniatura)
 
     if miniatura_base_url:
         try:
+            # Descargar imagen base
             r = requests.get(miniatura_base_url, timeout=30)
             r.raise_for_status()
+            
             temp_base = "miniatura_base.jpg"
             with open(temp_base, "wb") as f:
                 f.write(r.content)
-            with Image.open(temp_base) as img:
-                img_resized = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
-                img_resized.save(temp_base)
-
-            dibujar_texto_miniatura(temp_base, palabras_portada, "miniatura.jpg")
-            miniatura_path = "miniatura.jpg"
-            print(f"✅ Miniatura HORIZONTAL con texto '{palabras_portada}' generada.")
-
+            
+            # Crear miniatura profesional
+            if crear_miniatura_profesional(temp_base, palabras_portada, "miniatura.jpg"):
+                miniatura_path = "miniatura.jpg"
+                print(f"✅ Miniatura profesional generada con texto: '{palabras_portada}'")
+            else:
+                # Fallback: solo guardar la imagen sin texto
+                import shutil
+                shutil.copy(temp_base, "miniatura.jpg")
+                miniatura_path = "miniatura.jpg"
+                print(f"️ Miniatura guardada sin texto")
+            
+            # Limpiar temporal
             if os.path.exists(temp_base):
                 os.remove(temp_base)
-
+                
         except Exception as e:
-            print(f"⚠️ Error generando miniatura con PIL: {e}")
-            import traceback
-            traceback.print_exc()
-            try:
-                if os.path.exists("miniatura_base.jpg"):
-                    with Image.open("miniatura_base.jpg") as img:
-                        img.save("miniatura.jpg", "JPEG", quality=85)
-                    miniatura_path = "miniatura.jpg"
-                    print(f"⚠️ Fallback: miniatura guardada SIN texto")
-            except Exception as e2:
-                print(f"❌ Fallback también falló: {e2}")
-                miniatura_path = None
+            print(f"️ Error con miniatura: {e}")
+            miniatura_path = None
     else:
-        print("❌ No se pudo encontrar la imagen base de la miniatura en Pexels.")
+        print("❌ No se pudo obtener imagen para miniatura.")
         miniatura_path = None
 
     # ============================================================
     # MONTAJE Y SUBIDA
     # ============================================================
-    print("🎬 Montando video HORIZONTAL (1920x1080)...")
+    print(" Montando video HORIZONTAL (1920x1080)...")
     video_path, duracion_final = montar_video(elementos_validos)
     duracion_minutos = duracion_final / 60
     print(f"⏱️ Duración final: {duracion_minutos:.1f} minutos")
@@ -1457,7 +1592,7 @@ def main():
     guardar_estado_musica(estado_publicacion)
 
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado (video HORIZONTAL 16:9 + miniatura mejorada + filtros de Yayas).")
+    print(" Proceso completado (video HORIZONTAL 16:9 + miniatura profesional + filtros de Yayas).")
 
 if __name__ == "__main__":
     try:
