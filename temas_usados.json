@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "fantasma",
-      "lugar": "taxi",
-      "contexto": "pasajero desaparecido"
-    },
-    {
-      "tipo": "fantasma",
       "lugar": "centro comercial",
       "contexto": "encuentro"
     },
@@ -34,6 +29,11 @@
       "tipo": "fantasma",
       "lugar": "hospital",
       "contexto": "archivo"
+    },
+    {
+      "tipo": "ritual_tiktok",
+      "lugar": "cementerio",
+      "contexto": "ritual"
     }
   ]
 }
