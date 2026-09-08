@@ -1,6 +1,7 @@
 import asyncio
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
+from PIL import ImageEnhance
 import json
 import json5
 import os
@@ -18,7 +19,7 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
 )
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
 import requests
 import edge_tts
 import urllib3
@@ -48,23 +49,123 @@ DURACION_MINIMA_SEGUNDOS = 480  # 8 minutos
 MAX_INTENTOS_EXPANSION = 2
 
 ACTIVAR_DISCLOSURE_IA = True
-DISCLOSURE_TEXT = "\n\n Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
+DISCLOSURE_TEXT = "\n\n🤖 Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
+
+# ================================================================
+# 🎯 TEMAS VIRALES 2024 (ADAPTADOS PARA VIDEOS LARGOS)
+# ================================================================
+TEMAS_VIRALES_LARGOS = [
+    {
+        "tema": "backrooms_exploracion",
+        "titulo_base": "Exploré los Backrooms de {lugar} durante {horas} horas",
+        "keywords": ["backrooms", "liminal spaces", "dimensiones paralelas", "atrapado", "infinito"],
+        "contextos": ["hotel abandonado", "centro comercial vacío", "túneles subterráneos", "edificio abandonado"],
+        "duracion_objetivo": 600,  # 10 minutos
+        "busquedas": 450000
+    },
+    {
+        "tema": "skinwalker_persiguiendo",
+        "titulo_base": "Un Skinwalker me persiguió {dias} días en {lugar}",
+        "keywords": ["skinwalker", "wendigo", "criatura", "persecución", "bosque maldito"],
+        "contextos": ["carretera solitaria", "bosque profundo", "montaña aislada", "desierto nocturno"],
+        "duracion_objetivo": 540,  # 9 minutos
+        "busquedas": 380000
+    },
+    {
+        "tema": "ritual_completo",
+        "titulo_base": "Hice el ritual completo en {lugar} y esto pasó",
+        "keywords": ["ritual", "invocación", "ceremonia", "maldición", "ocultismo"],
+        "contextos": ["cementerio antiguo", "casa abandonada", "bosque sagrado", "cueva"],
+        "duracion_objetivo": 660,  # 11 minutos
+        "busquedas": 520000
+    },
+    {
+        "tema": "ia_prediccion_muerte",
+        "titulo_base": "Una IA predijo mi muerte en {lugar} - {dias} días después",
+        "keywords": ["IA", "inteligencia artificial", "predicción", "muerte", "algoritmo maldito"],
+        "contextos": ["laboratorio", "cuarto de servidores", "oficina tech", "universidad"],
+        "duracion_objetivo": 600,
+        "busquedas": 890000
+    },
+    {
+        "tema": "numero_maldito_llamadas",
+        "titulo_base": "Llamé al número maldito {numero} veces en {lugar}",
+        "keywords": ["teléfono maldito", "llamadas", "número prohibido", "voz del más allá"],
+        "contextos": ["cabina telefónica", "casa embrujada", "oficina nocturna", "sótano"],
+        "duracion_objetivo": 540,
+        "busquedas": 670000
+    },
+    {
+        "tema": "deep_web_archivos",
+        "titulo_base": "Descargué archivos prohibidos de la Deep Web en {lugar}",
+        "keywords": ["deep web", "red oscura", "archivos prohibidos", "contenido clasificado"],
+        "contextos": ["cuarto oscuro", "bunker", "oficina abandonada", "sótano tech"],
+        "duracion_objetivo": 600,
+        "busquedas": 540000
+    },
+    {
+        "tema": "creepypasta_real",
+        "titulo_base": "La creepypasta de {lugar} es REAL - Testimonio",
+        "keywords": ["creepypasta", "Slenderman", "Jeff the Killer", "leyenda urbana", "internet"],
+        "contextos": ["bosque nocturno", "parque abandonado", "calle solitaria", "casa embrujada"],
+        "duracion_objetivo": 660,
+        "busquedas": 230000
+    },
+    {
+        "tema": "objeto_maldito_casa",
+        "titulo_base": "Compré un objeto maldito en {lugar} - {dias} noches de terror",
+        "keywords": ["muñeca maldita", "espejo embrujado", "pintura maldita", "reliquia"],
+        "contextos": ["tienda de antigüedades", "mercado de pulgas", "subasta", "casa heredada"],
+        "duracion_objetivo": 600,
+        "busquedas": 340000
+    },
+]
+
+# ================================================================
+# 🔥 FÓRMULAS DE TÍTULOS VIRALES PARA VIDEOS LARGOS
+# ================================================================
+FORMULAS_TITULOS_LARGOS = {
+    "experiencia_extrema": [
+        "Sobreviví {numero} noches en {lugar} - Testimonio REAL",
+        "Estuve {horas} horas atrapado en {lugar} - Esto vi",
+        "{dias} días explorando {lugar} - Lo que descubrí",
+    ],
+    "numero_especifico": [
+        "{numero} veces que vi al mismo fantasma en {lugar}",
+        "{hora} exacto: Lo que pasó en {lugar}",
+        "Día {numero} en {lugar}: Algo me seguía",
+    ],
+    "advertencia_real": [
+        "⚠️ NO vayas a {lugar} si ves ESTO - Testigo lo confirma",
+        "🚨 ALERTA: Algo acecha en {lugar} - Múltiples avistamientos",
+        "PELIGRO REAL en {lugar} - Lo que las autoridades ocultan",
+    ],
+    "secreto_revelado": [
+        "El SECRETO que {lugar} esconde (FILTRADO)",
+        "Lo que NADIE te cuenta sobre {lugar} - Investigación",
+        "Descubrí algo PROHIBIDO en {lugar} - Evidencia",
+    ],
+    "pregunta_misterio": [
+        "¿Qué hay realmente en {lugar}? - Investigación completa",
+        "¿Por qué NADIE entra a {lugar} después de {hora}?",
+        "¿Sobrevivirías {horas} horas en {lugar}? - Experimento",
+    ],
+}
 
 # ================================================================
 # 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA (VIDEOS LARGOS)
 # ================================================================
 MAX_VIDEOS_DIA = 1
-PROBABILIDAD_DESCANSO = 0.20      # 20% días sin publicar
-PROBABILIDAD_CAPRICHO = 0.15      # 15% capricho de no publicar
+PROBABILIDAD_DESCANSO = 0.20
+PROBABILIDAD_CAPRICHO = 0.15
 INTERVALO_MIN_HORAS = 24
 INTERVALO_MAX_HORAS = 72
 RETRASO_MAX_MINUTOS = 45
 
-# Umbral de demanda (vistas promedio en YouTube)
 UMBRAL_DEMANDA_VIEWS = 10000
 
 # ================================================================
-#  DECISIONES DE PUBLICACIÓN
+# 🎬 DECISIONES DE PUBLICACIÓN
 # ================================================================
 def deberia_publicar_ahora(estado):
     """Decide si publicar hoy con comportamiento humano."""
@@ -116,7 +217,7 @@ def deberia_publicar_ahora(estado):
     return True
 
 # ================================================================
-# VALIDAR PEXELS API KEY (SIN "Bearer")
+# VALIDAR PEXELS API KEY
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
@@ -129,21 +230,47 @@ def validar_pexels_api_key():
             print("✅ API Key de Pexels válida.")
             return True
         else:
-            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
+            print(f"️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"️ Error probando API Key: {e}")
+        print(f"⚠️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# VERIFICAR DEMANDA EN YOUTUBE (FILTRO 2)
+# 🎯 GENERAR TÍTULO ULTRA-VIRAL PARA VIDEOS LARGOS
+# ================================================================
+def generar_titulo_viral_largo(keywords, lugar, tema_viral):
+    """
+    Genera títulos virales adaptados para videos largos (8-12 min)
+    """
+    categorias = list(FORMULAS_TITULOS_LARGOS.keys())
+    categoria = random.choice(categorias)
+    
+    formulas = FORMULAS_TITULOS_LARGOS[categoria]
+    formula = random.choice(formulas)
+    
+    horas = ["3:33 AM", "2:00 AM", "4:44 AM", "medianoche", "3:00 AM", "12 horas", "24 horas"]
+    numeros = ["3", "7", "13", "47", "9", "5", "10"]
+    dias = ["3", "7", "5", "10", "13"]
+    
+    titulo = formula.replace("{hora}", random.choice(horas))
+    titulo = titulo.replace("{lugar}", lugar)
+    titulo = titulo.replace("{numero}", random.choice(numeros))
+    titulo = titulo.replace("{dias}", random.choice(dias))
+    
+    titulo = titulo[0].upper() + titulo[1:]
+    
+    if len(titulo) > 95:
+        titulo = titulo[:92] + "..."
+    
+    return titulo
+
+# ================================================================
+# VERIFICAR DEMANDA EN YOUTUBE
 # ================================================================
 def verificar_demanda_youtube(tema, umbral_views=UMBRAL_DEMANDA_VIEWS):
-    """
-    Busca el tema en YouTube y devuelve True si hay suficiente demanda.
-    """
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -186,8 +313,7 @@ def verificar_demanda_youtube(tema, umbral_views=UMBRAL_DEMANDA_VIEWS):
             print(f"⛔ Demanda baja (promedio < {umbral_views:,}). Cancelando publicación.")
             return False
     except Exception as e:
-        print(f"️ Error verificando demanda: {e}")
-        # Si falla, asumimos que hay demanda para no bloquear
+        print(f"⚠️ Error verificando demanda: {e}")
         return True
 
 # ================================================================
@@ -218,7 +344,7 @@ def actualizar_epoca(anio):
     print(f"️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# VOCES NEURALES (con fallback automático)
+# VOCES NEURALES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
@@ -322,7 +448,7 @@ PERFIL_PERSONAJE = generar_perfil_personaje()
 UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
 
 # ================================================================
-# AUDIO DE FONDO (sin repetir los últimos 3)
+# AUDIO DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -377,7 +503,7 @@ def seleccionar_fondo_disponible():
                 full_path = os.path.join(root, fondo)
                 print(f"⚠️ Fallback: {full_path}")
                 return full_path
-    print("️ No se encontró ningún archivo de fondo.")
+    print("⚠️ No se encontró ningún archivo de fondo.")
     return None
 
 FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
@@ -416,7 +542,7 @@ def titulo_largo_ya_publicado(titulo):
     return False
 
 # ================================================================
-# GESTIÓN DE TEMAS (para evitar repeticiones)
+# GESTIÓN DE TEMAS
 # ================================================================
 def cargar_temas_shorts():
     try:
@@ -452,50 +578,41 @@ def tema_ya_usado(tema, umbral=0.5):
     return False
 
 # ================================================================
-# VALIDACIÓN DE TÍTULO GANCHO (MEJORADA - FILTRO 1)
+# VALIDACIÓN DE TÍTULO GANCHO
 # ================================================================
 def validar_titulo_gancho(titulo):
-    """
-    Valida que el título sea un gancho claro que se entienda en 10 segundos.
-    """
-    if not titulo or len(titulo) < 25:
+    if not titulo or len(titulo) < 30:
         return False
 
-    # Títulos genéricos prohibidos
     genericas = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
     if any(titulo.lower().startswith(g) for g in genericas):
         return False
 
-    # Palabras que indican gancho fuerte (pregunta, restricción, primera persona impactante)
     ganchos_fuertes = [
         "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví",
         "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "oí", "sentí",
         "3:33", "3:00", "medianoche", "nunca", "jamás", "solo", "primero",
         "último", "desapareció", "regresó", "volvió", "entró", "salió", "huyó",
         "escapé", "corrí", "grité", "lloré", "rogué", "supliqué", "¿", "?",
-        "cómo", "por qué", "qué", "dónde", "cuándo"
+        "cómo", "por qué", "qué", "dónde", "cuándo", "horas", "días", "noches"
     ]
     tiene_gancho = any(g in titulo.lower() for g in ganchos_fuertes)
-    longitud_ok = 30 <= len(titulo) <= 75
+    longitud_ok = 35 <= len(titulo) <= 95
     tiene_separador = any(c in titulo for c in [":", "-", "|", ","])
 
     if tiene_gancho and longitud_ok:
         return True
-    if longitud_ok and tiene_separador and len(titulo) > 35:
+    if longitud_ok and tiene_separador and len(titulo) > 40:
         return True
-    if any(titulo.startswith(p) for p in ["Trabajé", "Fui", "El pozo", "Encontré", "Vi lo que"]):
+    if any(titulo.startswith(p) for p in ["Trabajé", "Fui", "El pozo", "Encontré", "Vi lo que", "Exploré", "Sobreviví"]):
         return True
 
     return False
 
 # ================================================================
-# EVALUAR CLARIDAD DEL TÍTULO CON DEEPSEEK (FILTRO 1 EXTRA)
+# EVALUAR CLARIDAD DEL TÍTULO
 # ================================================================
 def evaluar_claridad_titulo(titulo, historia_resumen):
-    """
-    Pide a DeepSeek que evalúe si el título se entiende en 10 segundos y es un gancho claro.
-    Devuelve True si pasa.
-    """
     prompt = f"""
 Eres un EXPERTO EN TÍTULOS DE YOUTUBE. Evalúa el siguiente título para un video de terror/paranormal.
 
@@ -512,7 +629,7 @@ Responde únicamente con un JSON:
 Criterios:
 - ¿Se entiende de qué trata el video en menos de 10 segundos?
 - ¿Genera curiosidad o promete algo concreto?
-- ¿Evita ser genérico (ej: "El misterio de...")?
+- ¿Evita ser genérico?
 """
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -535,7 +652,6 @@ Criterios:
         return claro
     except Exception as e:
         print(f"⚠️ Error evaluando claridad del título: {e}")
-        # Si falla, asumimos que es claro para no bloquear
         return True
 
 # ================================================================
@@ -556,9 +672,14 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# GENERAR HISTORIA (CON PROMPT MEJORADO - FILTRO 1)
+#  GENERAR HISTORIA CON TEMAS VIRALES
 # ================================================================
 def generar_historia_completa():
+    # Seleccionar tema viral
+    tema_viral = random.choice(TEMAS_VIRALES_LARGOS)
+    contexto = random.choice(tema_viral["contextos"])
+    keywords = tema_viral["keywords"]
+    
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
     temas_texto = "\n".join([f"- {t}" for t in temas_recientes]) if temas_recientes else "Ninguno aún."
 
@@ -568,25 +689,29 @@ def generar_historia_completa():
     prompt_base = f"""
 Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para YouTube.
 
- TÍTULOS YA PUBLICADOS (NO REPETIR NI PARECERSE):
+ TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
+📍 CONTEXTO: {contexto}
+🔑 KEYWORDS: {', '.join(keywords)}
+⏱️ DURACIÓN OBJETIVO: {tema_viral['duracion_objetivo']//60} minutos
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
-🚫 TEMAS YA PUBLICADOS (EVITAR ESTAS TEMÁTICAS):
+🚫 TEMAS YA PUBLICADOS (EVITAR):
 {temas_texto}
 
 🎯 REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
 
-🎯 REGLA DE TÍTULO SEO (CRÍTICA - FILTRO 1):
-El título debe ser un GANCHO que se entienda en 10 segundos. Debe ser una pregunta, una restricción o una promesa clara.
-EJEMPLOS DE TÍTULOS GANADORES (30-75 caracteres):
-- "¿Qué vi en el manicomio de Puebla a las 3 AM?"
-- "Sobreviví 7 días en el hotel más embrujado de México"
-- "El pozo de mi pueblo no tenía fondo. Hasta que lo vi."
-- "Fui velador en Oaxaca y vi algo que no debí ver"
-❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
+🎯 REGLA DE TÍTULO SEO (CRÍTICA):
+El título debe ser un GANCHO que se entienda en 10 segundos.
+EJEMPLOS DE TÍTULOS GANADORES (40-95 caracteres):
+- "Exploré los Backrooms de {contexto} durante 12 horas"
+- "Sobreviví 7 noches en {contexto} - Testimonio REAL"
+- "Una IA predijo mi muerte en {contexto} - 3 días después"
+ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
 
-🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
-"palabras_portada": TEXTO GANCHO de 2-3 palabras emocionales y ESPECÍFICAS del relato.
+ REGLA DE PALABRAS CLAVE PARA MINIATURA:
+"palabras_portada": TEXTO GANCHO de 2-4 palabras emocionales y ESPECÍFICAS.
 
 🎯 REGLA DE ÉPOCA Y AMBIENTACIÓN:
 "anio_suceso": año específico del suceso (1970-2020).
@@ -594,36 +719,38 @@ EJEMPLOS DE TÍTULOS GANADORES (30-75 caracteres):
 🎯 REGLA DE PERSONAJE:
 Personaje principal fijo: "{PERFIL_PERSONAJE}"
 
-🎯 ESTRUCTURA DEL RELATO (texto_completo - 1400-1600 palabras):
-1. GANCHO (1-2 párrafos): Presenta el conflicto central.
-2. CONTEXTO: Quién, dónde, cuándo.
-3. DESARROLLO: Aumento de tensión. Detalles sensoriales.
-4. CLÍMAX: El momento más aterrador.
-5. DESENLACE: Resolución o reflexión.
-- Tono: Natural, coloquial, en primera persona.
-- IMPORTANTE: Describe ENTORNOS (carros, casas, bosques, calles).
+🎯 ESTRUCTURA DEL RELATO (texto_completo - 1600-2000 palabras):
+1. HOOK INMEDIATO (primeros 30 segundos impactantes)
+2. CONTEXTO DETALLADO: Quién, dónde, cuándo, por qué
+3. DESARROLLO PROGRESIVO: Aumento constante de tensión
+4. CLÍMAX MÚLTIPLE: Varios momentos aterradores
+5. DESENLACE ABIERTO: Reflexión o pregunta final
+- Tono: Natural, coloquial, en primera persona
+- IMPORTANTE: Describe ENTORNOS, SONIDOS, SENSACIONES
+- Incluye timestamps naturales cada 2-3 minutos
 
 🎯 REGLA DE CAPÍTULOS:
-Genera 4-6 capítulos con timestamps REALISTAS basados en una duración total de 8-12 minutos.
+Genera 5-7 capítulos con timestamps REALISTAS basados en {tema_viral['duracion_objetivo']//60}-{(tema_viral['duracion_objetivo']+120)//60} minutos.
 
 Responde ESTRICTAMENTE en este JSON:
 {{
-  "titulo": "Título GANCHO de 30-75 caracteres",
+  "titulo": "Título ultra-viral 2024 (40-95 caracteres)",
   "titulo_alternativo": "Título alternativo",
-  "anio_suceso": 1998,
-  "palabras_clave": ["keyword1", "keyword2", "keyword3"],
-  "palabras_portada": "TEXTO GANCHO 2-3 palabras",
-  "descripcion": "Descripción SEO completa",
+  "anio_suceso": 2019,
+  "palabras_clave": ["{keywords[0]}", "{keywords[1]}", "{keywords[2]}"],
+  "palabras_portada": "TEXTO GANCHO 2-4 palabras",
+  "descripcion": "Descripción SEO completa con gancho inicial",
   "tags": "15-20 tags separados por coma",
-  "hashtags": "#Terror #Mexico #RelatosReales (mínimo 5 hashtags relevantes)",
-  "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena impactante del relato]",
+  "hashtags": "#Terror #Mexico #RelatosReales #Viral2024 (mínimo 5 hashtags)",
+  "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena MÁS impactante del relato]",
   "capitulos": [
     {{"tiempo": "00:00", "titulo": "El Comienzo"}},
-    {{"tiempo": "02:15", "titulo": "El Encuentro"}},
-    {{"tiempo": "05:30", "titulo": "El Clímax"}},
-    {{"tiempo": "09:00", "titulo": "La Revelación"}}
+    {{"tiempo": "02:30", "titulo": "Los Primeros Signos"}},
+    {{"tiempo": "05:45", "titulo": "El Encuentro"}},
+    {{"tiempo": "09:15", "titulo": "El Clímax"}},
+    {{"tiempo": "12:00", "titulo": "La Revelación"}}
   ],
-  "texto_completo": "Relato completo de 1400-1600 palabras"
+  "texto_completo": "Relato completo de 1600-2000 palabras con timestamps naturales"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -638,6 +765,7 @@ Responde ESTRICTAMENTE en este JSON:
 
     for intento in range(6):
         try:
+            print(f"🔄 Intento {intento+1}/6 generando historia viral...")
             r = requests.post(url, headers=headers, json=payload, timeout=120)
             r.raise_for_status()
             respuesta_json = r.json()
@@ -660,12 +788,10 @@ Responde ESTRICTAMENTE en este JSON:
             if "texto_completo" in data and palabras >= 500:
                 titulo_generado = data.get("titulo", "")
 
-                # Validación de gancho (filtro 1 básico)
                 if not validar_titulo_gancho(titulo_generado):
                     print(f"️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
 
-                # Evaluación de claridad con DeepSeek (filtro 1 extra)
                 if not evaluar_claridad_titulo(titulo_generado, texto[:300]):
                     print(f"⚠️ Título no pasa evaluación de claridad. Reintentando...")
                     raise ValueError("Título no claro")
@@ -678,19 +804,20 @@ Responde ESTRICTAMENTE en este JSON:
                 if keywords:
                     tema = " ".join(keywords)
                     if tema_ya_usado(tema):
-                        print(f"️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
+                        print(f"⚠️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
                         raise ValueError("Tema duplicado")
 
                 anio_suceso = data.get("anio_suceso", None)
                 actualizar_epoca(anio_suceso)
                 print(f"✅ Historia generada: {palabras} palabras.")
-                print(f"🏷️ Título GANCHO: {titulo_generado}")
+                print(f"🔥 Título VIRAL: {titulo_generado}")
+                print(f"🎯 Tema viral: {tema_viral['tema']}")
                 return data
             else:
-                print(f"️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
+                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
                 raise ValueError("Texto insuficiente")
         except Exception as e:
-            print(f"❌ Intento {intento+1}/6 falló: {e}")
+            print(f" Intento {intento+1}/6 falló: {e}")
             if intento < 5:
                 time.sleep(10)
     print("❌ No se pudo generar historia válida después de 6 intentos.")
@@ -721,7 +848,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
     return segmentos
 
 # ================================================================
-# ASIGNAR ETAPAS VISUALES A SEGMENTOS
+# ASIGNAR ETAPAS VISUALES
 # ================================================================
 def asignar_etapas_visuales(segmentos, ubicacion):
     n = len(segmentos)
@@ -744,73 +871,58 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# GENERAR QUERY PARA PEXELS (MEJORADA - INCLUYE ÉPOCA)
+# 🎬 GENERAR QUERY CINEMATOGRÁFICO PARA PEXELS
 # ================================================================
-def generar_query_pexels(segmento_texto, etapa, ubicacion_escena):
-    prompt = f"""Eres un EXPERTO EN BÚSQUEDA DE FOTOGRAFÍA DE STOCK. Genera SOLO 4-6 palabras clave en inglés para buscar una foto HORIZONTAL (16:9) en Pexels que represente perfectamente esta escena.
-
-ESCENA: "{segmento_texto[:150]}"
-ETAPA: {etapa}
-UBICACIÓN: {ubicacion_escena}
-ÉPOCA: {EPOCA_MOD}
-
-REGLAS:
-- Palabras clave separadas por espacio, sin comas.
-- Enfócate en: tipo de lugar, ambiente (noche, niebla, lluvia), objetos clave (coche, puerta, etc.), y la época.
-- Ejemplos: "abandoned church night fog vintage car", "old house interior darkness 1990s", "lonely road rain night 1980s".
-
-Devuelve SOLO las palabras clave en inglés, sin puntos, sin comillas.
-"""
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6,
-        "max_tokens": 50,
-    }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=20)
-        r.raise_for_status()
-        query = r.json()["choices"][0]["message"]["content"].strip()
-        query = re.sub(r'["\']', '', query)
-        query = re.sub(r',', ' ', query)
-        query = re.sub(r'\s+', ' ', query)
-        if len(query.split()) < 3:
-            query = "dark night landscape scary"
-        print(f"🧠 Query Pexels: '{query}'")
-        return query
-    except Exception as e:
-        print(f"⚠️ Error generando query: {e}. Usando fallback.")
-        return "dark night landscape scary"
-
-def generar_query_miniatura_pexels(miniatura_prompt):
-    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto HORIZONTAL (16:9) en Pexels para una miniatura de YouTube de terror.
-    Idea: "{miniatura_prompt[:150]}"
-    Época: {EPOCA_MOD}
-    Devuelve SOLO las palabras clave.
+def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral):
     """
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.5,
-        "max_tokens": 40,
+    Genera prompts cinematográficos profesionales para videos largos
+    """
+    prompts_cinematograficos = {
+        "inicio_casa": f"""
+            POV shot from inside dark mexican {ubicacion_escena}, 
+            single flickering light bulb, long hallway leading to darkness, 
+            cinematic horror photography, shallow depth of field, 
+            shot on 35mm, film grain, cold blue tones, unsettling atmosphere
+        """,
+        "desplazamiento": f"""
+            Night driving shot, dark mexican road through {ubicacion_escena}, 
+            fog, headlights illuminating mist, cinematic thriller photography, 
+            motion blur, shallow focus, eerie atmosphere, 35mm film look
+        """,
+        "lugar_destino": f"""
+            Wide establishing shot of {ubicacion_escena} at night, 
+            mexican location, fog, dramatic lighting, cinematic horror photography, 
+            ultra wide angle, deep shadows, mysterious atmosphere
+        """,
+        "climax_evento": f"""
+            Extreme close-up of terrified eyes reflecting something horrifying 
+            in {ubicacion_escena}, dramatic chiaroscuro lighting, 
+            horror movie still, hyperrealistic, shallow focus, tension, fear
+        """,
+        "resolucion": f"""
+            Person walking away from {ubicacion_escena} at dawn, 
+            silhouette against morning light, cinematic horror photography, 
+            wide shot, atmospheric fog, emotional aftermath
+        """
     }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=20)
-        r.raise_for_status()
-        query = r.json()["choices"][0]["message"]["content"].strip()
-        query = re.sub(r'["\']', '', query)
-        query = re.sub(r',', ' ', query)
-        query = re.sub(r'\s+', ' ', query)
-        return query if len(query) > 5 else "horror night dark landscape vintage"
-    except Exception as e:
-        return "horror night dark landscape vintage"
+    
+    prompt_base = prompts_cinematograficos.get(etapa, prompts_cinematograficos["inicio_casa"])
+    
+    if tema_viral == "backrooms":
+        prompt_base += ", liminal space, endless corridors, yellow wallpaper, fluorescent lights"
+    elif tema_viral == "skinwalker":
+        prompt_base += ", creature silhouette, forest, antlers, glowing eyes"
+    elif tema_viral == "ritual":
+        prompt_base += ", candles, ritual circle, ancient symbols, mystical atmosphere"
+    elif tema_viral == "ia":
+        prompt_base += ", computer screen, code, digital horror, glitch effects"
+    
+    prompt_base = re.sub(r'\s+', ' ', prompt_base).strip()
+    
+    return prompt_base[:200]
 
 # ================================================================
-# BUSCAR IMAGEN EN PEXELS (HORIZONTAL)
+# BUSCAR IMAGEN EN PEXELS
 # ================================================================
 ULTIMA_URL_PEXELS = None
 
@@ -820,7 +932,7 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
         print("⚠️ Pexels no disponible.")
         return None
 
-    variantes = ["angle", "view", "perspective", "mood", "atmosphere"]
+    variantes = ["cinematic", "dramatic", "atmospheric", "moody", "film"]
     variacion = random.choice(variantes)
     query_variada = f"{query} {variacion}"
 
@@ -844,18 +956,18 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
                     foto = random.choice(fotos)
                     image_url = foto["src"]["large2x"] or foto["src"]["large"] or foto["src"]["original"]
                     if ULTIMA_URL_PEXELS and image_url == ULTIMA_URL_PEXELS:
-                        print("   ⚠️ URL repetida, buscando otra página...")
+                        print("   ️ URL repetida, buscando otra página...")
                         params["page"] = (params["page"] % 8) + 1
                         continue
                     ULTIMA_URL_PEXELS = image_url
                     print(f"✅ Imagen encontrada: {image_url[:80]}...")
                     return image_url
                 else:
-                    print("⚠️ No se encontraron fotos para esta consulta.")
+                    print("️ No se encontraron fotos para esta consulta.")
             else:
                 print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
         except requests.exceptions.Timeout:
-            print(" Timeout en Pexels. Reintentando...")
+            print("⏰ Timeout en Pexels. Reintentando...")
         except Exception as e:
             print(f"️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
@@ -866,13 +978,9 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
     return None
 
 # ================================================================
-# 🖼️ BUSCAR MINIATURA EN PEXELS (MEJORADA - CON ESPACIO PARA TEXTO)
+# 🖼️ BUSCAR MINIATURA EN PEXELS
 # ================================================================
 def buscar_miniatura_pexels(query, intentos=5):
-    """
-    Busca imágenes específicamente para miniaturas con espacio para texto.
-    """
-    # Palabras clave que ayudan a encontrar imágenes con espacio para texto
     variantes_texto = [
         "empty space", "copy space", "negative space", 
         "dark background", "blurry background", "minimal"
@@ -883,7 +991,6 @@ def buscar_miniatura_pexels(query, intentos=5):
     
     for intento in range(intentos):
         try:
-            # Agregar variante aleatoria para espacio de texto
             variante = random.choice(variantes_texto)
             query_completa = f"{query} {variante}"
             
@@ -901,12 +1008,9 @@ def buscar_miniatura_pexels(query, intentos=5):
             if r.status_code == 200:
                 data = r.json()
                 if data.get("photos") and len(data["photos"]) > 0:
-                    # Buscar la imagen con mejor espacio para texto
                     for foto in data["photos"][:5]:
-                        # Preferir imágenes oscuras o con espacio vacío
                         img_url = foto["src"]["large2x"] or foto["src"]["large"]
                         
-                        # Descargar y verificar que sea usable
                         try:
                             r_img = requests.get(img_url, timeout=10)
                             if r_img.status_code == 200:
@@ -916,7 +1020,7 @@ def buscar_miniatura_pexels(query, intentos=5):
                             continue
                     
             else:
-                print(f"⚠️ Error Pexels: {r.status_code}")
+                print(f"️ Error Pexels: {r.status_code}")
                 
         except Exception as e:
             print(f"⚠️ Error: {e}")
@@ -924,7 +1028,6 @@ def buscar_miniatura_pexels(query, intentos=5):
         if intento < intentos - 1:
             time.sleep(3)
     
-    # Fallback: buscar sin variantes
     print("⚠️ Usando búsqueda de fallback...")
     params = {
         "query": query,
@@ -981,32 +1084,21 @@ Devuelve SOLO el texto de continuación.
     return ""
 
 # ================================================================
-# 🎨 CREAR MINIATURA PROFESIONAL TIPO YOUTUBE (MEJORADA)
+# 🎨 CREAR MINIATURA PROFESIONAL TIPO YOUTUBE
 # ================================================================
 def crear_miniatura_profesional(img_path, texto, output_path):
-    """
-    Crea una miniatura profesional con:
-    - Texto grande y legible
-    - Fondo oscuro semitransparente
-    - Contorno grueso negro
-    - Sombra pronunciada
-    - Posicionamiento optimizado
-    """
-    # Colores vibrantes para máximo impacto
     colores_impacto = [
-        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},      # Amarillo brillante
-        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},      # Rojo brillante
-        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},      # Naranja
-        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},      # Cyan
-        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},    # Blanco
-        {"texto": (255, 0, 255), "fondo": (0, 0, 0)},      # Magenta
+        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},
+        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},
+        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},
+        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},
+        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},
+        {"texto": (255, 0, 255), "fondo": (0, 0, 0)},
     ]
     
     color_elegido = random.choice(colores_impacto)
     color_texto = color_elegido["texto"]
-    color_fondo = color_elegido["fondo"]
     
-    # Rutas de fuentes
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
@@ -1014,24 +1106,22 @@ def crear_miniatura_profesional(img_path, texto, output_path):
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
     ]
     
-    # Cargar la imagen base
     try:
         with Image.open(img_path) as img:
-            # Asegurar formato RGB
             if img.mode != 'RGB':
                 img = img.convert('RGB')
             
-            # Redimensionar a 1280x720 (HD YouTube)
             img = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
             
-            # Crear capa para dibujar
+            # Aplicar mejoras de imagen
+            img = ImageEnhance.Contrast(img).enhance(1.3)
+            img = ImageEnhance.Sharpness(img).enhance(1.5)
+            
             draw = ImageDraw.Draw(img)
             width, height = img.size
             
-            # Preparar texto (MAYÚSCULAS para impacto)
             texto_final = texto.upper().strip()
             
-            # Dividir en 2 líneas si es muy largo
             palabras = texto_final.split()
             if len(palabras) > 4:
                 mitad = len(palabras) // 2
@@ -1041,14 +1131,12 @@ def crear_miniatura_profesional(img_path, texto, output_path):
             else:
                 lineas = [texto_final]
             
-            # Encontrar el tamaño de fuente óptimo
             font_size = 90
             font = None
             
             for size in range(120, 40, -5):
                 try:
                     font = ImageFont.truetype(font_paths[0], size)
-                    # Verificar que quepa
                     max_width = 0
                     total_height = 0
                     for linea in lineas:
@@ -1064,14 +1152,12 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                 except:
                     continue
             
-            # Si no encontró fuente, usar la por defecto
             if font is None:
                 try:
                     font = ImageFont.truetype(font_paths[0], font_size)
                 except:
                     font = ImageFont.load_default()
             
-            # Calcular posición centrada
             total_height = 0
             heights = []
             for linea in lineas:
@@ -1080,10 +1166,8 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                 heights.append(h)
                 total_height += h + 15
             
-            # Posición: centro vertical con un poco hacia abajo
             y_start = (height - total_height) // 2 + 50
             
-            # Crear fondo oscuro semitransparente detrás del texto
             padding = 30
             max_line_width = 0
             for linea in lineas:
@@ -1096,24 +1180,19 @@ def crear_miniatura_profesional(img_path, texto, output_path):
             rect_w = max_line_width + (padding * 2)
             rect_h = total_height + (padding * 2)
             
-            # Dibujar rectángulo de fondo (negro semitransparente)
             draw.rectangle(
                 [rect_x, rect_y, rect_x + rect_w, rect_y + rect_h],
                 fill=(0, 0, 0, 200)
             )
             
-            # Dibujar cada línea con contorno y sombra
             y_current = y_start
             for linea in lineas:
-                # Obtener dimensiones
                 bbox = draw.textbbox((0, 0), linea, font=font)
                 w = bbox[2] - bbox[0]
                 h = bbox[3] - bbox[1]
                 
-                # Centrar horizontalmente
                 x = (width - w) // 2
                 
-                # Sombra muy pronunciada (offset grande)
                 for offset in range(-5, 6):
                     for offset_y in range(-5, 6):
                         if offset != 0 or offset_y != 0:
@@ -1124,7 +1203,6 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                                 fill=(0, 0, 0, 200)
                             )
                 
-                # Contorno grueso negro (4 píxeles en cada dirección)
                 for dx in [-4, -3, -2, -1, 1, 2, 3, 4]:
                     for dy in [-4, -3, -2, -1, 1, 2, 3, 4]:
                         draw.text(
@@ -1134,7 +1212,6 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                             fill=(0, 0, 0)
                         )
                 
-                # Texto principal en color brillante
                 draw.text(
                     (x, y_current),
                     linea,
@@ -1144,11 +1221,9 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                 
                 y_current += h + 15
             
-            # Agregar viñeta oscura en las esquinas (efecto cinematográfico)
             overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
             draw_overlay = ImageDraw.Draw(overlay)
             
-            # Esquinas oscuras
             for i in range(200):
                 alpha = int(150 * (i / 200))
                 draw_overlay.rectangle(
@@ -1156,10 +1231,8 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                     fill=(0, 0, 0, alpha//4)
                 )
             
-            # Combinar con la imagen original
             img = Image.alpha_composite(img.convert('RGBA'), overlay)
             
-            # Guardar como JPG de alta calidad
             img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
             
             print(f"✅ Miniatura profesional creada: {output_path}")
@@ -1168,13 +1241,13 @@ def crear_miniatura_profesional(img_path, texto, output_path):
             return True
             
     except Exception as e:
-        print(f"❌ Error creando miniatura: {e}")
+        print(f" Error creando miniatura: {e}")
         import traceback
         traceback.print_exc()
         return False
 
 # ================================================================
-# GENERAR AUDIO CON FALLBACK
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -1199,7 +1272,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
                 asyncio.run(_generar())
                 if os.path.exists(filename) and os.path.getsize(filename) > 0:
                     if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f" Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
+                        print(f"🔄 Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
                     CONFIG_VOZ_ACTUAL = voz_config
                     return filename
             except Exception as e:
@@ -1215,7 +1288,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# MONTAR VIDEO HORIZONTAL (1920x1080)
+# 🎬 MONTAR VIDEO CON EFECTOS CINEMATOGRÁFICOS
 # ================================================================
 def montar_video(elementos, salida="video_final.mp4"):
     clips_video = []
@@ -1230,7 +1303,18 @@ def montar_video(elementos, salida="video_final.mp4"):
             with open(img_path, "wb") as f:
                 f.write(r.content)
             with Image.open(img_path) as img:
-                ImageOps.fit(img, (1920, 1080), Image.LANCZOS).save(img_path)
+                img = ImageOps.fit(img, (1920, 1080), Image.LANCZOS)
+                
+                # Aplicar efectos según etapa
+                if "climax" in elem.get("etapa", ""):
+                    img = ImageEnhance.Contrast(img).enhance(1.4)
+                    img = img.filter(ImageFilter.SHARPEN)
+                elif "inicio" in elem.get("etapa", ""):
+                    img = ImageEnhance.Brightness(img).enhance(0.8)
+                    img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
+                
+                img.save(img_path)
+                
             if duracion > 35:
                 duracion_mitad = duracion / 2
                 clips_video.extend([ImageClip(img_path, duration=duracion_mitad), ImageClip(img_path, duration=duracion_mitad)])
@@ -1355,9 +1439,9 @@ def marcar_publicacion_exitosa():
     guardar_estado_musica(estado)
 
 # ================================================================
-# PROCESAR SEGMENTOS (IMÁGENES HORIZONTALES)
+# PROCESAR SEGMENTOS CON EFECTOS
 # ================================================================
-def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
+def procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0):
     elementos = []
     imagen_ultimo_recurso = None
     for i, seg_texto in enumerate(segmentos):
@@ -1366,7 +1450,7 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
         ubic = ubicaciones[i] if i < len(ubicaciones) else UBICACION_HISTORIA
         print(f"\n📍 Segmento {idx+1} - Etapa: {etapa} | {ubic}")
 
-        query = generar_query_pexels(seg_texto, etapa, ubic)
+        query = generar_query_cinematografico(seg_texto, etapa, ubic, tema_viral)
 
         if i > 0:
             time.sleep(3)
@@ -1379,7 +1463,7 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
                 print(f"⚠️ Reutilizando imagen anterior para segmento {idx+1}.")
                 url_img = imagen_ultimo_recurso
             else:
-                query_fallback = "mexican night landscape dark"
+                query_fallback = "mexican night landscape dark cinematic"
                 url_img = buscar_imagen_pexels(query_fallback, orientation="landscape")
                 if url_img:
                     print(f"⚠️ Usando imagen genérica para segmento {idx+1}.")
@@ -1391,7 +1475,7 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, offset=0):
         if not audio_file:
             continue
 
-        elementos.append({"imagen_url": url_img, "audio_path": audio_file})
+        elementos.append({"imagen_url": url_img, "audio_path": audio_file, "etapa": etapa})
     return elementos
 
 # ================================================================
@@ -1407,7 +1491,6 @@ def verificar_envs():
 def main():
     verificar_envs()
 
-    # Forzar publicación si es workflow_dispatch
     if os.getenv("FORCE_PUBLISH") == "true":
         print("🚀 FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
     else:
@@ -1416,9 +1499,6 @@ def main():
             print("✅ Ya se publicó hoy. Saliendo.")
             sys.exit(0)
 
-    # ============================================================
-    # 🧠 DECISIÓN DE PUBLICAR (MODO HUMANO)
-    # ============================================================
     estado_publicacion = cargar_estado_musica()
 
     if not deberia_publicar_ahora(estado_publicacion):
@@ -1426,38 +1506,34 @@ def main():
         guardar_estado_musica(estado_publicacion)
         sys.exit(0)
 
-    # ============================================================
-    # GENERAR VIDEO
-    # ============================================================
     print("="*70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT VIDEOS LARGOS (HORIZONTAL 16:9)")
-    print("   ✦ Títulos gancho (validación automática + evaluación de claridad)")
-    print("   ✦ Imágenes HORIZONTALES 16:9 para YouTube")
-    print("   ✦ Miniaturas profesionales tipo YouTube (sin texto cortado)")
-    print("    Verificación de demanda real en YouTube (filtro 2)")
-    print("   ✦ Capítulos con timestamps realistas")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT VIDEOS LARGOS VIRAL 2024")
+    print("   ✦ Temas virales trending (Backrooms, Skinwalker, IA, etc.)")
+    print("   ✦ Títulos ultra-virales con fórmulas probadas")
+    print("   ✦ Miniaturas profesionales tipo MrBeast")
+    print("   ✦ Imágenes cinematográficas con efectos")
+    print("   ✦ Verificación de demanda real")
     print("="*70)
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
     print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
-    print(f" Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
-    print(f" Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
-    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
+    print(f"🎵 Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
+    print(f" {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-"*70)
 
     historia = generar_historia_completa()
     titulo_video = historia.get("titulo", "Relato Paranormal Real")
-    palabras_portada = historia.get("palabras_portada", "LO VI")
+    palabras_portada = historia.get("palabras_portada", "TERROR")
     descripcion_base = historia.get("descripcion", f"Relato paranormal.\n{FACEBOOK_LINK}")
     tags_video = historia.get("tags", "relatos, leyendas, mexico")
-    hashtags_video = historia.get("hashtags", "#Terror #Mexico #RelatosReales")
+    hashtags_video = historia.get("hashtags", "#Terror #Mexico #RelatosReales #Viral2024")
     capitulos_video = historia.get("capitulos", [])
     texto_completo = historia.get("texto_completo", "")
     keywords = historia.get("palabras_clave", [])
+    
+    tema_viral = historia.get("tema", {}).get("tipo", "paranormal")
 
-    # ============================================================
-    #  VERIFICAR DEMANDA REAL (FILTRO 2)
-    # ============================================================
     if keywords:
         tema_busqueda = keywords[0]
     else:
@@ -1466,9 +1542,6 @@ def main():
         print("⛔ Demanda insuficiente. Cancelando publicación.")
         sys.exit(0)
 
-    # ============================================================
-    # CONSTRUIR DESCRIPCIÓN COMPLETA
-    # ============================================================
     descripcion_completa = f"""{descripcion_base}
 
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
@@ -1476,18 +1549,19 @@ def main():
 
 {hashtags_video}"""
 
-    print(f"\n📊 SEO GENERADO:")
-    print(f"   ️ Título GANCHO: {titulo_video}")
-    print(f"   🖼️ Texto miniatura: {palabras_portada}")
+    print(f"\n SEO VIRAL GENERADO:")
+    print(f"   🔥 Título VIRAL: {titulo_video}")
+    print(f"   ️ Texto miniatura: {palabras_portada}")
     print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
     print(f"   📚 Capítulos: {len(capitulos_video)}")
     print(f"   🔑 Keywords: {keywords}")
+    print(f"   🎯 Tema viral: {tema_viral}")
 
     segmentos = dividir_en_segmentos(texto_completo, 55)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, UBICACION_HISTORIA)
-    print(f"\n🎨 {len(segmentos)} segmentos divididos por código (imágenes HORIZONTALES 16:9).")
+    print(f"\n🎬 {len(segmentos)} segmentos con efectos cinematográficos.")
 
-    elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, offset=0)
+    elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0)
     if not elementos_validos:
         print("❌ No hay elementos válidos.")
         sys.exit(1)
@@ -1497,13 +1571,13 @@ def main():
 
     intentos_expansion = 0
     while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
-        print(f"⚠️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
+        print(f"️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
         texto_extra = expandir_texto(titulo_video, texto_completo)
         if texto_extra:
             texto_completo += " " + texto_extra
             nuevos = dividir_en_segmentos(texto_extra, 55)
             etapas_n, ubic_n = asignar_etapas_visuales(nuevos, UBICACION_HISTORIA)
-            elems_n = procesar_segmentos(nuevos, etapas_n, ubic_n, offset=len(elementos_validos))
+            elems_n = procesar_segmentos(nuevos, etapas_n, ubic_n, tema_viral, offset=len(elementos_validos))
             elementos_validos.extend(elems_n)
             duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
             intentos_expansion += 1
@@ -1516,10 +1590,7 @@ def main():
 
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    # ============================================================
-    # ️ GENERAR MINIATURA PROFESIONAL (NUEVO)
-    # ============================================================
-    print("🖼️ Creando miniatura profesional tipo YouTube...")
+    print("️ Creando miniatura profesional viral...")
     miniatura_path = None
     
     query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night"))
@@ -1527,7 +1598,6 @@ def main():
 
     if miniatura_base_url:
         try:
-            # Descargar imagen base
             r = requests.get(miniatura_base_url, timeout=30)
             r.raise_for_status()
             
@@ -1535,32 +1605,26 @@ def main():
             with open(temp_base, "wb") as f:
                 f.write(r.content)
             
-            # Crear miniatura profesional
             if crear_miniatura_profesional(temp_base, palabras_portada, "miniatura.jpg"):
                 miniatura_path = "miniatura.jpg"
-                print(f"✅ Miniatura profesional generada con texto: '{palabras_portada}'")
+                print(f"✅ Miniatura viral generada con texto: '{palabras_portada}'")
             else:
-                # Fallback: solo guardar la imagen sin texto
                 import shutil
                 shutil.copy(temp_base, "miniatura.jpg")
                 miniatura_path = "miniatura.jpg"
-                print(f"️ Miniatura guardada sin texto")
+                print(f"⚠️ Miniatura guardada sin texto")
             
-            # Limpiar temporal
             if os.path.exists(temp_base):
                 os.remove(temp_base)
                 
         except Exception as e:
-            print(f"️ Error con miniatura: {e}")
+            print(f"⚠️ Error con miniatura: {e}")
             miniatura_path = None
     else:
         print("❌ No se pudo obtener imagen para miniatura.")
         miniatura_path = None
 
-    # ============================================================
-    # MONTAJE Y SUBIDA
-    # ============================================================
-    print(" Montando video HORIZONTAL (1920x1080)...")
+    print("🎬 Montando video HORIZONTAL (1920x1080) con efectos...")
     video_path, duracion_final = montar_video(elementos_validos)
     duracion_minutos = duracion_final / 60
     print(f"⏱️ Duración final: {duracion_minutos:.1f} minutos")
@@ -1585,14 +1649,13 @@ def main():
         tema = f"{UBICACION_HISTORIA} {titulo_video.split()[0]}"
         guardar_tema_shorts(tema)
 
-    # Marcar publicación exitosa
     estado_publicacion["publicaciones_hoy"] = estado_publicacion.get("publicaciones_hoy", 0) + 1
     estado_publicacion["ultima_publicacion"] = datetime.now(ZoneInfo("America/Mexico_City")).isoformat()
     marcar_publicacion_exitosa()
     guardar_estado_musica(estado_publicacion)
 
     limpiar_archivos_temporales()
-    print(" Proceso completado (video HORIZONTAL 16:9 + miniatura profesional + filtros de Yayas).")
+    print("🎉 Proceso completado. ¡Video viral listo!")
 
 if __name__ == "__main__":
     try:
