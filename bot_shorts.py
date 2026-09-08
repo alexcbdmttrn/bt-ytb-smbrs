@@ -17,7 +17,7 @@ from moviepy.editor import (
     concatenate_videoclips,
     AudioClip,
 )
-from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter, ImageEnhance
 import requests
 import edge_tts
 import pytz
@@ -108,12 +108,12 @@ TEMAS_VIRALES_2024 = [
 ]
 
 # ================================================================
-#  FÓRMULAS DE TÍTULOS VIRALES 2024
+# 🔥 FÓRMULAS DE TÍTULOS VIRALES 2024
 # ================================================================
 FORMULAS_TITULOS_VIRALES = {
     "prohibido": [
         "🚫 PROHIBIDO entrar aquí después de las {hora}",
-        " Esto es ILEGAL en {lugar} (pero lo hice)",
+        "⚠️ Esto es ILEGAL en {lugar} (pero lo hice)",
         "❌ NADIE debe ver esto de {lugar}",
         "🔒 Lo que {lugar} esconde está CLASIFICADO",
     ],
@@ -166,13 +166,13 @@ def validar_pexels_api_key():
             print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"️ Error probando API Key: {e}")
+        print(f"⚠️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-#  DECISIÓN DE PUBLICAR
+# 🧠 DECISIÓN DE PUBLICAR
 # ================================================================
 def deberia_publicar_ahora(estado):
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
@@ -221,32 +221,23 @@ def deberia_publicar_ahora(estado):
 # 🎯 GENERAR TÍTULO ULTRA-VIRAL 2024
 # ================================================================
 def generar_titulo_viral_2024(keywords, lugar, tema_viral):
-    """
-    Genera títulos basados en fórmulas virales probadas 2024
-    """
-    # Seleccionar categoría de fórmula
     categorias = list(FORMULAS_TITULOS_VIRALES.keys())
     categoria = random.choice(categorias)
     
-    # Obtener fórmula base
     formulas = FORMULAS_TITULOS_VIRALES[categoria]
     formula = random.choice(formulas)
     
-    # Variables de reemplazo
     horas = ["3:33 AM", "2:00 AM", "4:44 AM", "medianoche", "3:00 AM"]
     numeros = ["3", "7", "13", "47", "9"]
     segundos = ["47", "23", "66", "13", "99"]
     
-    # Reemplazar variables
     titulo = formula.replace("{hora}", random.choice(horas))
     titulo = titulo.replace("{lugar}", lugar)
     titulo = titulo.replace("{numero}", random.choice(numeros))
     titulo = titulo.replace("{segundos}", random.choice(segundos))
     
-    # Limpiar y formatear
     titulo = titulo[0].upper() + titulo[1:]
     
-    # Limitar longitud
     if len(titulo) > 75:
         titulo = titulo[:72] + "..."
     
@@ -482,12 +473,11 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🎨 CREAR MINIATURA VIRAL PROFESIONAL
+# 🎨 CREAR MINIATURA VIRAL PROFESIONAL (CORREGIDA)
 # ================================================================
 def crear_miniatura_viral(img_path, texto, output_path):
     """
     Crea miniatura estilo MrBeast/T-Series para Shorts con:
-    - Rostro expresivo (si hay persona)
     - Texto gigante con contorno
     - Flecha/círculo rojo señalando algo
     - Alto contraste
@@ -515,13 +505,13 @@ def crear_miniatura_viral(img_path, texto, output_path):
                 img = img.convert('RGB')
             
             img = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
-            draw = ImageDraw.Draw(img)
-            width, height = img.size
             
-            # Aplicar filtro de alto contraste
+            # ✅ Aplicar filtros de mejora (ahora con ImageEnhance importado)
             img = ImageEnhance.Contrast(img).enhance(1.3)
             img = ImageEnhance.Sharpness(img).enhance(1.5)
+            
             draw = ImageDraw.Draw(img)
+            width, height = img.size
             
             texto_final = texto.upper().strip()
             palabras = texto_final.split()
@@ -677,7 +667,6 @@ def truncar_texto_largo(texto, max_palabras=170):
 # 🎯 GENERAR HISTORIA CON TEMAS VIRALES
 # ================================================================
 def generar_historia_completa():
-    # Seleccionar tema viral
     tema_viral = random.choice(TEMAS_VIRALES_2024)
     contexto = random.choice(tema_viral["contextos"])
     keywords = tema_viral["keywords"]
@@ -696,16 +685,29 @@ def generar_historia_completa():
     outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
     outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
 
-    prompt = f"""Eres un CURADOR DE RELATOS PARANORMALES VIRALES de internet, especializado en contenido TRENDING 2024.
+    formulas_titulo = [
+        "SIN RECURSO: 'Sin [recurso], [acción] en [lugar] fue mi mayor error'",
+        "DESAFÍO: '¿Qué [acción] en [lugar] a las [hora]?'",
+        "TESTIMONIO: 'La noche que [acción] en [lugar] y todo cambió'",
+        "DESCUBRIMIENTO: 'Encontré [algo] al [acción] en [lugar]'",
+        "ADVERTENCIA: 'Nunca [acción] en [lugar] después de las [hora]'",
+        "MISTERIO: 'El [objeto] de [lugar] que nadie menciona'",
+        "CONSECUENCIA: '[Acción] en [lugar] sin [recurso] y pasó esto'"
+    ]
+    formula_aleatoria = random.choice(formulas_titulo)
+
+    prompt = f"""Eres un CURADOR DE RELATOS PARANORMALES REALES de internet, especializado en SEO para YouTube Shorts.
 
 🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
 🔑 KEYWORDS: {', '.join(keywords)}
 
- REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
+🚀 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
 {outliers_texto}
 
- REGLA DE ORO:
+Inspírate en la estructura, pero NO copies. Crea tu propia variación.
+
+🚨 REGLA DE ORO:
 La historia DEBE estar basada en un relato REAL que alguien contó en internet.
 Adáptalo en primera persona, tono coloquial, ambientado en {ESTADO_HISTORIA_SHORTS}, México.
 
@@ -714,44 +716,39 @@ Adáptalo en primera persona, tono coloquial, ambientado en {ESTADO_HISTORIA_SHO
 PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 
 📐 ESTRUCTURA CON CONFLICTO ACTIVO:
-1. HOOK INMEDIATO (primera línea impactante)
-2. OBJETIVO CLARO del protagonista.
-3. RESTRICCIÓN o limitación.
-4. ACCIÓN del protagonista.
-5. CLÍMAX aterrador.
-6. RESOLUCIÓN abierta.
+1. OBJETIVO CLARO del protagonista.
+2. RESTRICCIÓN o limitación.
+3. ACCIÓN del protagonista.
+4. RESOLUCIÓN.
 
- TÍTULO ULTRA-VIRAL (55-75 caracteres):
-Usa fórmulas probadas 2024:
-- Números específicos (3:33 AM, 7 veces, 47 segundos)
-- Palabras de poder (PROHIBIDO, ILEGAL, CLASIFICADO, SECRETO)
-- Preguntas imposibles
-- Advertencias reales
-❌ PROHIBIDO empezar con "Intenté"
+🎯 TÍTULO CON ESTRATEGIA DE OUTLIER (55-75 caracteres):
+FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
+❌ PROHIBIDO empezar con "Intenté" a menos que la fórmula lo exija explícitamente. Varía al máximo.
 ❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
 
-🎯 PALABRAS DE PORTADA (máx 3 palabras, ultra impactantes)
- DESCRIPCIÓN SEO con gancho
- TAGS (10-15)
+🎯 PALABRAS DE PORTADA (máx 2 palabras)
+🎯 DESCRIPCIÓN SEO
+🎯 TAGS (10-15)
 🎯 AÑO DEL SUCESO
 
- TÍTULOS YA PUBLICADOS:
+🚫 TÍTULOS YA PUBLICADOS:
 {titulos_referencia}
 
 {temas_bloqueo}
 
 Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "Título ultra-viral 2024 (55-75 caracteres)",
+    "titulo": "Título con estructura de outlier (55-75 caracteres)",
     "titulo_alternativo": "Segundo título",
-    "anio_suceso": 2019,
+    "anio_suceso": 1998,
     "palabras_clave": ["{keywords[0]}", "{keywords[1]}", "{keywords[2]}"],
     "gancho_descripcion": "Gancho máx 90 caracteres",
-    "contexto_descripcion": "1 oración con contexto viral",
-    "fuente_relato": "Basado en un testimonio real viral...",
+    "contexto_descripcion": "1 oración con contexto",
+    "fuente_relato": "Basado en un testimonio real...",
     "texto_completo": "Micro-relato REAL, 150-170 palabras",
-    "palabras_portada": "TEXTO GANCHO máximo 3 palabras",
+    "palabras_portada": "TEXTO GANCHO máximo 2 palabras",
     "tags": "10-15 tags separados por coma",
+    "miniatura_prompt": "Escena MÁS impactante del relato para miniatura vertical",
     "tema": {{
         "tipo": "{tema_viral['tema']}",
         "lugar": "{contexto}",
@@ -791,13 +788,14 @@ Devuelve ESTRICTAMENTE este JSON:
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
 
-            # Si el título empieza con "Intenté", regenerar
             if titulo.lower().startswith("intenté") or titulo.lower().startswith("intente"):
                 if random.random() > 0.2:
+                    keywords = data.get("palabras_clave", [])
                     lugar = ESTADO_HISTORIA_SHORTS
                     titulo = generar_titulo_viral_2024(keywords, lugar, tema_viral)
             
             if len(titulo) < 35:
+                keywords = data.get("palabras_clave", [])
                 lugar = ESTADO_HISTORIA_SHORTS
                 titulo = generar_titulo_viral_2024(keywords, lugar, tema_viral)
 
@@ -809,22 +807,23 @@ Devuelve ESTRICTAMENTE este JSON:
 
             gancho = data.get("gancho_descripcion", "").strip()
             if not gancho or len(gancho) > 110:
-                gancho = f"⚠️ Lo que pasó en {ESTADO_HISTORIA_SHORTS} es REAL..."[:100]
+                gancho = f"Sin recursos, en {ESTADO_HISTORIA_SHORTS}..."[:100]
             data["gancho_descripcion"] = gancho
 
             contexto = data.get("contexto_descripcion", "").strip()
             if not contexto:
-                contexto = f"Testimonio viral de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."
+                contexto = f"Un testimonio real de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."
             data["contexto_descripcion"] = contexto
 
             fuente = data.get("fuente_relato", "").strip()
             if not fuente:
-                fuente = "Basado en un testimonio real viral en internet."
+                fuente = "Basado en un testimonio real compartido en internet."
             data["fuente_relato"] = fuente
 
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:12]
 
+            keywords = data.get("palabras_clave", [])
             if keywords:
                 for kw in keywords:
                     if kw.lower() not in [t.lower() for t in tags_list]:
@@ -834,7 +833,7 @@ Devuelve ESTRICTAMENTE este JSON:
                 f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
                 "testimonios paranormales reales", "historias reales en primera persona",
                 "leyendas urbanas mexicanas reales", "casos paranormales reales mexico",
-                "viral 2024", "trending terror"
+                "desafio paranormal", "restriccion terror", "viral 2024"
             ]
             for ext in extras:
                 if ext not in tags_list and len(tags_list) < 15:
@@ -864,8 +863,14 @@ Devuelve ESTRICTAMENTE este JSON:
                 "#Viral2024", "#TerrorViral", "#MiedoReal",
                 "#LeyendasUrbanas", "#CasosReales", "#TerrorMexicano"
             ])
+            if "intenté" in titulo.lower() or "sin" in titulo.lower():
+                hashtag_estrategia = "#RestriccionTerror"
+            elif "?" in titulo or "¿" in titulo:
+                hashtag_estrategia = "#DesafioParanormal"
+            else:
+                hashtag_estrategia = "#Outlier"
 
-            hashtag_final = f"{hashtag_base} {hashtag_lugar} {hashtag_tema} {' '.join(hashtag_keywords[:2])} {hashtag_extra}"
+            hashtag_final = f"{hashtag_base} {hashtag_lugar} {hashtag_tema} {' '.join(hashtag_keywords[:2])} {hashtag_extra} {hashtag_estrategia}"
             data["hashtags_descripcion"] = hashtag_final
 
             print(f"   🔥 Título VIRAL: {data['titulo']} ({len(data['titulo'])} chars)")
@@ -873,7 +878,7 @@ Devuelve ESTRICTAMENTE este JSON:
             print(f"   🔑 Keywords: {keywords}")
             print(f"   🎯 Tema viral: {tema_viral['tema']}")
             if "tema" in data:
-                print(f"   🧩 Contexto: {data['tema']}")
+                print(f"   🧩 Tema: {data['tema']}")
             return data
 
         except Exception as e:
@@ -932,9 +937,6 @@ def obtener_publicaciones_hoy():
 # 🎬 GENERAR QUERY CINEMATOGRÁFICO PARA PEXELS
 # ================================================================
 def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral):
-    """
-    Genera prompts cinematográficos profesionales para imágenes de terror
-    """
     prompts_cinematograficos = {
         "inicio_casa": f"""
             POV shot from inside dark mexican {ubicacion_escena}, 
@@ -964,10 +966,8 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
         """
     }
     
-    # Obtener prompt base según etapa
     prompt_base = prompts_cinematograficos.get(etapa, prompts_cinematograficos["inicio_casa"])
     
-    # Agregar elementos del tema viral
     if tema_viral == "backrooms":
         prompt_base += ", liminal space, endless corridors, yellow wallpaper, fluorescent lights"
     elif tema_viral == "skinwalker":
@@ -976,11 +976,87 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
         prompt_base += ", candles, ritual circle, ancient symbols, mystical atmosphere"
     elif tema_viral == "ia_prediccion":
         prompt_base += ", computer screen, code, digital horror, glitch effects"
+    elif tema_viral == "numero_maldito":
+        prompt_base += ", old telephone, ringing, dark room, vintage phone"
+    elif tema_viral == "deep_web":
+        prompt_base += ", computer screen, dark room, code, mysterious"
     
-    # Limpiar y formatear
     prompt_base = re.sub(r'\s+', ' ', prompt_base).strip()
     
     return prompt_base[:200]
+
+# ================================================================
+# 🖼️ BUSCAR MINIATURA EN PEXELS (VERTICAL)
+# ================================================================
+def buscar_miniatura_pexels(query, intentos=5):
+    """
+    Busca imágenes específicamente para miniaturas verticales de Shorts.
+    """
+    variantes_texto = [
+        "empty space", "copy space", "negative space", 
+        "dark background", "blurry background", "minimal",
+        "dramatic", "cinematic", "horror"
+    ]
+    
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": PEXELS_API_KEY}
+    
+    for intento in range(intentos):
+        try:
+            variante = random.choice(variantes_texto)
+            query_completa = f"{query} {variante}"
+            
+            params = {
+                "query": query_completa,
+                "orientation": "portrait",
+                "per_page": 10,
+                "page": random.randint(1, 5),
+                "size": "large"
+            }
+            
+            print(f"🔍 Buscando miniatura vertical: '{query_completa}'...")
+            r = requests.get(url, headers=headers, params=params, timeout=25)
+            
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("photos") and len(data["photos"]) > 0:
+                    for foto in data["photos"][:5]:
+                        img_url = foto["src"]["large2x"] or foto["src"]["large"]
+                        
+                        try:
+                            r_img = requests.get(img_url, timeout=10)
+                            if r_img.status_code == 200:
+                                print(f"✅ Miniatura vertical encontrada: {img_url[:80]}...")
+                                return img_url
+                        except:
+                            continue
+                    
+            else:
+                print(f"⚠️ Error Pexels: {r.status_code}")
+                
+        except Exception as e:
+            print(f"⚠️ Error: {e}")
+        
+        if intento < intentos - 1:
+            time.sleep(3)
+    
+    print("⚠️ Usando búsqueda de fallback...")
+    params = {
+        "query": query,
+        "orientation": "portrait",
+        "per_page": 5,
+        "page": 1
+    }
+    try:
+        r = requests.get(url, headers=headers, params=params, timeout=25)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get("photos"):
+                return data["photos"][0]["src"]["large2x"]
+    except:
+        pass
+    
+    return None
 
 # ================================================================
 # BUSCAR IMAGEN EN PEXELS
@@ -1031,7 +1107,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
                     print("❌ API key inválida.")
                     break
         except Exception as e:
-            print(f"️ Error conexión Pexels: {e}")
+            print(f"⚠️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
             print(f"   ⏳ Esperando 5s...")
             time.sleep(5)
@@ -1121,7 +1197,7 @@ def generar_audio_cta_final():
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS CON EFECTOS CINEMATOGRÁFICOS
+# 🎬 GENERAR RECURSOS POR SEGMENTO
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, intentos_por_imagen=3):
     resultados = []
@@ -1134,7 +1210,6 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
         print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
 
-        # Generar query cinematográfico
         query = generar_query_cinematografico(seg, etapa, ubic_escena, tema_viral)
         print(f"    🎥 Query cinematográfico: {query[:80]}...")
 
@@ -1142,7 +1217,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
 
         if not img_url:
             query_fallback = "mexican night landscape dark cinematic"
-            print(f"     Intentando con fallback: {query_fallback}")
+            print(f"    🔄 Intentando con fallback: {query_fallback}")
             img_url = buscar_imagen_pexels_shorts(query_fallback, intentos=2)
 
         if not img_url and imagen_anterior:
@@ -1212,7 +1287,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             # PRIMERA IMAGEN: Miniatura viral clickable
             # ============================================
             if i == 0 and palabras_portada:
-                print(f" Aplicando miniatura viral a la PRIMERA imagen...")
+                print(f"🎨 Aplicando miniatura viral a la PRIMERA imagen...")
                 img_path_procesada = f"temp_short_{i}_viral.jpg"
                 if crear_miniatura_viral(img_path, palabras_portada, img_path_procesada):
                     img_path = img_path_procesada
@@ -1290,7 +1365,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
             print("🎵 Audio de fondo mezclado al 8%")
         except Exception as e:
-            print(f"️ Error en audio de fondo: {e}")
+            print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
 
     video = video.set_audio(audio_final)
@@ -1307,14 +1382,61 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# 🎨 GENERAR MINIATURA SEPARADA PARA YOUTUBE (THUMBNAIL)
 # ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
+def generar_miniatura_separada(historia_raw, palabras_portada):
+    """
+    Genera una miniatura SEPARADA para subir como thumbnail de YouTube Shorts.
+    Esta es la imagen que se mostrará en el feed del canal, búsquedas, etc.
+    """
+    print("🖼️ Generando miniatura SEPARADA para YouTube...")
+    
+    miniatura_prompt = historia_raw.get("miniatura_prompt", "scary horror night dark")
+    
+    # Buscar imagen vertical específica para miniatura
+    query_miniatura = f"{miniatura_prompt} dramatic horror cinematic"
+    img_url = buscar_miniatura_pexels(query_miniatura)
+    
+    if not img_url:
+        print("⚠️ No se pudo obtener imagen para miniatura separada.")
+        return None
+    
+    try:
+        # Descargar imagen
+        r = requests.get(img_url, timeout=30)
+        r.raise_for_status()
+        
+        temp_miniatura = "thumbnail_shorts.jpg"
+        with open(temp_miniatura, "wb") as f:
+            f.write(r.content)
+        
+        # Crear miniatura viral
+        if crear_miniatura_viral(temp_miniatura, palabras_portada, "thumbnail_final.jpg"):
+            print("✅ Miniatura separada generada exitosamente")
+            if os.path.exists(temp_miniatura):
+                os.remove(temp_miniatura)
+            return "thumbnail_final.jpg"
+        else:
+            # Fallback: copiar imagen sin texto
+            import shutil
+            shutil.copy(temp_miniatura, "thumbnail_final.jpg")
+            if os.path.exists(temp_miniatura):
+                os.remove(temp_miniatura)
+            return "thumbnail_final.jpg"
+            
+    except Exception as e:
+        print(f"❌ Error generando miniatura separada: {e}")
+        return None
+
+# ================================================================
+# SUBIR A YOUTUBE (CON MINIATURA)
+# ================================================================
+def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
     except Exception as e:
-        print(f" Error autenticando con YouTube: {e}")
+        print(f"❌ Error autenticando con YouTube: {e}")
         sys.exit(1)
 
     if isinstance(etiquetas, str):
@@ -1328,7 +1450,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
 
 📖 {fuente_relato}
 
- Facebook: {FACEBOOK_LINK}
+📱 Facebook: {FACEBOOK_LINK}
 
 {hashtags_descripcion}"""
 
@@ -1356,6 +1478,19 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho_descripcion, contexto_
         response = request.execute()
         video_id = response["id"]
         print(f"✅ Short subido: https://youtu.be/{video_id}")
+        
+        # ✅ SUBIR MINIATURA SEPARADA
+        if miniatura_path and os.path.exists(miniatura_path):
+            try:
+                print(f"🖼️ Subiendo miniatura personalizada: {miniatura_path}")
+                media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True, mimetype="image/jpeg")
+                youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
+                print("✅ Miniatura personalizada subida correctamente")
+            except Exception as e:
+                print(f"⚠️ Error subiendo miniatura: {e}")
+        else:
+            print("⚠️ No se proporcionó miniatura. YouTube usará una por defecto.")
+        
         return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
@@ -1405,6 +1540,13 @@ def limpiar_temporales_shorts():
                 os.remove(f)
             except:
                 pass
+    # Limpiar miniaturas temporales
+    for f in ["thumbnail_shorts.jpg", "thumbnail_final.jpg"]:
+        if os.path.exists(f):
+            try:
+                os.remove(f)
+            except:
+                pass
     if os.path.exists("short_final.mp4"):
         try:
             os.remove("short_final.mp4")
@@ -1415,8 +1557,8 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print(" Iniciando Bot de SHORTS VIRAL 2024 (3 al día - Horarios aleatorios)")
-    print(f" {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("🎬 Iniciando Bot de SHORTS VIRAL 2024 (3 al día - Horarios aleatorios)")
+    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']}")
 
     if not YOUTUBE_USER_TOKEN:
@@ -1473,7 +1615,7 @@ def main():
 
     print(f"\n🎥 Buscando {len(segmentos)} imágenes cinematográficas en Pexels...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
-        print(f"    Segmento {i+1}: [{etapa}] {ubic}")
+        print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
 
     recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
@@ -1487,6 +1629,9 @@ def main():
         print("❌ Error generando recursos.")
         sys.exit(1)
 
+    # ✅ GENERAR MINIATURA SEPARADA ANTES DE MONTAR VIDEO
+    miniatura_separada_path = generar_miniatura_separada(historia_raw, palabras_portada)
+
     try:
         video_final = montar_video_shorts(recursos, fondo_path, palabras_portada)
     except Exception as e:
@@ -1496,6 +1641,7 @@ def main():
     print(f"\n🚀 Subiendo Short a YouTube...")
     video_id_youtube = subir_a_youtube(
         video_path=video_final,
+        miniatura_path=miniatura_separada_path,
         titulo=historia_raw["titulo"],
         etiquetas=historia_raw["tags"],
         gancho_descripcion=historia_raw["gancho_descripcion"],
@@ -1523,7 +1669,7 @@ def main():
 {historia_raw['contexto_descripcion']}
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
 📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real viral.')}
- Síguenos: {FACEBOOK_LINK}
+📱 Síguenos: {FACEBOOK_LINK}
 {historia_raw['hashtags_descripcion']}"""
             enviar_a_make(
                 titulo=historia_raw["titulo"],
@@ -1532,7 +1678,7 @@ def main():
                 url_youtube=f"https://youtu.be/{video_id_youtube}"
             )
         else:
-            print("️ No se pudo subir al host temporal.")
+            print("⚠️ No se pudo subir al host temporal.")
 
     limpiar_temporales_shorts()
     print("✨ Ejecución completada. ¡Short viral listo!")
