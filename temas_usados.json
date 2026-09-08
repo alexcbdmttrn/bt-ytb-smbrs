@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "sombra",
-      "lugar": "hospital",
-      "contexto": "encuentro"
-    },
-    {
       "tipo": "aparición",
       "lugar": "panteón",
       "contexto": "ronda nocturna"
@@ -34,6 +29,11 @@
       "tipo": "numero_maldito",
       "lugar": "casa vacia",
       "contexto": "telefono"
+    },
+    {
+      "tipo": "creepypasta",
+      "lugar": "calle solitaria",
+      "contexto": "slenderman"
     }
   ]
 }
