@@ -137,7 +137,7 @@ FORMULAS_TITULOS_LARGOS = {
     ],
     "advertencia_real": [
         "⚠️ NO vayas a {lugar} si ves ESTO - Testigo lo confirma",
-        "🚨 ALERTA: Algo acecha en {lugar} - Múltiples avistamientos",
+        " ALERTA: Algo acecha en {lugar} - Múltiples avistamientos",
         "PELIGRO REAL en {lugar} - Lo que las autoridades ocultan",
     ],
     "secreto_revelado": [
@@ -230,16 +230,16 @@ def validar_pexels_api_key():
             print("✅ API Key de Pexels válida.")
             return True
         else:
-            print(f"️ API Key de Pexels inválida (código {r.status_code}).")
+            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"⚠️ Error probando API Key: {e}")
+        print(f"️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# 🎯 GENERAR TÍTULO ULTRA-VIRAL PARA VIDEOS LARGOS
+#  GENERAR TÍTULO ULTRA-VIRAL PARA VIDEOS LARGOS
 # ================================================================
 def generar_titulo_viral_largo(keywords, lugar, tema_viral):
     """
@@ -341,7 +341,7 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # VOCES NEURALES
@@ -672,7 +672,7 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-#  GENERAR HISTORIA CON TEMAS VIRALES
+# 🎯 GENERAR HISTORIA CON TEMAS VIRALES
 # ================================================================
 def generar_historia_completa():
     # Seleccionar tema viral
@@ -689,7 +689,7 @@ def generar_historia_completa():
     prompt_base = f"""
 Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para YouTube.
 
- TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
+🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
 🔑 KEYWORDS: {', '.join(keywords)}
 ⏱️ DURACIÓN OBJETIVO: {tema_viral['duracion_objetivo']//60} minutos
@@ -700,7 +700,7 @@ Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para Y
 🚫 TEMAS YA PUBLICADOS (EVITAR):
 {temas_texto}
 
-🎯 REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
+ REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
 
 🎯 REGLA DE TÍTULO SEO (CRÍTICA):
 El título debe ser un GANCHO que se entienda en 10 segundos.
@@ -708,9 +708,9 @@ EJEMPLOS DE TÍTULOS GANADORES (40-95 caracteres):
 - "Exploré los Backrooms de {contexto} durante 12 horas"
 - "Sobreviví 7 noches en {contexto} - Testimonio REAL"
 - "Una IA predijo mi muerte en {contexto} - 3 días después"
- NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
+❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
 
- REGLA DE PALABRAS CLAVE PARA MINIATURA:
+🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
 "palabras_portada": TEXTO GANCHO de 2-4 palabras emocionales y ESPECÍFICAS.
 
 🎯 REGLA DE ÉPOCA Y AMBIENTACIÓN:
@@ -789,7 +789,7 @@ Responde ESTRICTAMENTE en este JSON:
                 titulo_generado = data.get("titulo", "")
 
                 if not validar_titulo_gancho(titulo_generado):
-                    print(f"️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
+                    print(f"⚠️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
 
                 if not evaluar_claridad_titulo(titulo_generado, texto[:300]):
@@ -814,10 +814,10 @@ Responde ESTRICTAMENTE en este JSON:
                 print(f"🎯 Tema viral: {tema_viral['tema']}")
                 return data
             else:
-                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
+                print(f"️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
                 raise ValueError("Texto insuficiente")
         except Exception as e:
-            print(f" Intento {intento+1}/6 falló: {e}")
+            print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
                 time.sleep(10)
     print("❌ No se pudo generar historia válida después de 6 intentos.")
@@ -922,6 +922,38 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
     return prompt_base[:200]
 
 # ================================================================
+# 🎬 GENERAR QUERY PARA MINIATURA EN PEXELS
+# ================================================================
+def generar_query_miniatura_pexels(miniatura_prompt):
+    """
+    Genera query optimizada para buscar miniatura en Pexels
+    """
+    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto HORIZONTAL (16:9) en Pexels para una miniatura de YouTube de terror.
+    Idea: "{miniatura_prompt[:150]}"
+    Época: {EPOCA_MOD}
+    Devuelve SOLO las palabras clave.
+    """
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.5,
+        "max_tokens": 40,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
+        r.raise_for_status()
+        query = r.json()["choices"][0]["message"]["content"].strip()
+        query = re.sub(r'["\']', '', query)
+        query = re.sub(r',', ' ', query)
+        query = re.sub(r'\s+', ' ', query)
+        return query if len(query) > 5 else "horror night dark landscape cinematic"
+    except Exception as e:
+        print(f"⚠️ Error generando query de miniatura: {e}")
+        return "horror night dark landscape cinematic"
+
+# ================================================================
 # BUSCAR IMAGEN EN PEXELS
 # ================================================================
 ULTIMA_URL_PEXELS = None
@@ -929,7 +961,7 @@ ULTIMA_URL_PEXELS = None
 def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
     global ULTIMA_URL_PEXELS
     if not PEXELS_VALIDA:
-        print("⚠️ Pexels no disponible.")
+        print("️ Pexels no disponible.")
         return None
 
     variantes = ["cinematic", "dramatic", "atmospheric", "moody", "film"]
@@ -956,7 +988,7 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
                     foto = random.choice(fotos)
                     image_url = foto["src"]["large2x"] or foto["src"]["large"] or foto["src"]["original"]
                     if ULTIMA_URL_PEXELS and image_url == ULTIMA_URL_PEXELS:
-                        print("   ️ URL repetida, buscando otra página...")
+                        print("   ⚠️ URL repetida, buscando otra página...")
                         params["page"] = (params["page"] % 8) + 1
                         continue
                     ULTIMA_URL_PEXELS = image_url
@@ -965,7 +997,7 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
                 else:
                     print("️ No se encontraron fotos para esta consulta.")
             else:
-                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+                print(f"️ Error Pexels: {r.status_code} - {r.text[:100]}")
         except requests.exceptions.Timeout:
             print("⏰ Timeout en Pexels. Reintentando...")
         except Exception as e:
@@ -1020,7 +1052,7 @@ def buscar_miniatura_pexels(query, intentos=5):
                             continue
                     
             else:
-                print(f"️ Error Pexels: {r.status_code}")
+                print(f"⚠️ Error Pexels: {r.status_code}")
                 
         except Exception as e:
             print(f"⚠️ Error: {e}")
@@ -1241,7 +1273,7 @@ def crear_miniatura_profesional(img_path, texto, output_path):
             return True
             
     except Exception as e:
-        print(f" Error creando miniatura: {e}")
+        print(f"❌ Error creando miniatura: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -1276,7 +1308,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
                     CONFIG_VOZ_ACTUAL = voz_config
                     return filename
             except Exception as e:
-                print(f" Falló {voz}: {e}")
+                print(f"❌ Falló {voz}: {e}")
             if intento < intentos_por_voz - 1:
                 time.sleep(3 * (intento + 1))
     if os.path.exists(filename):
@@ -1380,7 +1412,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, 
     if isinstance(etiquetas, str):
         etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    if capitulos and " Capítulos" not in descripcion:
+    if capitulos and "⏰ Capítulos" not in descripcion:
         capitulos_texto = "\n⏰ Capítulos del relato:\n"
         for cap in capitulos:
             capitulos_texto += f"{cap['tiempo']} - {cap['titulo']}\n"
@@ -1460,7 +1492,7 @@ def procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0):
             imagen_ultimo_recurso = url_img
         else:
             if imagen_ultimo_recurso:
-                print(f"⚠️ Reutilizando imagen anterior para segmento {idx+1}.")
+                print(f"️ Reutilizando imagen anterior para segmento {idx+1}.")
                 url_img = imagen_ultimo_recurso
             else:
                 query_fallback = "mexican night landscape dark cinematic"
@@ -1492,7 +1524,7 @@ def main():
     verificar_envs()
 
     if os.getenv("FORCE_PUBLISH") == "true":
-        print("🚀 FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
+        print(" FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
     else:
         estado_musica = cargar_estado_musica()
         if verificar_publicacion_hoy():
@@ -1519,7 +1551,7 @@ def main():
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
     print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
     print(f"🎵 Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
-    print(f" {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-"*70)
 
     historia = generar_historia_completa()
@@ -1545,7 +1577,7 @@ def main():
     descripcion_completa = f"""{descripcion_base}
 
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
-📱 Facebook: {FACEBOOK_LINK}
+ Facebook: {FACEBOOK_LINK}
 
 {hashtags_video}"""
 
@@ -1559,7 +1591,7 @@ def main():
 
     segmentos = dividir_en_segmentos(texto_completo, 55)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, UBICACION_HISTORIA)
-    print(f"\n🎬 {len(segmentos)} segmentos con efectos cinematográficos.")
+    print(f"\n {len(segmentos)} segmentos con efectos cinematográficos.")
 
     elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0)
     if not elementos_validos:
@@ -1571,7 +1603,7 @@ def main():
 
     intentos_expansion = 0
     while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
-        print(f"️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
+        print(f"⚠️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
         texto_extra = expandir_texto(titulo_video, texto_completo)
         if texto_extra:
             texto_completo += " " + texto_extra
@@ -1590,7 +1622,7 @@ def main():
 
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    print("️ Creando miniatura profesional viral...")
+    print("🖼️ Creando miniatura profesional viral...")
     miniatura_path = None
     
     query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night"))
