@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "aparición",
-      "lugar": "autopista",
-      "contexto": "persecución"
-    },
-    {
       "tipo": "entidad sin rostro",
       "lugar": "estacionamiento de centro comercial",
       "contexto": "ronda nocturna"
@@ -34,6 +29,11 @@
       "tipo": "numero_maldito",
       "lugar": "cabina telefonica",
       "contexto": "telefono"
+    },
+    {
+      "tipo": "backrooms",
+      "lugar": "hotel abandonado",
+      "contexto": "backrooms"
     }
   ]
 }
