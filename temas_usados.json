@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "entidad sin rostro",
-      "lugar": "estacionamiento de centro comercial",
-      "contexto": "ronda nocturna"
-    },
-    {
       "tipo": "fantasma",
       "lugar": "hospital",
       "contexto": "archivo"
@@ -34,6 +29,11 @@
       "tipo": "backrooms",
       "lugar": "hotel abandonado",
       "contexto": "backrooms"
+    },
+    {
+      "tipo": "deep_web",
+      "lugar": "oficina abandonada",
+      "contexto": "deep web"
     }
   ]
 }
