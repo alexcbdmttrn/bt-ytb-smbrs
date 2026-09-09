@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "aparición",
-      "lugar": "panteón",
-      "contexto": "ronda nocturna"
-    },
-    {
-      "tipo": "aparición",
       "lugar": "autopista",
       "contexto": "persecución"
     },
@@ -34,6 +29,11 @@
       "tipo": "creepypasta",
       "lugar": "calle solitaria",
       "contexto": "slenderman"
+    },
+    {
+      "tipo": "numero_maldito",
+      "lugar": "cabina telefonica",
+      "contexto": "telefono"
     }
   ]
 }
