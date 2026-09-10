@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "fantasma",
-      "lugar": "hospital",
-      "contexto": "archivo"
-    },
-    {
       "tipo": "ritual_tiktok",
       "lugar": "cementerio",
       "contexto": "ritual"
@@ -34,6 +29,11 @@
       "tipo": "deep_web",
       "lugar": "oficina abandonada",
       "contexto": "deep web"
+    },
+    {
+      "tipo": "creepypasta",
+      "lugar": "parque desierto",
+      "contexto": "slenderman"
     }
   ]
 }
