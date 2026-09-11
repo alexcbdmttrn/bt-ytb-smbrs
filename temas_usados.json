@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "numero_maldito",
-      "lugar": "cabina telefonica",
-      "contexto": "telefono"
-    },
-    {
       "tipo": "backrooms",
       "lugar": "hotel abandonado",
       "contexto": "backrooms"
@@ -34,6 +29,11 @@
       "tipo": "creepypasta",
       "lugar": "parque desierto",
       "contexto": "slenderman"
+    },
+    {
+      "tipo": "objeto_maldito",
+      "lugar": "ático",
+      "contexto": "muñeca"
     }
   ]
 }
