@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Sunken Dread.mp3",
     "The Deep Rot.mp3",
     "Black Maw.mp3",
@@ -9,11 +8,12 @@
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
     "The Deep Rot.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunless Vault.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-08-30",
-  "fecha": "2026-09-10",
-  "publicaciones_hoy": 1,
+  "fecha": "2026-09-11",
+  "publicaciones_hoy": 0,
   "dia_descanso": null,
   "ultima_publicacion": "2026-09-10T08:22:00.389223-06:00"
 }
