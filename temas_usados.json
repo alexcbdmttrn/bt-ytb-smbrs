@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "creepypasta",
-      "lugar": "calle solitaria",
-      "contexto": "slenderman"
-    },
-    {
       "tipo": "numero_maldito",
       "lugar": "cabina telefonica",
       "contexto": "telefono"
@@ -34,6 +29,11 @@
       "tipo": "numero_maldito",
       "lugar": "casa vacia",
       "contexto": "telefono"
+    },
+    {
+      "tipo": "creepypasta",
+      "lugar": "parque desierto",
+      "contexto": "slenderman"
     }
   ]
 }
