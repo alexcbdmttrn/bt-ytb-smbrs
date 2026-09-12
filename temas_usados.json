@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "deep_web",
-      "lugar": "oficina abandonada",
-      "contexto": "deep web"
-    },
-    {
       "tipo": "creepypasta",
       "lugar": "parque desierto",
       "contexto": "slenderman"
@@ -34,6 +29,11 @@
       "tipo": "deep_web",
       "lugar": "bunker",
       "contexto": "deep web"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "cuarto oscuro",
+      "contexto": "IA"
     }
   ]
 }
