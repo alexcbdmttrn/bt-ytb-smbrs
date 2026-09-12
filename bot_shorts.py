@@ -46,69 +46,101 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
-# 🧠 CONFIGURACIÓN DE PUBLICACIÓN (3 AL DÍA - HORARIOS ALEATORIOS)
+#  CONFIGURACIÓN DE PUBLICACIÓN (2 AL DÍA - SEO OPTIMIZADO)
 # ================================================================
-MAX_SHORTS_DIA = 3
-INTERVALO_MIN_HORAS = 3
-INTERVALO_MAX_HORAS = 6
-RETRASO_MAX_MINUTOS = 45
+MAX_SHORTS_DIA = 2  # Cambiado de 3 a 2 para mayor calidad
+INTERVALO_MIN_HORAS = 6  # Más espacio entre publicaciones
+INTERVALO_MAX_HORAS = 9
+RETRASO_MAX_MINUTOS = 30
 
 # ================================================================
-# 🎯 TEMAS VIRALES 2024 (TRENDING)
+# 🎯 TEMAS VIRALES 2024-2025 (TRENDING + ALTO CTR)
 # ================================================================
 TEMAS_VIRALES_2024 = [
     {
         "tema": "backrooms",
         "keywords": ["backrooms", "liminal spaces", "dimensiones", "atrapado", "infinito"],
         "contextos": ["hotel abandonado", "centro comercial vacío", "estacionamiento subterráneo", "oficina de noche"],
-        "busquedas": 450000
+        "busquedas": 450000,
+        "competencia": "media",
+        "ctr_potencial": 8.5
     },
     {
         "tema": "skinwalker",
         "keywords": ["skinwalker", "wendigo", "criatura", "carretera", "bosque"],
         "contextos": ["carretera solitaria", "bosque profundo", "montaña aislada", "desierto nocturno"],
-        "busquedas": 380000
+        "busquedas": 380000,
+        "competencia": "baja",
+        "ctr_potencial": 9.2
     },
     {
         "tema": "ritual_tiktok",
         "keywords": ["ritual", "tiktok", "challenge", "maldicion", "invocacion"],
         "contextos": ["cuarto oscuro", "baño a medianoche", "espejo antiguo", "cementerio"],
-        "busquedas": 520000
+        "busquedas": 520000,
+        "competencia": "alta",
+        "ctr_potencial": 7.8
     },
     {
         "tema": "ia_prediccion",
         "keywords": ["IA", "inteligencia artificial", "prediccion", "muerte", "algoritmo"],
         "contextos": ["computadora antigua", "celular en la noche", "laboratorio", "cuarto oscuro"],
-        "busquedas": 890000
+        "busquedas": 890000,
+        "competencia": "baja",
+        "ctr_potencial": 11.3
     },
     {
         "tema": "numero_maldito",
         "keywords": ["telefono", "numero", "llamada", "maldito", "desconocido"],
         "contextos": ["cabina telefonica", "celular antiguo", "casa vacia", "oficina nocturna"],
-        "busquedas": 670000
+        "busquedas": 670000,
+        "competencia": "media",
+        "ctr_potencial": 8.9
     },
     {
         "tema": "deep_web",
         "keywords": ["deep web", "red oscura", "foro", "archivo", "prohibido"],
         "contextos": ["computadora en cuarto oscuro", "sótano", "bunker", "oficina abandonada"],
-        "busquedas": 540000
+        "busquedas": 540000,
+        "competencia": "media",
+        "ctr_potencial": 9.1
     },
     {
         "tema": "creepypasta",
         "keywords": ["slenderman", "jeff", "creepypasta", "internet", "leyenda"],
         "contextos": ["bosque nocturno", "casa abandonada", "calle solitaria", "parque desierto"],
-        "busquedas": 230000
+        "busquedas": 230000,
+        "competencia": "alta",
+        "ctr_potencial": 6.5
     },
     {
         "tema": "objeto_maldito",
         "keywords": ["muñeca", "espejo", "pintura", "reliquia", "maldito"],
         "contextos": ["tienda de antigüedades", "sótano", "ático", "museo abandonado"],
-        "busquedas": 340000
+        "busquedas": 340000,
+        "competencia": "baja",
+        "ctr_potencial": 9.7
+    },
+    {
+        "tema": "experiencia_cercana_muerte",
+        "keywords": ["muerte", "tunel", "luz", "experiencia", "casi muero"],
+        "contextos": ["hospital", "accidente", "quirófano", "emergencia"],
+        "busquedas": 720000,
+        "competencia": "media",
+        "ctr_potencial": 10.2
+    },
+    {
+        "tema": "glitch_realidad",
+        "keywords": ["glitch", "matrix", "realidad", "paralelo", "deja vu"],
+        "contextos": ["calle familiar", "casa propia", "trabajo", "escuela"],
+        "busquedas": 410000,
+        "competencia": "baja",
+        "ctr_potencial": 10.8
     },
 ]
 
 # ================================================================
-# 🔥 FÓRMULAS DE TÍTULOS VIRALES 2024
+# 🔥 FÓRMULAS DE TÍTULOS ULTRA-VIRALES (ALTO CTR 2024)
 # ================================================================
 FORMULAS_TITULOS_VIRALES = {
     "prohibido": [
@@ -147,7 +179,61 @@ FORMULAS_TITULOS_VIRALES = {
         "Nunca olvidaré lo que pasó en {lugar}",
         "Estuve a punto de morir en {lugar}",
     ],
+    "curiosidad_morbosa": [
+        "Así se ve {lugar} por dentro (Nadie entra)",
+        "Lo que encontré en {lugar} me dio miedo",
+        "Por qué {lugar} está abandonado (La razón)",
+        "La historia REAL detrás de {lugar}",
+    ],
 }
+
+# ================================================================
+#  PALETAS DE COLOR DE ALTO IMPACTO VISUAL
+# ================================================================
+PALETAS_COLOR_ELITE = [
+    {
+        "nombre": "Cold Horror",
+        "primary": "#00FFFF",  # Cyan eléctrico
+        "secondary": "#000080",  # Navy blue
+        "accent": "#FF00FF",  # Magenta
+        "contraste": 1.4
+    },
+    {
+        "nombre": "Blood Moon",
+        "primary": "#FF0000",  # Rojo sangre
+        "secondary": "#1a0000",  # Negro rojizo
+        "accent": "#FF6600",  # Naranja fuego
+        "contraste": 1.6
+    },
+    {
+        "nombre": "Toxic Green",
+        "primary": "#39FF14",  # Verde neón
+        "secondary": "#001a00",  # Verde oscuro
+        "accent": "#00FFFF",  # Cyan
+        "contraste": 1.5
+    },
+    {
+        "nombre": "Void Purple",
+        "primary": "#9400D3",  # Púrpura violeta
+        "secondary": "#0a001a",  # Azul noche
+        "accent": "#FF00FF",  # Fucsia
+        "contraste": 1.3
+    },
+]
+
+# ================================================================
+# 🎬 ESTILOS CINEMATOGRÁFICOS PROFESIONALES
+# ================================================================
+ESTILOS_CINE_ELITE = [
+    "Cinematic horror photography, shot on ARRI Alexa 65, anamorphic lens, film grain 35mm",
+    "Documentary thriller style, handheld camera aesthetic, natural lighting, realistic",
+    "Neo-noir cinematography, high contrast chiaroscuro, dramatic shadows, moody",
+    "Found footage aesthetic, VHS quality, timestamp overlay, authentic horror",
+    "8K ultra HD cinematic frame, IMAX quality, crystal clear details, professional",
+    "Analog horror photography, VHS degradation, CRT scanlines, retro aesthetic",
+    "Gothic horror cinematography, baroque lighting, renaissance painting composition",
+    "Modern thriller photography, drone shot perspective, aerial view, cinematic",
+]
 
 # ================================================================
 # VALIDAR PEXELS API KEY
@@ -172,7 +258,7 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# 🧠 DECISIÓN DE PUBLICAR
+#  DECISIÓN DE PUBLICAR (OPTIMIZADA PARA 2/DÍA)
 # ================================================================
 def deberia_publicar_ahora(estado):
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
@@ -185,7 +271,7 @@ def deberia_publicar_ahora(estado):
 
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
-        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
+        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado (CALIDAD > CANTIDAD).")
         return False
 
     ultima_hora = estado.get("ultima_publicacion")
@@ -194,11 +280,8 @@ def deberia_publicar_ahora(estado):
         hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
         diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
         
-        shorts_restantes = MAX_SHORTS_DIA - publicadas_hoy
-        if shorts_restantes == 1:
-            intervalo_requerido = random.uniform(5, 8)
-        else:
-            intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
+        # Intervalos más largos para mayor impacto
+        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
         
         if diff_horas < intervalo_requerido:
             print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
@@ -208,7 +291,7 @@ def deberia_publicar_ahora(estado):
         else:
             print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
 
-    print(f"✅ Decisión: Publicar. (Short {publicadas_hoy + 1}/{MAX_SHORTS_DIA} del día)")
+    print(f"✅ Decisión: Publicar. (Short {publicadas_hoy + 1}/{MAX_SHORTS_DIA} del día - CALIDAD ÉLITE)")
 
     retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
     if retraso_segundos > 0:
@@ -218,33 +301,55 @@ def deberia_publicar_ahora(estado):
     return True
 
 # ================================================================
-# 🎯 GENERAR TÍTULO ULTRA-VIRAL 2024
+# 🎯 GENERAR TÍTULO ULTRA-VIRAL CON PSICOLOGÍA DE CTR
 # ================================================================
-def generar_titulo_viral_2024(keywords, lugar, tema_viral):
+def generar_titulo_viral_2024(keywords, lugar, tema_viral, anio_suceso=None):
+    # Seleccionar fórmula basada en el tipo de tema
     categorias = list(FORMULAS_TITULOS_VIRALES.keys())
-    categoria = random.choice(categorias)
+    
+    # Priorizar fórmulas según el tema
+    if tema_viral in ["ia_prediccion", "glitch_realidad"]:
+        categoria = random.choice(["numero_especifico", "pregunta_imposible"])
+    elif tema_viral in ["backrooms", "skinwalker"]:
+        categoria = random.choice(["advertencia_real", "experiencia_extrema"])
+    else:
+        categoria = random.choice(categorias)
     
     formulas = FORMULAS_TITULOS_VIRALES[categoria]
     formula = random.choice(formulas)
     
-    horas = ["3:33 AM", "2:00 AM", "4:44 AM", "medianoche", "3:00 AM"]
-    numeros = ["3", "7", "13", "47", "9"]
-    segundos = ["47", "23", "66", "13", "99"]
+    # Variables dinámicas optimizadas
+    horas = ["3:33 AM", "2:00 AM", "4:44 AM", "medianoche", "3:00 AM", "11:11 PM"]
+    numeros = ["3", "7", "13", "47", "9", "666"]
+    segundos = ["47", "23", "66", "13", "99", "100"]
     
     titulo = formula.replace("{hora}", random.choice(horas))
     titulo = titulo.replace("{lugar}", lugar)
     titulo = titulo.replace("{numero}", random.choice(numeros))
     titulo = titulo.replace("{segundos}", random.choice(segundos))
     
-    titulo = titulo[0].upper() + titulo[1:]
+    # Capitalizar estratégicamente
+    palabras = titulo.split()
+    if len(palabras) > 3:
+        # Capitalizar solo palabras clave
+        palabras_clave = ["PROHIBIDO", "ILEGAL", "NADIE", "SECRETO", "ALERTA", "PELIGRO", "REAL"]
+        for i, palabra in enumerate(palabras):
+            if palabra.upper() in palabras_clave or len(palabra) > 6:
+                palabras[i] = palabra.upper()
+        titulo = " ".join(palabras)
     
-    if len(titulo) > 75:
-        titulo = titulo[:72] + "..."
+    # Ajustar longitud para SEO (55-70 caracteres es óptimo)
+    if len(titulo) > 70:
+        titulo = titulo[:67] + "..."
+    elif len(titulo) < 40:
+        # Agregar emoji si es muy corto
+        emojis = ["😱", "⚠️", "", "💀", "️"]
+        titulo = random.choice(emojis) + " " + titulo
     
     return titulo
 
 # ================================================================
-# 🚀 LISTA DE OUTLIERS
+# 🚀 LISTA DE OUTLIERS (CONTENIDO QUE YA FUNCIONÓ)
 # ================================================================
 OUTLIERS_TERROR = [
     "Intenté sobrevivir 7 días en el hotel más embrujado de México",
@@ -319,65 +424,34 @@ def actualizar_epoca(anio):
     print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# VOCES NEURALES
+# VOCES NEURALES PREMIUM (OPTIMIZADAS PARA RETENCIÓN)
 # ================================================================
 VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-2Hz"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz"},
-    {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz"},
+    {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-2Hz", "estilo": "narrativo"},
+    {"voz": "es-ES-AlvaroNeural", "velocidad": "+5%", "tono": "-3Hz", "estilo": "dramatico"},
+    {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz", "estilo": "conversacional"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+7%", "tono": "-2Hz", "estilo": "suspenso"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+6%", "tono": "+1Hz", "estilo": "femenino_misterio"},
 ]
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# PALETAS Y ESTILOS
-# ================================================================
-PALETAS_COLOR = [
-    "Cold cyan blue LED fog, navy blue shadows, crisp white moonlight",
-    "Emerald green twilight, city haze, muted sage ambient lighting",
-    "Deep violet haze, electric purple ambient light, dark magenta shadows",
-    "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
-    "Dark teal and deep blue, oceanic midnight, cold misty atmosphere",
-    "Stark black and white high contrast, silver moonlight, pitch shadows",
-    "Desaturated cold film look, moody cinematic lighting, hyperrealistic",
-    "Warm amber and dark mahogany, golden lighting, deep brown shadows",
-    "Fiery sunset orange, deep purple shadows, red highlights",
-    "Deep crimson red, pitch black shadow, intense orange emergency lights",
-    "Muted sepia-toned film look, faded analog colors, nostalgic atmosphere",
-    "Warm tungsten indoor glow, soft yellow lamplight, aged shadows",
-]
-PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
-
-ESTILOS_VISUALES = [
-    "Cinematic photograph, dramatic lighting, sharp focus, film still",
-    "Thriller photography, soft ambient diffusion, high contrast",
-    "Documentary realistic photo, natural texture, authentic",
-    "8k resolution cinematic frame, ultra clear details",
-    "Noir style, high contrast, moody urban atmosphere",
-    "Analog film photograph, grain of the period, authentic era look",
-]
-ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
-
-# ================================================================
-# GENERADOR DE PERSONAJES
+# GENERADOR DE PERSONAJES (PARA MAYOR IDENTIFICACIÓN)
 # ================================================================
 def generar_perfil_personaje_shorts():
-    edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
+    edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old"]
     vestimentas = [
         "wearing a denim jacket and t-shirt", "wearing a dark green coat and wool scarf",
         "wearing a simple white shirt and leather belt", "wearing a blue mechanic uniform",
         "wearing a dark sweater and trousers", "wearing a red flannel shirt and jeans",
-        "wearing a black leather jacket and boots", "wearing a hoodie and baseball cap",
-        "wearing a polo shirt and dark pants", "wearing a work uniform with reflective stripes",
     ]
     cabellos = [
         "short curly dark hair", "grey cropped hair", "bald with a short beard",
-        "short spiky black hair", "chestnut brown curly hair", "short salt-and-pepper hair",
+        "short spiky black hair", "chestnut brown curly hair",
     ]
     rasgos = [
         "with mestizo features and light olive skin", "with light brown skin and freckles",
         "with olive skin and a strong jaw", "with pale skin and green eyes",
-        "with tan skin and a warm smile",
     ]
     profesiones = [
         "trailero conduciendo un tráiler en autopista nocturna", "policía en su turno nocturno",
@@ -402,7 +476,7 @@ ESTADO_HISTORIA_SHORTS = random.choice([
 ])
 
 # ================================================================
-# AUDIO DE FONDO
+# AUDIO DE FONDO (SELECCIÓN INTELIGENTE)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -420,18 +494,18 @@ def seleccionar_fondo_disponible(estado):
                     encontrados[fondo] = os.path.join(root, file)
 
     if not encontrados:
-        print("⚠️ No se encontraron archivos de música de fondo en el repositorio.")
+        print("️ No se encontraron archivos de música de fondo en el repositorio.")
         return None
 
     ultimo_fondo = estado.get("ultimo_fondo")
     candidatos = [f for f in encontrados if f != ultimo_fondo] or list(encontrados.keys())
     seleccionado = random.choice(candidatos)
     estado["ultimo_fondo"] = seleccionado
-    print(f"🎵 Música de fondo seleccionada: {seleccionado} (de {len(candidatos)} candidatas disponibles)")
+    print(f" Música de fondo seleccionada: {seleccionado} (de {len(candidatos)} candidatas disponibles)")
     return encontrados[seleccionado]
 
 # ================================================================
-# LIMPIADORES
+# LIMPIADORES DE TEXTO
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
@@ -473,7 +547,7 @@ def generar_placeholder_local(texto="Terror", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🎨 CREAR MINIATURA VIRAL PROFESIONAL (CORREGIDA)
+# 🎨 CREAR MINIATURA VIRAL PROFESIONAL (ESTILO MRBEAST)
 # ================================================================
 def crear_miniatura_viral(img_path, texto, output_path):
     """
@@ -481,13 +555,14 @@ def crear_miniatura_viral(img_path, texto, output_path):
     - Texto gigante con contorno
     - Flecha/círculo rojo señalando algo
     - Alto contraste
+    - Colores de alto impacto
     """
     colores_impacto = [
-        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},
-        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},
-        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},
-        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},
-        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},
+        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},  # Amarillo
+        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},  # Rojo
+        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},  # Naranja
+        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},  # Cyan
+        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},  # Blanco
     ]
     
     color_elegido = random.choice(colores_impacto)
@@ -506,7 +581,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
             
             img = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
             
-            # ✅ Aplicar filtros de mejora (ahora con ImageEnhance importado)
+            # Aplicar filtros de mejora
             img = ImageEnhance.Contrast(img).enhance(1.3)
             img = ImageEnhance.Sharpness(img).enhance(1.5)
             
@@ -583,16 +658,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
                 h = bbox[3] - bbox[1]
                 x = (width - w) // 2
                 
-                for offset in range(-6, 7):
-                    for offset_y in range(-6, 7):
-                        if offset != 0 or offset_y != 0:
-                            draw.text(
-                                (x + offset, y_current + offset_y),
-                                linea,
-                                font=font,
-                                fill=(0, 0, 0, 220)
-                            )
-                
+                # Contorno múltiple para máximo contraste
                 for dx in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]:
                     for dy in [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]:
                         draw.text(
@@ -624,7 +690,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
             img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
             
             print(f"✅ Miniatura viral creada: {output_path}")
-            print(f"   📝 Texto: '{texto}'")
+            print(f"    Texto: '{texto}'")
             print(f"   🎨 Color: {color_texto}")
             return True
             
@@ -664,10 +730,11 @@ def truncar_texto_largo(texto, max_palabras=170):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# 🎯 GENERAR HISTORIA CON TEMAS VIRALES
+#  GENERAR HISTORIA CON TEMAS VIRALES Y SEO AVANZADO
 # ================================================================
 def generar_historia_completa():
-    tema_viral = random.choice(TEMAS_VIRALES_2024)
+    # Seleccionar tema viral basado en CTR potencial
+    tema_viral = max(TEMAS_VIRALES_2024, key=lambda x: x.get("ctr_potencial", 0) * random.uniform(0.8, 1.2))
     contexto = random.choice(tema_viral["contextos"])
     keywords = tema_viral["keywords"]
     
@@ -677,7 +744,7 @@ def generar_historia_completa():
     temas_recientes = obtener_temas_recientes()
     temas_bloqueo = ""
     if temas_recientes:
-        temas_bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE:\n"
+        temas_bloqueo = "\n TEMAS YA PUBLICADOS RECIENTEMENTE:\n"
         for t in temas_recientes[-5:]:
             temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
         temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar.\n"
@@ -698,9 +765,11 @@ def generar_historia_completa():
 
     prompt = f"""Eres un CURADOR DE RELATOS PARANORMALES REALES de internet, especializado en SEO para YouTube Shorts.
 
-🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
+ TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
 🔑 KEYWORDS: {', '.join(keywords)}
+📊 BUSQUEDAS/MES: {tema_viral['busquedas']}
+🎯 CTR POTENCIAL: {tema_viral['ctr_potencial']}%
 
 🚀 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
 {outliers_texto}
@@ -724,12 +793,12 @@ PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
 🎯 TÍTULO CON ESTRATEGIA DE OUTLIER (55-75 caracteres):
 FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
 ❌ PROHIBIDO empezar con "Intenté" a menos que la fórmula lo exija explícitamente. Varía al máximo.
-❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
+ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
 
 🎯 PALABRAS DE PORTADA (máx 2 palabras)
-🎯 DESCRIPCIÓN SEO
+ DESCRIPCIÓN SEO
 🎯 TAGS (10-15)
-🎯 AÑO DEL SUCESO
+ AÑO DEL SUCESO
 
 🚫 TÍTULOS YA PUBLICADOS:
 {titulos_referencia}
@@ -792,12 +861,12 @@ Devuelve ESTRICTAMENTE este JSON:
                 if random.random() > 0.2:
                     keywords = data.get("palabras_clave", [])
                     lugar = ESTADO_HISTORIA_SHORTS
-                    titulo = generar_titulo_viral_2024(keywords, lugar, tema_viral)
+                    titulo = generar_titulo_viral_2024(keywords, lugar, tema_viral, anio_suceso)
             
             if len(titulo) < 35:
                 keywords = data.get("palabras_clave", [])
                 lugar = ESTADO_HISTORIA_SHORTS
-                titulo = generar_titulo_viral_2024(keywords, lugar, tema_viral)
+                titulo = generar_titulo_viral_2024(keywords, lugar, tema_viral, anio_suceso)
 
             data["titulo"] = titulo
 
@@ -1314,7 +1383,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             video_clip = ImageClip(img_path).set_duration(duracion)
             clips_video.append(video_clip)
         except Exception as e:
-            print(f"⚠️ Error procesando imagen {i}: {e}")
+            print(f"️ Error procesando imagen {i}: {e}")
             placeholder = generar_placeholder_local(f"Img {i+1}")
             if placeholder:
                 with Image.open(placeholder) as img:
@@ -1557,9 +1626,9 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS VIRAL 2024 (3 al día - Horarios aleatorios)")
+    print("🎬 Iniciando Bot de SHORTS VIRAL 2024-2025 (2 al día - CALIDAD ÉLITE)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']}")
+    print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} ({CONFIG_VOZ_ACTUAL['estilo']})")
 
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN.")
@@ -1571,7 +1640,7 @@ def main():
     estado = cargar_estado()
 
     if not deberia_publicar_ahora(estado):
-        print("⏸️ Decisión: No publicar en esta ejecución.")
+        print("️ Decisión: No publicar en esta ejecución.")
         guardar_estado(estado)
         sys.exit(0)
 
@@ -1591,8 +1660,8 @@ def main():
 
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
-    paleta = PALETA_COLOR_ACTUAL
-    estilo = ESTILO_VISUAL_ACTUAL
+    paleta = random.choice(PALETAS_COLOR_ELITE)
+    estilo = random.choice(ESTILOS_CINE_ELITE)
     palabras_portada = historia_raw.get("palabras_portada", "TERROR")
     tema_viral = historia_raw.get("tema", {}).get("tipo", "paranormal")
 
@@ -1601,11 +1670,12 @@ def main():
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
     print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
-    print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
+    print(f"    Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
     print(f"   🧩 Hashtags: {historia_raw['hashtags_descripcion']}")
     print(f"   🎨 Texto portada: {palabras_portada}")
     print(f"   🎯 Tema viral: {tema_viral}")
+    print(f"   🎨 Paleta: {paleta['nombre']}")
     if "tema" in historia_raw:
         print(f"   🧩 Contexto: {historia_raw['tema']}")
     print(f"\n   📖 Procesando historia ({len(texto_completo.split())} palabras)...")
@@ -1615,7 +1685,7 @@ def main():
 
     print(f"\n🎥 Buscando {len(segmentos)} imágenes cinematográficas en Pexels...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
-        print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
+        print(f"    Segmento {i+1}: [{etapa}] {ubic}")
 
     recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
@@ -1669,7 +1739,7 @@ def main():
 {historia_raw['contexto_descripcion']}
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
 📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real viral.')}
-📱 Síguenos: {FACEBOOK_LINK}
+ Síguenos: {FACEBOOK_LINK}
 {historia_raw['hashtags_descripcion']}"""
             enviar_a_make(
                 titulo=historia_raw["titulo"],
