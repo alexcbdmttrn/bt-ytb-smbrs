@@ -49,7 +49,7 @@ ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
-#  CONFIGURACIÓN DE PUBLICACIÓN ÉLITE (2 AL DÍA - MÁXIMA CALIDAD)
+# CONFIGURACIÓN DE PUBLICACIÓN ÉLITE (2 AL DÍA - MÁXIMA CALIDAD)
 # ================================================================
 MAX_SHORTS_DIA = 2
 INTERVALO_MIN_HORAS = 6
@@ -57,7 +57,7 @@ INTERVALO_MAX_HORAS = 9
 RETRASO_MAX_MINUTOS = 30
 
 # ================================================================
-#  TEMAS VIRALES 2024-2025 CON ANÁLISIS DE COMPETENCIA
+# TEMAS VIRALES 2024-2025 CON ANÁLISIS DE COMPETENCIA
 # ================================================================
 TEMAS_VIRALES_2024 = [
     {
@@ -138,7 +138,7 @@ TEMAS_VIRALES_2024 = [
 ]
 
 # ================================================================
-#  FÓRMULAS DE TÍTULOS ÉLITE (BASADAS EN DATOS REALES DE TOP CREATORS)
+# FÓRMULAS DE TÍTULOS ÉLITE (BASADAS EN DATOS REALES DE TOP CREATORS)
 # ================================================================
 FORMULAS_TITULOS_ELITE = {
     "curiosidad_gap": [
@@ -210,7 +210,7 @@ PSICOLOGIA_COLOR = {
 }
 
 # ================================================================
-# 📊 ALGORITMO DE PREDICCIÓN DE VIRALIDAD
+#  ALGORITMO DE PREDICCIÓN DE VIRALIDAD
 # ================================================================
 def calcular_puntuacion_viralidad(tema):
     """
@@ -262,7 +262,7 @@ def generar_cluster_keywords(tema_principal):
     return clusters.get(tema_principal, {})
 
 # ================================================================
-#  ANALIZADOR DE COMPETENCIA (Simulado)
+# 🧠 ANALIZADOR DE COMPETENCIA (Simulado)
 # ================================================================
 def analizar_competencia_youtube(tema):
     """
@@ -306,7 +306,7 @@ def analizar_competencia_youtube(tema):
     })
 
 # ================================================================
-#  GENERADOR DE MINIATURAS ÉLITE (Neuro-Marketing)
+# 🎨 GENERADOR DE MINIATURAS ÉLITE (Neuro-Marketing)
 # ================================================================
 def crear_miniatura_elite_neuro(img_path, texto, tema_viral, output_path):
     """
@@ -490,7 +490,7 @@ def generar_titulo_ab_testing(keywords, lugar, tema_viral, anio_suceso=None):
         if len(titulo) > 70:
             titulo = titulo[:67] + "..."
         elif len(titulo) < 40:
-            emojis = ["😱", "⚠️", "👁️", "💀", "🔥"]
+            emojis = ["", "⚠️", "👁️", "💀", "🔥"]
             titulo = random.choice(emojis) + " " + titulo
         
         variantes.append({
@@ -543,7 +543,7 @@ def calcular_score_titulo(titulo):
     return min(score, 100)
 
 # ================================================================
-#  ANALYTICS ÉLITE (Predicción y Optimización)
+# 📊 ANALYTICS ÉLITE (Predicción y Optimización)
 # ================================================================
 def cargar_analytics_elite():
     try:
@@ -605,7 +605,7 @@ def validar_pexels_api_key():
             print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"⚠️ Error probando API Key: {e}")
+        print(f"️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
@@ -620,7 +620,7 @@ def deberia_publicar_ahora(estado):
     if estado.get("fecha") != fecha_hoy:
         estado["fecha"] = fecha_hoy
         estado["publicaciones_hoy"] = 0
-        print(f" Nuevo día. Contador reiniciado.")
+        print(f"📅 Nuevo día. Contador reiniciado.")
 
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
@@ -655,7 +655,7 @@ def deberia_publicar_ahora(estado):
 
     retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
     if retraso_segundos > 0:
-        print(f" Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
+        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
         time.sleep(retraso_segundos)
 
     return True
@@ -723,7 +723,7 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f" Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # VOCES NEURALES PREMIUM (OPTIMIZADAS PARA RETENCIÓN)
@@ -997,7 +997,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
             return True
             
     except Exception as e:
-        print(f"❌ Error creando miniatura viral: {e}")
+        print(f" Error creando miniatura viral: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -1079,14 +1079,14 @@ def generar_historia_completa():
 🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
 🔑 KEYWORDS PRIMARIAS: {', '.join(keywords)}
- KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
+🔑 KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
 📊 BUSQUEDAS/MES: {tema_viral['busquedas']:,}
 🎯 CTR POTENCIAL: {tema_viral['ctr_potencial']}%
 📈 RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
 ⏱️ DURACIÓN ÓPTIMA: {tema_viral['duracion_optima']} segundos
 📊 SCORE VIRALIDAD: {score_viralidad['score']:.1f}/100 ({score_viralidad['categoria']})
 
- REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
+📚 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
 {outliers_texto}
 
 📊 ANÁLISIS DE COMPETENCIA:
@@ -1156,7 +1156,7 @@ Devuelve ESTRICTAMENTE este JSON:
 
     for intento in range(6):
         try:
-            print(f" Intento {intento+1}/6 generando historia viral...")
+            print(f"🔄 Intento {intento+1}/6 generando historia viral...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
@@ -1498,9 +1498,9 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
                     print(f"✅ Imagen encontrada: {image_url[:80]}...")
                     return image_url
                 else:
-                    print("⚠️ No se encontraron fotos.")
+                    print("️ No se encontraron fotos.")
             else:
-                print(f"️ Error Pexels: {r.status_code}")
+                print(f"⚠️ Error Pexels: {r.status_code}")
                 if r.status_code == 401:
                     print("❌ API key inválida.")
                     break
@@ -1666,7 +1666,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             audio_clip = AudioFileClip(recurso["audio_path"])
             clips_audio.append(audio_clip)
         except Exception as e:
-            print(f"️ Error cargando audio {i}: {e}")
+            print(f"⚠️ Error cargando audio {i}: {e}")
             continue
 
         try:
@@ -1761,7 +1761,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print(" Audio de fondo mezclado al 8%")
+            print("🎵 Audio de fondo mezclado al 8%")
         except Exception as e:
             print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
@@ -1797,7 +1797,7 @@ def generar_miniatura_separada(historia_raw, palabras_portada):
     img_url = buscar_miniatura_pexels(query_miniatura)
     
     if not img_url:
-        print("️ No se pudo obtener imagen para miniatura separada.")
+        print("⚠️ No se pudo obtener imagen para miniatura separada.")
         return None
     
     try:
@@ -1835,7 +1835,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
     except Exception as e:
-        print(f"❌ Error autenticando con YouTube: {e}")
+        print(f" Error autenticando con YouTube: {e}")
         sys.exit(1)
 
     if isinstance(etiquetas, str):
@@ -1849,7 +1849,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
 
 📖 {fuente_relato}
 
- Facebook: {FACEBOOK_LINK}
+📱 Facebook: {FACEBOOK_LINK}
 
 {hashtags_descripcion}"""
 
@@ -1970,7 +1970,7 @@ def main():
     estado = cargar_estado()
 
     if not deberia_publicar_ahora(estado):
-        print("️ Decisión: No publicar en esta ejecución.")
+        print("⏸️ Decisión: No publicar en esta ejecución.")
         guardar_estado(estado)
         sys.exit(0)
 
@@ -1978,7 +1978,7 @@ def main():
 
     historia_raw = generar_historia_completa()
     if not historia_raw:
-        print("❌ No se pudo generar la historia.")
+        print(" No se pudo generar la historia.")
         sys.exit(1)
 
     texto_completo = historia_raw.get("texto_completo", "")
@@ -1990,7 +1990,11 @@ def main():
 
     perfil = PERFIL_PERSONAJE_SHORTS
     ubicacion = ESTADO_HISTORIA_SHORTS
-    paleta = random.choice(PSICOLOGIA_COLOR)
+    
+    # ✅ CORRECCIÓN: Obtener paleta correctamente del diccionario
+    tipo_paleta = random.choice(list(PSICOLOGIA_COLOR.keys()))
+    paleta = PSICOLOGIA_COLOR[tipo_paleta]
+    
     palabras_portada = historia_raw.get("palabras_portada", "TERROR")
     tema_viral = historia_raw.get("tema", {}).get("tipo", "paranormal")
 
@@ -2004,23 +2008,23 @@ def main():
     print(f"\n📊 RESUMEN SEO ÉLITE:")
     print(f"   🔥 Título VIRAL: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
-    print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
+    print(f"    Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
-    print(f"    Hashtags: {historia_raw['hashtags_descripcion']}")
+    print(f"   ️ Hashtags: {historia_raw['hashtags_descripcion']}")
     print(f"   🎨 Texto portada: {palabras_portada}")
-    print(f"   🎯 Tema viral: {tema_viral}")
-    print(f"   🎨 Paleta: {paleta}")
+    print(f"    Tema viral: {tema_viral}")
+    print(f"   🎨 Paleta: {tipo_paleta} - {paleta}")
     print(f"\n📈 PREDICCIÓN DE RENDIMIENTO:")
     print(f"   👁️ Vistas predichas: {prediccion['vistas_predichas']:,}")
     print(f"   🎯 CTR predicho: {prediccion['ctr_predicho']}%")
     print(f"   ⏱️ Retención predicha: {prediccion['retencion_predicha']}%")
-    print(f"    Confianza: {prediccion['confianza']}")
+    print(f"   🎯 Confianza: {prediccion['confianza']}")
     
     if "tema" in historia_raw:
         print(f"   🧩 Contexto: {historia_raw['tema']}")
-    print(f"\n    Procesando historia ({len(texto_completo.split())} palabras)...")
+    print(f"\n📝 Procesando historia ({len(texto_completo.split())} palabras)...")
 
     segmentos = dividir_en_segmentos(texto_completo)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
@@ -2110,7 +2114,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f" Error fatal: {e}")
+        print(f"❌ Error fatal: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
