@@ -49,10 +49,10 @@ DURACION_MINIMA_SEGUNDOS = 480  # 8 minutos
 MAX_INTENTOS_EXPANSION = 2
 
 ACTIVAR_DISCLOSURE_IA = True
-DISCLOSURE_TEXT = "\n\n🤖 Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
+DISCLOSURE_TEXT = "\n\n Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
 
 # ================================================================
-# 🔥 PALABRAS DE PODER (Aumentan CTR un 40% según estudios de YouTube)
+# 🔥 PALABRAS DE PODER
 # ================================================================
 PALABRAS_PODER = [
     "PROHIBIDO", "SECRETO", "PELIGRO", "REAL", "VERDAD", 
@@ -61,7 +61,7 @@ PALABRAS_PODER = [
 ]
 
 # ================================================================
-# 🎯 TEMAS VIRALES 2024 (ADAPTADOS PARA VIDEOS LARGOS)
+# 🎯 TEMAS VIRALES 2024
 # ================================================================
 TEMAS_VIRALES_LARGOS = [
     {
@@ -69,7 +69,7 @@ TEMAS_VIRALES_LARGOS = [
         "titulo_base": "Exploré los Backrooms de {lugar} durante {horas} horas",
         "keywords": ["backrooms", "liminal spaces", "dimensiones paralelas", "atrapado", "infinito"],
         "contextos": ["hotel abandonado", "centro comercial vacío", "túneles subterráneos", "edificio abandonado"],
-        "duracion_objetivo": 600,  # 10 minutos
+        "duracion_objetivo": 600,
         "busquedas": 450000
     },
     {
@@ -77,7 +77,7 @@ TEMAS_VIRALES_LARGOS = [
         "titulo_base": "Un Skinwalker me persiguió {dias} días en {lugar}",
         "keywords": ["skinwalker", "wendigo", "criatura", "persecución", "bosque maldito"],
         "contextos": ["carretera solitaria", "bosque profundo", "montaña aislada", "desierto nocturno"],
-        "duracion_objetivo": 540,  # 9 minutos
+        "duracion_objetivo": 540,
         "busquedas": 380000
     },
     {
@@ -85,7 +85,7 @@ TEMAS_VIRALES_LARGOS = [
         "titulo_base": "Hice el ritual completo en {lugar} y esto pasó",
         "keywords": ["ritual", "invocación", "ceremonia", "maldición", "ocultismo"],
         "contextos": ["cementerio antiguo", "casa abandonada", "bosque sagrado", "cueva"],
-        "duracion_objetivo": 660,  # 11 minutos
+        "duracion_objetivo": 660,
         "busquedas": 520000
     },
     {
@@ -131,7 +131,7 @@ TEMAS_VIRALES_LARGOS = [
 ]
 
 # ================================================================
-# 🔥 FÓRMULAS DE TÍTULOS VIRALES PARA VIDEOS LARGOS
+# 🔥 FÓRMULAS DE TÍTULOS VIRALES
 # ================================================================
 FORMULAS_TITULOS_LARGOS = {
     "experiencia_extrema": [
@@ -162,7 +162,7 @@ FORMULAS_TITULOS_LARGOS = {
 }
 
 # ================================================================
-# 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA (VIDEOS LARGOS)
+# 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA
 # ================================================================
 MAX_VIDEOS_DIA = 1
 PROBABILIDAD_DESCANSO = 0.20
@@ -177,7 +177,6 @@ UMBRAL_DEMANDA_VIEWS = 10000
 # 🎬 DECISIONES DE PUBLICACIÓN
 # ================================================================
 def deberia_publicar_ahora(estado):
-    """Decide si publicar hoy con comportamiento humano."""
     hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
     fecha_hoy = hoy.isoformat()
 
@@ -206,7 +205,7 @@ def deberia_publicar_ahora(estado):
         diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
         intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
         if diff_horas < intervalo_requerido:
-            print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
+            print(f" Esperando {intervalo_requerido:.1f}h desde la última publicación.")
             print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
             return False
         else:
@@ -248,12 +247,9 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# 🎯 GENERAR TÍTULO ULTRA-VIRAL PARA VIDEOS LARGOS
+# 🎯 GENERAR TÍTULO ULTRA-VIRAL (CORREGIDO)
 # ================================================================
 def generar_titulo_viral_largo(keywords, lugar, tema_viral):
-    """
-    Genera títulos virales adaptados para videos largos (8-12 min) con palabras de poder.
-    """
     categorias = list(FORMULAS_TITULOS_LARGOS.keys())
     categoria = random.choice(categorias)
     
@@ -269,12 +265,31 @@ def generar_titulo_viral_largo(keywords, lugar, tema_viral):
     titulo = titulo.replace("{numero}", random.choice(numeros))
     titulo = titulo.replace("{dias}", random.choice(dias))
     
-    # Capitalizar palabras de poder para máximo impacto visual
+    # CORRECCIÓN: Solo 2-3 palabras CLAVE en mayúsculas
     palabras = titulo.split()
+    palabras_procesadas = []
+    contador_caps = 0
+    
     for i, palabra in enumerate(palabras):
-        if palabra.upper().strip(".,:;!?¿¡") in PALABRAS_PODER or len(palabra) > 7:
-            palabras[i] = palabra.upper()
-    titulo = " ".join(palabras)
+        palabra_limpia = palabra.upper().strip(".,:;!?¿¡")
+        
+        if contador_caps < 3:
+            if palabra_limpia in PALABRAS_PODER:
+                palabras_procesadas.append(palabra.upper())
+                contador_caps += 1
+            elif i == 0 and len(palabra) > 3 and palabra_limpia not in ["el", "la", "los", "las", "un", "una", "de", "del"]:
+                palabras_procesadas.append(palabra.upper())
+                contador_caps += 1
+            else:
+                palabras_procesadas.append(palabra.lower())
+        else:
+            palabras_procesadas.append(palabra.lower())
+    
+    titulo = " ".join(palabras_procesadas)
+    
+    # CORRECCIÓN: Agregar "Relato de Terror" al final
+    if not titulo.lower().endswith("relato de terror"):
+        titulo = f"{titulo} - Relato de Terror"
     
     if len(titulo) > 95:
         titulo = titulo[:92] + "..."
@@ -319,7 +334,7 @@ def verificar_demanda_youtube(tema, umbral_views=UMBRAL_DEMANDA_VIEWS):
             total_views += views
 
         avg_views = total_views / len(stats_items)
-        print(f"📊 Demanda para '{tema}': {len(stats_items)} videos, promedio de vistas: {avg_views:,.0f}")
+        print(f" Demanda para '{tema}': {len(stats_items)} videos, promedio de vistas: {avg_views:,.0f}")
         if avg_views >= umbral_views:
             print("✅ Demanda suficiente.")
             return True
@@ -686,13 +701,16 @@ def limpiar_respuesta_json(respuesta):
     return respuesta
 
 # ================================================================
-# 🎯 GENERAR HISTORIA CON TEMAS VIRALES Y SEO ÉLITE
+# 🎯 GENERAR HISTORIA COMPLETA CON SEO ÉLITE (CORREGIDO)
 # ================================================================
 def generar_historia_completa():
-    # Seleccionar tema viral
     tema_viral = random.choice(TEMAS_VIRALES_LARGOS)
     contexto = random.choice(tema_viral["contextos"])
     keywords = tema_viral["keywords"]
+    
+    # CORRECCIÓN: Agregar keywords de terror/paranormal
+    keywords_terror = ["relato de terror", "paranormal", "miedo", "terror real", "caso real"]
+    keywords_completas = keywords + keywords_terror[:2]
     
     temas_recientes = cargar_temas_shorts()["temas"][-20:]
     temas_texto = "\n".join([f"- {t}" for t in temas_recientes]) if temas_recientes else "Ninguno aún."
@@ -700,29 +718,32 @@ def generar_historia_completa():
     titulos_pub = cargar_titulos_largos()["titulos"][-20:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # MEJORA ÉLITE: Se agrega instrucción explícita de gancho de retención en los primeros 30 segundos
     prompt_base = f"""
 Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para YouTube.
 
-🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
+ TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
-🔑 KEYWORDS SEO: {', '.join(keywords)}
+🔑 KEYWORDS SEO: {', '.join(keywords_completas)}
 ⏱️ DURACIÓN OBJETIVO: {tema_viral['duracion_objetivo']//60} minutos
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
+ TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
 🚫 TEMAS YA PUBLICADOS (EVITAR):
 {temas_texto}
 
-🚨 REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
+ REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
 
 🎯 REGLA DE TÍTULO SEO (CRÍTICA):
-El título debe ser un GANCHO que se entienda en 10 segundos. Usa MAYÚSCULAS en palabras de poder.
-EJEMPLOS DE TÍTULOS GANADORES (40-95 caracteres):
-- "Exploré los Backrooms de {contexto} durante 12 horas"
-- "Sobreviví 7 noches en {contexto} - Testimonio REAL"
-- "Una IA predijo mi muerte en {contexto} - 3 días después"
+El título debe ser un GANCHO que se entienda en 10 segundos.
+- Usa MAYÚSCULAS solo en 2-3 palabras de poder (NO en todo el título)
+- AL FINAL del título agrega SIEMPRE: "- Relato de Terror"
+- Longitud: 40-95 caracteres
+
+EJEMPLOS DE TÍTULOS GANADORES:
+✅ "Exploré los Backrooms de {contexto} durante 12 horas - Relato de Terror"
+✅ "SOBREVIVÍ 7 noches en {contexto} - Testimonio REAL - Relato de Terror"
+✅ "Una IA PREDIJO mi muerte - 3 días después - Relato de Terror"
 ❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
 
 🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
@@ -735,27 +756,30 @@ EJEMPLOS DE TÍTULOS GANADORES (40-95 caracteres):
 Personaje principal fijo: "{PERFIL_PERSONAJE}"
 
 🎯 ESTRUCTURA DEL RELATO (texto_completo - 1600-2000 palabras):
-1. GANCHO DE RETENCIÓN (PRIMEROS 30 SEGUNDOS): Una frase o acción impactante que obligue a seguir viendo. Promete una revelación.
-2. CONTEXTO DETALLADO: Quién, dónde, cuándo, por qué.
-3. DESARROLLO PROGRESIVO: Aumento constante de tensión con detalles sensoriales (sonidos, olores, sensaciones).
-4. CLÍMAX MÚLTIPLE: Varios momentos aterradores.
-5. DESENLACE ABIERTO: Reflexión o pregunta final que genere comentarios.
-- Tono: Natural, coloquial, en primera persona.
-- Incluye timestamps naturales cada 2-3 minutos.
+1. GANCHO DE RETENCIÓN (PRIMEROS 30 SEGUNDOS): Frase o acción impactante
+2. CONTEXTO DETALLADO: Quién, dónde, cuándo, por qué
+3. DESARROLLO PROGRESIVO: Aumento constante de tensión
+4. CLÍMAX MÚLTIPLE: Varios momentos aterradores
+5. DESENLACE ABIERTO: Reflexión o pregunta final
+- Tono: Natural, coloquial, en primera persona
+- Incluye timestamps naturales cada 2-3 minutos
 
 🎯 REGLA DE CAPÍTULOS:
 Genera 5-7 capítulos con timestamps REALISTAS basados en {tema_viral['duracion_objetivo']//60}-{(tema_viral['duracion_objetivo']+120)//60} minutos.
 
+🎯 SEO ÉLITE - KEYWORDS DE TERROR:
+Incluye en descripción y tags: "relato de terror", "paranormal", "miedo", "terror real", "caso real"
+
 Responde ESTRICTAMENTE en este JSON:
 {{
-  "titulo": "Título ultra-viral 2024 (40-95 caracteres)",
+  "titulo": "Título ultra-viral 2024 (40-95 caracteres) CON '- Relato de Terror' al final",
   "titulo_alternativo": "Título alternativo",
   "anio_suceso": 2019,
-  "palabras_clave": ["{keywords[0]}", "{keywords[1]}", "{keywords[2]}"],
+  "palabras_clave": ["{keywords_completas[0]}", "{keywords_completas[1]}", "{keywords_completas[2]}", "relato de terror", "paranormal"],
   "palabras_portada": "TEXTO GANCHO 2-4 palabras",
-  "descripcion": "Descripción SEO completa. LAS KEYWORDS DEBEN ESTAR EN LAS PRIMERAS 2 LÍNEAS.",
-  "tags": "15-20 tags separados por coma",
-  "hashtags": "#Terror #Mexico #RelatosReales #Viral2024 (mínimo 5 hashtags)",
+  "descripcion": "Descripción SEO completa. LAS KEYWORDS DEBEN ESTAR EN LAS PRIMERAS 2 LÍNEAS. Incluye 'relato de terror' y 'paranormal'.",
+  "tags": "15-20 tags separados por coma. Incluye: relato de terror, paranormal, miedo, terror real, caso real",
+  "hashtags": "#Terror #Paranormal #RelatosDeTerror #Mexico #Viral2024 #Miedo #CasosReales",
   "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena MÁS impactante del relato]",
   "capitulos": [
     {{"tiempo": "00:00", "titulo": "El Comienzo"}},
@@ -803,7 +827,7 @@ Responde ESTRICTAMENTE en este JSON:
                 titulo_generado = data.get("titulo", "")
 
                 if not validar_titulo_gancho(titulo_generado):
-                    print(f"⚠️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
+                    print(f"️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
                     raise ValueError("Título no cumple estándar de gancho")
 
                 if not evaluar_claridad_titulo(titulo_generado, texto[:300]):
@@ -828,10 +852,10 @@ Responde ESTRICTAMENTE en este JSON:
                 print(f"🎯 Tema viral: {tema_viral['tema']}")
                 return data
             else:
-                print(f"⚠️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
+                print(f"️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
                 raise ValueError("Texto insuficiente")
         except Exception as e:
-            print(f"❌ Intento {intento+1}/6 falló: {e}")
+            print(f" Intento {intento+1}/6 falló: {e}")
             if intento < 5:
                 time.sleep(10)
     print("❌ No se pudo generar historia válida después de 6 intentos.")
@@ -986,7 +1010,7 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
 
     for intento in range(intentos):
         try:
-            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}' ({orientation})...")
+            print(f" Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}' ({orientation})...")
             r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
@@ -1004,9 +1028,9 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
                 else:
                     print("⚠️ No se encontraron fotos para esta consulta.")
             else:
-                print(f"⚠️ Error Pexels: {r.status_code} - {r.text[:100]}")
+                print(f"️ Error Pexels: {r.status_code} - {r.text[:100]}")
         except requests.exceptions.Timeout:
-            print("⏰ Timeout en Pexels. Reintentando...")
+            print(" Timeout en Pexels. Reintentando...")
         except Exception as e:
             print(f"⚠️ Error conexión Pexels: {e}")
         if intento < intentos - 1:
@@ -1017,7 +1041,7 @@ def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
     return None
 
 # ================================================================
-# 🖼️ BUSCAR MINIATURA EN PEXELS
+# ️ BUSCAR MINIATURA EN PEXELS
 # ================================================================
 def buscar_miniatura_pexels(query, intentos=5):
     variantes_texto = [
@@ -1041,7 +1065,7 @@ def buscar_miniatura_pexels(query, intentos=5):
                 "size": "large"
             }
             
-            print(f"🔍 Intento {intento+1}/{intentos}: '{query_completa}'...")
+            print(f" Intento {intento+1}/{intentos}: '{query_completa}'...")
             r = requests.get(url, headers=headers, params=params, timeout=25)
             
             if r.status_code == 200:
@@ -1123,18 +1147,19 @@ Devuelve SOLO el texto de continuación.
     return ""
 
 # ================================================================
-# 🎨 CREAR MINIATURA PROFESIONAL TIPO YOUTUBE (MEJORADA ÉLITE)
+# 🎨 CREAR MINIATURA PROFESIONAL (CORREGIDA - SIN CUADRO)
 # ================================================================
 def crear_miniatura_profesional(img_path, texto, output_path):
     colores_impacto = [
-        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},  # Amarillo (Mejor CTR)
-        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},  # Rojo
-        {"texto": (255, 255, 255), "fondo": (0, 0, 0)}, # Blanco
-        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},   # Naranja
+        {"texto": (255, 255, 0), "borde": (0, 0, 0)},    # Amarillo
+        {"texto": (255, 50, 50), "borde": (0, 0, 0)},    # Rojo
+        {"texto": (255, 255, 255), "borde": (0, 0, 0)},  # Blanco
+        {"texto": (255, 140, 0), "borde": (0, 0, 0)},    # Naranja
     ]
     
     color_elegido = random.choice(colores_impacto)
     color_texto = color_elegido["texto"]
+    color_borde = color_elegido["borde"]
     
     font_paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
@@ -1149,26 +1174,28 @@ def crear_miniatura_profesional(img_path, texto, output_path):
             
             img = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
             
-            # MEJORA ÉLITE: Contraste y saturación extremos para destacar en el feed
-            img = ImageEnhance.Contrast(img).enhance(1.5)
-            img = ImageEnhance.Color(img).enhance(1.3)
-            img = ImageEnhance.Sharpness(img).enhance(2.0)
+            # MEJORA: Contraste y saturación
+            img = ImageEnhance.Contrast(img).enhance(1.4)
+            img = ImageEnhance.Color(img).enhance(1.2)
+            img = ImageEnhance.Sharpness(img).enhance(1.8)
             
             draw = ImageDraw.Draw(img)
             width, height = img.size
             
-            # MEJORA ÉLITE: Limitar a 3-4 palabras máximo para legibilidad en móvil
+            # CORRECCIÓN: Limitar a 3-4 palabras máximo
             palabras = texto.upper().strip().split()
             if len(palabras) > 4:
                 palabras = palabras[:4]
             texto_final = " ".join(palabras)
             
+            # Dividir en 1-2 líneas
             lineas = [texto_final] if len(palabras) <= 2 else [" ".join(palabras[:len(palabras)//2]), " ".join(palabras[len(palabras)//2:])]
             
-            font_size = 90
+            # CORRECCIÓN: Font size ENORME (160px mínimo)
+            font_size = 160
             font = None
             
-            for size in range(120, 40, -5):
+            for size in range(200, 120, -5):
                 try:
                     font = ImageFont.truetype(font_paths[0], size)
                     max_width = 0
@@ -1180,7 +1207,7 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                         max_width = max(max_width, w)
                         total_height += h + 15
                     
-                    if max_width < width * 0.9 and total_height < height * 0.5:
+                    if max_width < width * 0.90 and total_height < height * 0.50:
                         font_size = size
                         break
                 except:
@@ -1192,6 +1219,7 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                 except:
                     font = ImageFont.load_default()
             
+            # Calcular posición centrada
             total_height = 0
             heights = []
             for linea in lineas:
@@ -1200,25 +1228,10 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                 heights.append(h)
                 total_height += h + 15
             
-            y_start = (height - total_height) // 2 + 50
+            y_start = (height - total_height) // 2
             
-            padding = 30
-            max_line_width = 0
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                w = bbox[2] - bbox[0]
-                max_line_width = max(max_line_width, w)
-            
-            rect_x = (width - max_line_width) // 2 - padding
-            rect_y = y_start - padding
-            rect_w = max_line_width + (padding * 2)
-            rect_h = total_height + (padding * 2)
-            
-            # Fondo semitransparente detrás del texto
-            draw.rectangle(
-                [rect_x, rect_y, rect_x + rect_w, rect_y + rect_h],
-                fill=(0, 0, 0, 200)
-            )
+            # CORRECCIÓN: SIN CUADRO DE FONDO que obstruya
+            # Solo agregamos contorno grueso al texto, sin rectángulo
             
             y_current = y_start
             for linea in lineas:
@@ -1228,16 +1241,17 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                 
                 x = (width - w) // 2
                 
-                # Contorno negro ultra grueso para máximo contraste
-                for dx in [-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6]:
-                    for dy in [-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6]:
+                # CORRECCIÓN: Contorno negro ULTRA GRUESO (sin fondo)
+                for dx in [-7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7]:
+                    for dy in [-7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7]:
                         draw.text(
                             (x + dx, y_current + dy),
                             linea,
                             font=font,
-                            fill=(0, 0, 0)
+                            fill=color_borde
                         )
                 
+                # Texto principal en color
                 draw.text(
                     (x, y_current),
                     linea,
@@ -1245,27 +1259,40 @@ def crear_miniatura_profesional(img_path, texto, output_path):
                     fill=color_texto
                 )
                 
+                # Sombra suave para más profundidad
+                for dx in [-2, 2]:
+                    for dy in [-2, 2]:
+                        draw.text(
+                            (x + dx, y_current + dy),
+                            linea,
+                            font=font,
+                            fill=(0, 0, 0, 100)
+                        )
+                
                 y_current += h + 15
             
-            # MEJORA ÉLITE: Agregar flecha roja señalando (aumenta CTR un 30%)
-            draw.line(
-                [(width - 150, height - 200), (width - 300, height - 350)],
-                fill=(255, 0, 0), width=20
-            )
-            draw.polygon(
-                [
-                    (width - 300, height - 350),
-                    (width - 280, height - 380),
-                    (width - 320, height - 380)
-                ],
-                fill=(255, 0, 0)
-            )
+            # Agregar flecha roja señalando (opcional, aumenta CTR)
+            if random.random() > 0.3:  # 70% de probabilidad
+                draw.line(
+                    [(width - 100, height - 150), (width - 280, height - 300)],
+                    fill=(255, 0, 0), width=18
+                )
+                draw.polygon(
+                    [
+                        (width - 280, height - 300),
+                        (width - 265, height - 325),
+                        (width - 295, height - 325)
+                    ],
+                    fill=(255, 0, 0)
+                )
             
             img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
             
             print(f"✅ Miniatura ÉLITE creada: {output_path}")
             print(f"   📝 Texto: '{texto_final}'")
+            print(f"   📏 Tamaño fuente: {font_size}px")
             print(f"   🎨 Color: {color_texto}")
+            print(f"   ✨ SIN CUADRO DE FONDO - Solo contorno")
             return True
             
     except Exception as e:
@@ -1538,14 +1565,14 @@ def main():
     print("👻 SOMBRAS DE MEDIANOCHE - BOT VIDEOS LARGOS VIRAL 2024 (NIVEL ÉLITE)")
     print("   ✦ Temas virales trending (Backrooms, Skinwalker, IA, etc.)")
     print("   ✦ Títulos ultra-virales con palabras de poder")
-    print("   ✦ Miniaturas profesionales con flecha roja y alto contraste")
+    print("   ✦ Miniaturas profesionales SIN CUADRO - Solo contorno")
     print("   ✦ Imágenes cinematográficas con efectos")
     print("   ✦ Verificación de demanda real")
     print("="*70)
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
-    print(f"🧑 Personaje: {PERFIL_PERSONAJE}")
+    print(f" Personaje: {PERFIL_PERSONAJE}")
     print(f"📍 Ubicación: {UBICACION_HISTORIA}")
-    print(f"🎨 Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
+    print(f" Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
     print(f"🎵 Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-"*70)
@@ -1567,7 +1594,7 @@ def main():
     else:
         tema_busqueda = titulo_video.split()[0]
     if not verificar_demanda_youtube(tema_busqueda):
-        print("⛔ Demanda insuficiente. Cancelando publicación.")
+        print(" Demanda insuficiente. Cancelando publicación.")
         sys.exit(0)
 
     # MEJORA ÉLITE: Asegurar que las keywords estén en las primeras 2 líneas de la descripción
@@ -1581,7 +1608,7 @@ def main():
 
     print(f"\n📊 SEO VIRAL GENERADO:")
     print(f"   🔥 Título VIRAL: {titulo_video}")
-    print(f"   📝 Texto miniatura: {palabras_portada}")
+    print(f"    Texto miniatura: {palabras_portada}")
     print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
     print(f"   📚 Capítulos: {len(capitulos_video)}")
     print(f"   🔑 Keywords: {keywords}")
@@ -1589,7 +1616,7 @@ def main():
 
     segmentos = dividir_en_segmentos(texto_completo, 55)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, UBICACION_HISTORIA)
-    print(f"\n🎬 {len(segmentos)} segmentos con efectos cinematográficos.")
+    print(f"\n {len(segmentos)} segmentos con efectos cinematográficos.")
 
     elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0)
     if not elementos_validos:
@@ -1601,7 +1628,7 @@ def main():
 
     intentos_expansion = 0
     while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
-        print(f"⚠️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
+        print(f"️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
         texto_extra = expandir_texto(titulo_video, texto_completo)
         if texto_extra:
             texto_completo += " " + texto_extra
@@ -1620,7 +1647,7 @@ def main():
 
     print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
 
-    print("🖼️ Creando miniatura profesional ÉLITE...")
+    print("️ Creando miniatura profesional ÉLITE...")
     miniatura_path = None
     
     query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night"))
@@ -1642,7 +1669,7 @@ def main():
                 import shutil
                 shutil.copy(temp_base, "miniatura.jpg")
                 miniatura_path = "miniatura.jpg"
-                print(f"⚠️ Miniatura guardada sin texto")
+                print(f"️ Miniatura guardada sin texto")
             
             if os.path.exists(temp_base):
                 os.remove(temp_base)
@@ -1657,9 +1684,9 @@ def main():
     print("🎬 Montando video HORIZONTAL (1920x1080) con efectos...")
     video_path, duracion_final = montar_video(elementos_validos)
     duracion_minutos = duracion_final / 60
-    print(f"⏱️ Duración final: {duracion_minutos:.1f} minutos")
+    print(f"️ Duración final: {duracion_minutos:.1f} minutos")
 
-    print("⬆️ Subiendo a YouTube...")
+    print("️ Subiendo a YouTube...")
     subir_a_youtube(
         video_path,
         miniatura_path,
@@ -1685,7 +1712,7 @@ def main():
     guardar_estado_musica(estado_publicacion)
 
     limpiar_archivos_temporales()
-    print("🎉 Proceso completado. ¡Video viral ÉLITE listo!")
+    print(" Proceso completado. ¡Video viral ÉLITE listo!")
 
 if __name__ == "__main__":
     try:
