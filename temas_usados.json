@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "creepypasta",
-      "lugar": "parque desierto",
-      "contexto": "slenderman"
-    },
-    {
       "tipo": "ritual_tiktok",
       "lugar": "cuarto oscuro",
       "contexto": "ritual"
@@ -34,6 +29,11 @@
       "tipo": "ia_prediccion",
       "lugar": "cuarto oscuro",
       "contexto": "IA"
+    },
+    {
+      "tipo": "glitch_realidad",
+      "lugar": "calle familiar",
+      "contexto": "glitch"
     }
   ]
 }
