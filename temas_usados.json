@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "numero_maldito",
-      "lugar": "casa vacia",
-      "contexto": "telefono"
-    },
-    {
       "tipo": "creepypasta",
       "lugar": "parque desierto",
       "contexto": "slenderman"
@@ -33,6 +28,11 @@
     {
       "tipo": "ia_prediccion",
       "lugar": "celular en la noche",
+      "contexto": "IA"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "laboratorio",
       "contexto": "IA"
     }
   ]
