@@ -46,7 +46,7 @@ TEMAS_FILE = "temas_usados.json"
 ANALYTICS_FILE = "analytics_elite.json"
 MAX_TEMAS_HISTORIAL = 7
 ACTIVAR_DISCLOSURE_IA = True
-DISCLOSURE_TEXT = "\n🤖 Contenido generado con inteligencia artificial (relato e imágenes)."
+DISCLOSURE_TEXT = "\n Contenido generado con inteligencia artificial (relato e imágenes)."
 
 # ================================================================
 # CONFIGURACIÓN DE PUBLICACIÓN ÉLITE (2 AL DÍA - MÁXIMA CALIDAD)
@@ -169,7 +169,7 @@ FORMULAS_TITULOS_ELITE = {
         "NUNCA vayas a {lugar} si ves esto (PELIGRO REAL)",
         "🚨 ALERTA: Algo acecha en {lugar} de noche",
         "PELIGRO REAL en {lugar} - Testigo lo confirma",
-        "⚡ Lo que pasó en {lugar} NO fue normal",
+        " Lo que pasó en {lugar} NO fue normal",
     ],
     "experiencia_extrema": [
         "Sobreviví {numero} noches en {lugar}",
@@ -210,7 +210,7 @@ PSICOLOGIA_COLOR = {
 }
 
 # ================================================================
-#  ALGORITMO DE PREDICCIÓN DE VIRALIDAD
+# 🧠 ALGORITMO DE PREDICCIÓN DE VIRALIDAD
 # ================================================================
 def calcular_puntuacion_viralidad(tema):
     """
@@ -306,7 +306,7 @@ def analizar_competencia_youtube(tema):
     })
 
 # ================================================================
-# 🎨 GENERADOR DE MINIATURAS ÉLITE (Neuro-Marketing)
+#  GENERADOR DE MINIATURAS ÉLITE (Neuro-Marketing)
 # ================================================================
 def crear_miniatura_elite_neuro(img_path, texto, tema_viral, output_path):
     """
@@ -445,11 +445,11 @@ def crear_miniatura_elite_neuro(img_path, texto, tema_viral, output_path):
         return False
 
 # ================================================================
-# 🎯 OPTIMIZADOR DE TÍTULOS CON A/B TESTING SIMULADO
+# 🎯 OPTIMIZADOR DE TÍTULOS CON A/B TESTING SIMULADO Y HASHTAGS
 # ================================================================
 def generar_titulo_ab_testing(keywords, lugar, tema_viral, anio_suceso=None):
     """
-    Genera 3 variantes de título para A/B testing
+    Genera 3 variantes de título para A/B testing CON HASHTAGS
     """
     categorias = list(FORMULAS_TITULOS_ELITE.keys())
     
@@ -486,20 +486,43 @@ def generar_titulo_ab_testing(keywords, lugar, tema_viral, anio_suceso=None):
                 palabras[j] = palabra.upper()
         titulo = " ".join(palabras)
         
-        # Ajustar longitud óptima (55-70 caracteres)
+        # ✅ AGREGAR HASHTAGS AL TÍTULO
+        hashtags_titulo = []
+        hashtags_titulo.append(f"#{tema_viral.capitalize()}")
+        if keywords:
+            for kw in keywords[:2]:
+                kw_clean = re.sub(r'[áéíóú]', lambda m: {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}.get(m.group(), m.group()), kw)
+                kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
+                if kw_clean and len(kw_clean) > 2:
+                    hashtags_titulo.append(f"#{kw_clean.capitalize()}")
+        hashtags_titulo.append(f"#{lugar.replace(' ', '')}")
+        hashtags_titulo.append("#Terror")
+        
+        hashtags_str = " " + " ".join(hashtags_titulo)
+        
+        # Ajustar longitud (título + hashtags <= 100 chars)
+        if len(titulo) + len(hashtags_str) <= 100:
+            titulo_final = titulo + hashtags_str
+        else:
+            titulo_final = titulo[:70] + hashtags_str
+        
+        if len(titulo_final) > 100:
+            titulo_final = titulo_final[:97] + "..."
+        
+        # Ajustar longitud óptima (55-70 caracteres SIN hashtags)
         if len(titulo) > 70:
             titulo = titulo[:67] + "..."
         elif len(titulo) < 40:
-            emojis = ["", "⚠️", "👁️", "💀", "🔥"]
+            emojis = ["", "️", "👁️", "", "🔥"]
             titulo = random.choice(emojis) + " " + titulo
         
         variantes.append({
-            "titulo": titulo,
-            "longitud": len(titulo),
-            "tiene_numero": any(c.isdigit() for c in titulo),
-            "tiene_pregunta": "?" in titulo,
-            "tiene_emoji": any(ord(c) > 127743 for c in titulo),
-            "score_predicho": calcular_score_titulo(titulo)
+            "titulo": titulo_final,  # ✅ CON HASHTAGS
+            "longitud": len(titulo_final),
+            "tiene_numero": any(c.isdigit() for c in titulo_final),
+            "tiene_pregunta": "?" in titulo_final,
+            "tiene_emoji": any(ord(c) > 127743 for c in titulo_final),
+            "score_predicho": calcular_score_titulo(titulo_final)
         })
     
     # Ordenar por score predicho
@@ -589,7 +612,7 @@ def predecir_rendimiento(tema, titulo, hora_publicacion):
     }
 
 # ================================================================
-# 🎬 VALIDAR PEXELS API KEY
+#  VALIDAR PEXELS API KEY
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
@@ -605,7 +628,7 @@ def validar_pexels_api_key():
             print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
             return False
     except Exception as e:
-        print(f"️ Error probando API Key: {e}")
+        print(f"⚠️ Error probando API Key: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
@@ -655,7 +678,7 @@ def deberia_publicar_ahora(estado):
 
     retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
     if retraso_segundos > 0:
-        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
+        print(f" Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
         time.sleep(retraso_segundos)
 
     return True
@@ -723,7 +746,7 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f" Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # VOCES NEURALES PREMIUM (OPTIMIZADAS PARA RETENCIÓN)
@@ -997,7 +1020,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
             return True
             
     except Exception as e:
-        print(f" Error creando miniatura viral: {e}")
+        print(f"❌ Error creando miniatura viral: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -1055,7 +1078,7 @@ def generar_historia_completa():
     temas_recientes = obtener_temas_recientes()
     temas_bloqueo = ""
     if temas_recientes:
-        temas_bloqueo = "\n TEMAS YA PUBLICADOS RECIENTEMENTE:\n"
+        temas_bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE:\n"
         for t in temas_recientes[-5:]:
             temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
         temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar.\n"
@@ -1079,12 +1102,12 @@ def generar_historia_completa():
 🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
 🔑 KEYWORDS PRIMARIAS: {', '.join(keywords)}
-🔑 KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
+ KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
 📊 BUSQUEDAS/MES: {tema_viral['busquedas']:,}
 🎯 CTR POTENCIAL: {tema_viral['ctr_potencial']}%
-📈 RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
-⏱️ DURACIÓN ÓPTIMA: {tema_viral['duracion_optima']} segundos
-📊 SCORE VIRALIDAD: {score_viralidad['score']:.1f}/100 ({score_viralidad['categoria']})
+ RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
+️ DURACIÓN ÓPTIMA: {tema_viral['duracion_optima']} segundos
+ SCORE VIRALIDAD: {score_viralidad['score']:.1f}/100 ({score_viralidad['categoria']})
 
 📚 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
 {outliers_texto}
@@ -1332,53 +1355,118 @@ def obtener_publicaciones_hoy():
     return pub if estado.get("fecha") == hoy else 0
 
 # ================================================================
-# 🎬 GENERAR QUERY CINEMATOGRÁFICO PARA PEXELS
+# 🎬 GENERAR QUERY CINEMATOGRÁFICO PARA PEXELS (CON VARIEDAD)
 # ================================================================
-def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral):
-    prompts_cinematograficos = {
-        "inicio_casa": f"""
-            POV shot from inside dark mexican {ubicacion_escena}, 
-            single flickering light bulb, long hallway leading to darkness, 
-            cinematic horror photography, shallow depth of field, 
-            shot on 35mm, film grain, cold blue tones, unsettling atmosphere
-        """,
-        "desplazamiento": f"""
-            Night driving shot, dark mexican road through {ubicacion_escena}, 
-            fog, headlights illuminating mist, cinematic thriller photography, 
-            motion blur, shallow focus, eerie atmosphere, 35mm film look
-        """,
-        "lugar_destino": f"""
-            Wide establishing shot of {ubicacion_escena} at night, 
-            mexican location, fog, dramatic lighting, cinematic horror photography, 
-            ultra wide angle, deep shadows, mysterious atmosphere
-        """,
-        "climax_evento": f"""
-            Extreme close-up of terrified eyes reflecting something horrifying 
-            in {ubicacion_escena}, dramatic chiaroscuro lighting, 
-            horror movie still, hyperrealistic, shallow focus, tension, fear
-        """,
-        "resolucion": f"""
-            Person walking away from {ubicacion_escena} at dawn, 
-            silhouette against morning light, cinematic horror photography, 
-            wide shot, atmospheric fog, emotional aftermath
-        """
+def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral, segmento_index=0, total_segmentos=1):
+    """
+    Genera prompts cinematográficos con VARIEDAD de tomas según la etapa y progreso.
+    EVITA exceso de close-ups de ojos/caras.
+    """
+    
+    # Calcular progreso para variar el tipo de toma
+    progreso = segmento_index / max(total_segmentos - 1, 1)
+    
+    # Definir tipos de tomas según etapa y progreso
+    if etapa == "inicio_casa":
+        if progreso < 0.3:
+            # Inicio: establishing shots y medium shots (NO close-ups)
+            prompts = [
+                f"wide shot of dark mexican {ubicacion_escena}, establishing shot, cinematic horror photography, atmospheric lighting, film grain",
+                f"medium shot of {ubicacion_escena} interior, dim lighting, cinematic composition, 35mm film look",
+                f"overhead shot of empty {ubicacion_escena}, top-down view, eerie atmosphere, horror photography",
+                f"wide angle shot of {ubicacion_escena}, room perspective, cinematic horror, deep shadows",
+            ]
+        else:
+            # Transición: más dinámico
+            prompts = [
+                f"POV shot walking through {ubicacion_escena}, handheld camera, cinematic horror, shallow depth of field",
+                f"tracking shot in {ubicacion_escena}, smooth movement, atmospheric fog, film noir style",
+            ]
+    
+    elif etapa == "desplazamiento":
+        # VARIEDAD: Roads, vehicles, aerial, dashboard (NO caras)
+        prompts = [
+            f"wide shot of dark mexican road at night, {ubicacion_escena}, cinematic thriller, motion blur, atmospheric",
+            f"medium shot from inside car, dashboard view, night driving, {ubicacion_escena}, rain on windshield",
+            f"exterior shot of vehicle on dark road, {ubicacion_escena}, headlights cutting through fog, cinematic",
+            f"aerial view of lonely road at night, {ubicacion_escena}, drone shot, mysterious atmosphere",
+            f"street view of empty mexican street at night, {ubicacion_escena}, cinematic horror, streetlights",
+        ]
+    
+    elif etapa == "lugar_destino":
+        if progreso < 0.5:
+            # Llegada: establishing shots (NO close-ups)
+            prompts = [
+                f"wide establishing shot of {ubicacion_escena} at night, mexican location, ultra wide angle, dramatic lighting",
+                f"exterior shot of {ubicacion_escena}, building facade, night photography, cinematic horror, deep shadows",
+                f"medium shot approaching {ubicacion_escena}, walking towards entrance, atmospheric tension",
+                f"wide angle of {ubicacion_escena}, architectural shot, night photography, horror atmosphere",
+            ]
+        else:
+            # Exploración: más variedad (detalles, objetos, NO solo caras)
+            prompts = [
+                f"interior shot of {ubicacion_escena}, exploring inside, flashlight beam, cinematic horror, shallow focus",
+                f"POV shot inside {ubicacion_escena}, first person perspective, handheld camera, tension building",
+                f"medium shot of {ubicacion_escena} details, close-up of objects, atmospheric lighting, film grain",
+                f"detail shot of {ubicacion_escena}, textures and surfaces, horror photography, moody lighting",
+            ]
+    
+    elif etapa == "climax_evento":
+        # ⚠️ SOLO 30% close-ups de ojos/caras, 70% medium/wide/action shots
+        if progreso < 0.7:
+            # Antes del clímax máximo: medium shots, action, details (EVITAR ojos/caras)
+            prompts = [
+                f"medium shot of person reacting in {ubicacion_escena}, shocked expression, dramatic lighting, horror film still",
+                f"detail shot of hands trembling in {ubicacion_escena}, tension, cinematic close-up, shallow depth of field",
+                f"over-the-shoulder shot in {ubicacion_escena}, seeing something horrifying, POV perspective, horror photography",
+                f"wide shot of chaotic scene in {ubicacion_escena}, action moment, dynamic composition, cinematic horror",
+                f"medium shot of person running in {ubicacion_escena}, panic, motion blur, cinematic thriller",
+                f"detail shot of object in {ubicacion_escena}, mysterious item, dramatic lighting, horror photography",
+            ]
+        else:
+            # Clímax máximo: aquí SÍ close-ups pero variados (solo 30% del total)
+            prompts = [
+                f"extreme close-up of terrified eyes in {ubicacion_escena}, intense fear, dramatic chiaroscuro lighting, hyperrealistic",
+                f"close-up of person screaming in {ubicacion_escena}, pure terror, high contrast, horror movie still",
+                f"medium close-up of person running in {ubicacion_escena}, panic, motion blur, cinematic thriller",
+                f"wide shot of dramatic moment in {ubicacion_escena}, action scene, dynamic angle, horror cinematography",
+            ]
+    
+    elif etapa == "resolucion":
+        # Resolución: Wide shots, atmosphere (NO close-ups)
+        prompts = [
+            f"wide shot of person leaving {ubicacion_escena} at dawn, silhouette, atmospheric fog, emotional aftermath, cinematic",
+            f"medium shot from behind, walking away from {ubicacion_escena}, sunrise, wide angle, contemplative mood",
+            f"establishing shot of {ubicacion_escena} in morning light, aftermath, quiet atmosphere, cinematic photography",
+            f"aerial shot of {ubicacion_escena} at dawn, drone view, peaceful but eerie, wide landscape",
+            f"wide angle of {ubicacion_escena} at sunrise, aftermath scene, atmospheric lighting, cinematic",
+        ]
+    
+    # Agregar elementos del tema viral
+    tema_keywords = {
+        "backrooms": "liminal space, endless corridors, yellow wallpaper, fluorescent lights buzzing",
+        "skinwalker": "creature silhouette in distance, forest shadows, glowing eyes, antlers visible",
+        "ritual_tiktok": "candles arranged in circle, ancient symbols on floor, mystical atmosphere, ritual objects",
+        "ia_prediccion": "computer screen with code, digital glitch effects, blue light on face, server room",
+        "numero_maldito": "old rotary phone ringing, vintage telephone, dark room, phone cord tangled",
+        "deep_web": "computer monitor in dark room, terminal code, hacker aesthetic, multiple screens",
+        "creepypasta": "slender figure in background, tall shadow, distorted face, internet horror aesthetic",
+        "objeto_maldito": "antique doll on shelf, old mirror reflecting, cursed painting, vintage object",
+        "glitch_realidad": "glitch effect, reality distortion, digital artifacts, matrix effect",
+        "experiencia_cercana_muerte": "hospital room, medical equipment, bright light, tunnel vision",
     }
     
-    prompt_base = prompts_cinematograficos.get(etapa, prompts_cinematograficos["inicio_casa"])
+    # Seleccionar prompt aleatorio
+    prompt_base = random.choice(prompts)
     
-    if tema_viral == "backrooms":
-        prompt_base += ", liminal space, endless corridors, yellow wallpaper, fluorescent lights"
-    elif tema_viral == "skinwalker":
-        prompt_base += ", creature silhouette, forest, antlers, glowing eyes"
-    elif tema_viral == "ritual_tiktok":
-        prompt_base += ", candles, ritual circle, ancient symbols, mystical atmosphere"
-    elif tema_viral == "ia_prediccion":
-        prompt_base += ", computer screen, code, digital horror, glitch effects"
-    elif tema_viral == "numero_maldito":
-        prompt_base += ", old telephone, ringing, dark room, vintage phone"
-    elif tema_viral == "deep_web":
-        prompt_base += ", computer screen, dark room, code, mysterious"
+    # Agregar keywords del tema si existe
+    if tema_viral in tema_keywords:
+        prompt_base += f", {tema_keywords[tema_viral]}"
     
+    # Agregar modificadores de época
+    prompt_base += f", {EPOCA_MOD}"
+    
+    # Limpiar y retornar
     prompt_base = re.sub(r'\s+', ' ', prompt_base).strip()
     
     return prompt_base[:200]
@@ -1430,7 +1518,7 @@ def buscar_miniatura_pexels(query, intentos=5):
                             continue
                     
             else:
-                print(f"⚠️ Error Pexels: {r.status_code}")
+                print(f"️ Error Pexels: {r.status_code}")
                 
         except Exception as e:
             print(f"⚠️ Error: {e}")
@@ -1482,7 +1570,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
 
     for intento in range(intentos):
         try:
-            print(f" Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}'...")
+            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}'...")
             r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
@@ -1502,7 +1590,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
             else:
                 print(f"⚠️ Error Pexels: {r.status_code}")
                 if r.status_code == 401:
-                    print("❌ API key inválida.")
+                    print(" API key inválida.")
                     break
         except Exception as e:
             print(f"⚠️ Error conexión Pexels: {e}")
@@ -1608,23 +1696,33 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
         print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
         print(f"     📍 Ubicación: {ubic_escena}")
 
-        query = generar_query_cinematografico(seg, etapa, ubic_escena, tema_viral)
-        print(f"    🎥 Query cinematográfico: {query[:80]}...")
+        # ✅ Pasar índice y total para variedad de tomas
+        query = generar_query_cinematografico(seg, etapa, ubic_escena, tema_viral, idx, total_seg)
+        print(f"    🎥 Query cinematográfico: {query[:100]}...")
 
         img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
 
+        # Fallback si no encuentra
         if not img_url:
-            query_fallback = "mexican night landscape dark cinematic"
-            print(f"    🔄 Intentando con fallback: {query_fallback}")
-            img_url = buscar_imagen_pexels_shorts(query_fallback, intentos=2)
+            fallbacks = [
+                f"mexican night landscape dark cinematic",
+                f"dark atmospheric {etapa} horror photography",
+                f"cinematic horror {ubic_escena} night",
+            ]
+            for fallback_query in fallbacks:
+                print(f"    🔄 Intentando fallback: {fallback_query}")
+                img_url = buscar_imagen_pexels_shorts(fallback_query, intentos=2)
+                if img_url:
+                    break
 
-        if not img_url and imagen_anterior:
-            img_url = imagen_anterior
-            print(f"    🔄 Usando imagen del segmento anterior ({idx})")
-        elif not img_url:
-            placeholder = generar_placeholder_local("Terror", (1080, 1920))
-            img_url = placeholder if placeholder else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
-            print(f"    🔄 Usando placeholder genérico")
+        if not img_url:
+            if imagen_anterior:
+                img_url = imagen_anterior
+                print(f"    🔄 Reutilizando imagen del segmento anterior ({idx})")
+            else:
+                placeholder = generar_placeholder_local("Terror", (1080, 1920))
+                img_url = placeholder if placeholder else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=Terror"
+                print(f"    🔄 Usando placeholder genérico")
 
         if img_url:
             imagen_anterior = img_url
@@ -1643,7 +1741,8 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
             "imagen_url": img_url,
             "audio_path": audio_path,
             "duracion": duracion,
-            "etapa": etapa
+            "etapa": etapa,
+            "segmento_index": idx
         })
 
         if idx < len(segmentos) - 1:
@@ -1653,7 +1752,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
     return resultados
 
 # ================================================================
-# 🎬 MONTAR VIDEO CON EFECTOS CINEMATOGRÁFICOS
+#  MONTAR VIDEO CON EFECTOS CINEMATOGRÁFICOS
 # ================================================================
 def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_final.mp4"):
     if not recursos:
@@ -1797,7 +1896,7 @@ def generar_miniatura_separada(historia_raw, palabras_portada):
     img_url = buscar_miniatura_pexels(query_miniatura)
     
     if not img_url:
-        print("⚠️ No se pudo obtener imagen para miniatura separada.")
+        print("️ No se pudo obtener imagen para miniatura separada.")
         return None
     
     try:
@@ -1835,7 +1934,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
     except Exception as e:
-        print(f" Error autenticando con YouTube: {e}")
+        print(f"❌ Error autenticando con YouTube: {e}")
         sys.exit(1)
 
     if isinstance(etiquetas, str):
@@ -1881,7 +1980,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
         # ✅ SUBIR MINIATURA SEPARADA
         if miniatura_path and os.path.exists(miniatura_path):
             try:
-                print(f"🖼️ Subiendo miniatura élite personalizada: {miniatura_path}")
+                print(f"️ Subiendo miniatura élite personalizada: {miniatura_path}")
                 media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True, mimetype="image/jpeg")
                 youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
                 print("✅ Miniatura élite personalizada subida correctamente")
@@ -1892,7 +1991,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
         
         return video_id
     except Exception as e:
-        print(f" Error subiendo a YouTube: {e}")
+        print(f"❌ Error subiendo a YouTube: {e}")
         sys.exit(1)
 
 # ================================================================
@@ -1956,7 +2055,7 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print("🎬 Iniciando Bot de SHORTS VIRAL 2024-2025 (NIVEL ÉLITE MUNDIAL)")
+    print(" Iniciando Bot de SHORTS VIRAL 2024-2025 (NIVEL ÉLITE MUNDIAL)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} ({CONFIG_VOZ_ACTUAL['estilo']})")
 
@@ -2008,13 +2107,13 @@ def main():
     print(f"\n📊 RESUMEN SEO ÉLITE:")
     print(f"   🔥 Título VIRAL: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
-    print(f"    Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
+    print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
-    print(f"   ️ Hashtags: {historia_raw['hashtags_descripcion']}")
+    print(f"   🧩 Hashtags: {historia_raw['hashtags_descripcion']}")
     print(f"   🎨 Texto portada: {palabras_portada}")
-    print(f"    Tema viral: {tema_viral}")
+    print(f"   🎯 Tema viral: {tema_viral}")
     print(f"   🎨 Paleta: {tipo_paleta} - {paleta}")
     print(f"\n📈 PREDICCIÓN DE RENDIMIENTO:")
     print(f"   👁️ Vistas predichas: {prediccion['vistas_predichas']:,}")
@@ -2029,9 +2128,9 @@ def main():
     segmentos = dividir_en_segmentos(texto_completo)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
 
-    print(f"\n🎥 Buscando {len(segmentos)} imágenes cinematográficas en Pexels...")
+    print(f"\n Buscando {len(segmentos)} imágenes cinematográficas en Pexels...")
     for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
-        print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
+        print(f"    Segmento {i+1}: [{etapa}] {ubic}")
 
     recursos = generar_recursos_por_segmento(
         segmentos=segmentos,
@@ -2051,7 +2150,7 @@ def main():
     try:
         video_final = montar_video_shorts(recursos, fondo_path, palabras_portada)
     except Exception as e:
-        print(f" Error montando video: {e}")
+        print(f"❌ Error montando video: {e}")
         sys.exit(1)
 
     print(f"\n🚀 Subiendo Short a YouTube...")
@@ -2105,7 +2204,7 @@ def main():
                 url_youtube=f"https://youtu.be/{video_id_youtube}"
             )
         else:
-            print("⚠️ No se pudo subir al host temporal.")
+            print("️ No se pudo subir al host temporal.")
 
     limpiar_temporales_shorts()
     print("✨ Ejecución completada. ¡Short viral ÉLITE listo!")
