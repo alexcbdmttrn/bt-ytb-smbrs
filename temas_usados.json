@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "objeto_maldito",
-      "lugar": "ático",
-      "contexto": "muñeca"
-    },
-    {
       "tipo": "deep_web",
       "lugar": "bunker",
       "contexto": "deep web"
@@ -33,6 +28,11 @@
     {
       "tipo": "ia_prediccion",
       "lugar": "celular en la noche",
+      "contexto": "IA"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "hospital",
       "contexto": "IA"
     }
   ]
