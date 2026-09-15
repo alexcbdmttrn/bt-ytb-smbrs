@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "deep_web",
-      "lugar": "bunker",
-      "contexto": "deep web"
-    },
-    {
       "tipo": "ia_prediccion",
       "lugar": "cuarto oscuro",
       "contexto": "IA"
@@ -33,6 +28,11 @@
     {
       "tipo": "ia_prediccion",
       "lugar": "hospital",
+      "contexto": "IA"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "celular en la noche",
       "contexto": "IA"
     }
   ]
