@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "ia_prediccion",
-      "lugar": "celular en la noche",
-      "contexto": "IA"
-    },
-    {
-      "tipo": "ia_prediccion",
       "lugar": "hospital",
       "contexto": "IA"
     },
@@ -29,6 +24,11 @@
       "tipo": "glitch_realidad",
       "lugar": "casa propia",
       "contexto": "glitch"
+    },
+    {
+      "tipo": "experiencia_cercana_muerte",
+      "lugar": "emergencia",
+      "contexto": "muerte"
     },
     {
       "tipo": "experiencia_cercana_muerte",
