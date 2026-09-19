@@ -1,1724 +1,1443 @@
+# -*- coding: utf-8 -*-
+"""
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v3
+
+Flujo: elegir tema (demanda + rendimiento propio) -> plan SEO -> relato por capítulos
+-> voz -> escenas (video/foto Pexels con Ken Burns y grade unificado) -> miniatura
+-> subtítulos SRT -> subida programada en hora pico -> Short embudo -> comentario/playlist.
+
+Archivos de estado: se mantienen los mismos 3 JSON de antes (tu workflow no cambia).
+Variables opcionales: YOUTUBE_PLAYLIST_ID, HORA_PICO, INTERVALO_MIN_HORAS,
+USAR_VIDEOS, GENERAR_SHORT, PROGRAMAR_PICO, DEEPSEEK_MODEL, FORCE_PUBLISH.
+"""
 import asyncio
-from datetime import date, datetime
-from zoneinfo import ZoneInfo
-from PIL import ImageEnhance
+import bisect
 import json
-import json5
 import os
 import random
 import re
 import sys
 import time
+import traceback
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+import edge_tts
+import numpy as np
+import requests
+import urllib3
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from moviepy.editor import (
     AudioFileClip,
     CompositeAudioClip,
-    ImageClip,
+    VideoClip,
+    VideoFileClip,
     concatenate_audioclips,
-    concatenate_videoclips,
 )
-from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
-import requests
-import edge_tts
-import urllib3
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
-# Silenciar advertencias de SSL
+try:
+    import json5
+except ImportError:  # opcional
+    json5 = None
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
 # CONFIGURACIÓN
 # ================================================================
+TZ = ZoneInfo("America/Mexico_City")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
-YOUTUBE_USER_TOKEN = (
-    json.loads(os.getenv("YOUTUBE_USER_TOKEN"))
-    if os.getenv("YOUTUBE_USER_TOKEN")
-    else {}
-)
+YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN") or "{}")
+PLAYLIST_ID = os.getenv("YOUTUBE_PLAYLIST_ID", "")
 
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
+# Archivos de estado (mismos nombres que la versión anterior)
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-DURACION_MINIMA_SEGUNDOS = 480  # 8 minutos
+DURACION_MINIMA_SEGUNDOS = 480
 MAX_INTENTOS_EXPANSION = 2
+NUM_CAPITULOS = 6
+SEG_MAX_PALABRAS = 55
+SEG_ESCENA = 9.0            # segundos por plano (retención: cortes frecuentes)
+W, H, FPS = 1920, 1080, 24
+VOL_FONDO = 0.10
+
+USAR_VIDEOS = os.getenv("USAR_VIDEOS", "true").lower() == "true"
+GENERAR_SHORT = os.getenv("GENERAR_SHORT", "true").lower() == "true"
+PROGRAMAR_PICO = os.getenv("PROGRAMAR_PICO", "true").lower() == "true"
+HORA_PICO = int(os.getenv("HORA_PICO", "19"))          # hora local CDMX. Valídala en Analytics
+INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 
 ACTIVAR_DISCLOSURE_IA = True
-DISCLOSURE_TEXT = "\n\n Contenido narrado con inteligencia artificial. Relato basado en testimonios reales de internet."
+DISCLOSURE_TEXT = (
+    "\n\n⚠️ Relato de ficción narrado con inteligencia artificial, inspirado en "
+    "leyendas urbanas, creepypastas y folclor. Personajes y sucesos son ficticios."
+)
 
-# ================================================================
-# 🔥 PALABRAS DE PODER
-# ================================================================
-PALABRAS_PODER = [
-    "PROHIBIDO", "SECRETO", "PELIGRO", "REAL", "VERDAD", 
-    "FILTRADO", "OCULTO", "Maldito", "Abandonado", "Imposible",
-    "Nunca", "Nadie", "Mortal", "Extremo", "PRUEBAS", "ERROR"
+VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}   # una sola voz = identidad de marca
+VOCES_RESPALDO = ["es-MX-JorgeNeural", "es-ES-AlvaroNeural", "es-CO-GonzaloNeural", "es-US-AlonsoNeural"]
+RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "-2%", "resolucion": "+2%"}
+PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
+PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
+
+FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
+SUFIJO_TITULO = " | Relato de Terror"
+
+FONDOS_DISPONIBLES = [
+    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
+    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
+]
+
+ESTADOS_MEXICO = [
+    "Aguascalientes", "Baja California", "Campeche", "Chiapas", "Chihuahua", "Coahuila",
+    "Colima", "Durango", "Estado de México", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco",
+    "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro",
+    "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas",
+    "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas",
 ]
 
 # ================================================================
-# 🎯 TEMAS VIRALES 2024
+# TEMAS (cada uno con ángulo narrativo, semilla de búsqueda y visuales de stock)
 # ================================================================
-TEMAS_VIRALES_LARGOS = [
-    {
-        "tema": "backrooms_exploracion",
-        "titulo_base": "Exploré los Backrooms de {lugar} durante {horas} horas",
-        "keywords": ["backrooms", "liminal spaces", "dimensiones paralelas", "atrapado", "infinito"],
-        "contextos": ["hotel abandonado", "centro comercial vacío", "túneles subterráneos", "edificio abandonado"],
-        "duracion_objetivo": 600,
-        "busquedas": 450000
-    },
-    {
-        "tema": "skinwalker_persiguiendo",
-        "titulo_base": "Un Skinwalker me persiguió {dias} días en {lugar}",
-        "keywords": ["skinwalker", "wendigo", "criatura", "persecución", "bosque maldito"],
-        "contextos": ["carretera solitaria", "bosque profundo", "montaña aislada", "desierto nocturno"],
-        "duracion_objetivo": 540,
-        "busquedas": 380000
-    },
-    {
-        "tema": "ritual_completo",
-        "titulo_base": "Hice el ritual completo en {lugar} y esto pasó",
-        "keywords": ["ritual", "invocación", "ceremonia", "maldición", "ocultismo"],
-        "contextos": ["cementerio antiguo", "casa abandonada", "bosque sagrado", "cueva"],
-        "duracion_objetivo": 660,
-        "busquedas": 520000
-    },
-    {
-        "tema": "ia_prediccion_muerte",
-        "titulo_base": "Una IA predijo mi muerte en {lugar} - {dias} días después",
-        "keywords": ["IA", "inteligencia artificial", "predicción", "muerte", "algoritmo maldito"],
-        "contextos": ["laboratorio", "cuarto de servidores", "oficina tech", "universidad"],
-        "duracion_objetivo": 600,
-        "busquedas": 890000
-    },
-    {
-        "tema": "numero_maldito_llamadas",
-        "titulo_base": "Llamé al número maldito {numero} veces en {lugar}",
-        "keywords": ["teléfono maldito", "llamadas", "número prohibido", "voz del más allá"],
-        "contextos": ["cabina telefónica", "casa embrujada", "oficina nocturna", "sótano"],
-        "duracion_objetivo": 540,
-        "busquedas": 670000
-    },
-    {
-        "tema": "deep_web_archivos",
-        "titulo_base": "Descargué archivos prohibidos de la Deep Web en {lugar}",
-        "keywords": ["deep web", "red oscura", "archivos prohibidos", "contenido clasificado"],
-        "contextos": ["cuarto oscuro", "bunker", "oficina abandonada", "sótano tech"],
-        "duracion_objetivo": 600,
-        "busquedas": 540000
-    },
-    {
-        "tema": "creepypasta_real",
-        "titulo_base": "La creepypasta de {lugar} es REAL - Testimonio",
-        "keywords": ["creepypasta", "Slenderman", "Jeff the Killer", "leyenda urbana", "internet"],
-        "contextos": ["bosque nocturno", "parque abandonado", "calle solitaria", "casa embrujada"],
-        "duracion_objetivo": 660,
-        "busquedas": 230000
-    },
-    {
-        "tema": "objeto_maldito_casa",
-        "titulo_base": "Compré un objeto maldito en {lugar} - {dias} noches de terror",
-        "keywords": ["muñeca maldita", "espejo embrujado", "pintura maldita", "reliquia"],
-        "contextos": ["tienda de antigüedades", "mercado de pulgas", "subasta", "casa heredada"],
-        "duracion_objetivo": 600,
-        "busquedas": 340000
-    },
+TEMAS = [
+    {"tema": "backrooms", "seed": "backrooms historia", "angulo": "Un espacio liminal aparece al cruzar una puerta común; reglas extrañas, imposible salir.",
+     "keywords": ["backrooms", "espacios liminales", "dimensión paralela", "atrapado"],
+     "contextos": ["hotel abandonado", "centro comercial vacío", "túneles", "edificio de oficinas"],
+     "visuales": ["empty office corridor", "yellow wallpaper room", "fluorescent light hallway", "empty parking garage", "abandoned mall interior"],
+     "hashtags": ["#Backrooms", "#EspaciosLiminales"]},
+    {"tema": "skinwalker", "seed": "skinwalker relatos", "angulo": "Algo imita voces y te sigue por un camino solitario durante varias noches.",
+     "keywords": ["skinwalker", "criatura", "persecución", "bosque"],
+     "contextos": ["carretera solitaria", "bosque profundo", "sierra aislada", "desierto de noche"],
+     "visuales": ["dark forest fog", "desert road night", "mountain night", "lonely highway night", "eyes in the dark"],
+     "hashtags": ["#Skinwalker", "#CriaturasDeLaNoche"]},
+    {"tema": "ritual", "seed": "ritual prohibido historia de terror", "angulo": "Un ritual hecho por curiosidad abre algo que no se puede cerrar.",
+     "keywords": ["ritual", "invocación", "maldición", "ocultismo"],
+     "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas"],
+     "visuales": ["candles dark room", "old cemetery night", "abandoned church", "cave darkness", "old book candle"],
+     "hashtags": ["#Rituales", "#Ocultismo"]},
+    {"tema": "ia_maldita", "seed": "inteligencia artificial terror historia", "angulo": "Una IA empieza a predecir cosas íntimas y cada predicción se cumple.",
+     "keywords": ["inteligencia artificial", "predicción", "algoritmo", "tecnología"],
+     "contextos": ["oficina de noche", "cuarto de servidores", "universidad", "casa con domótica"],
+     "visuales": ["computer screen dark", "server room", "laptop night dark", "glitch screen", "dark office night"],
+     "hashtags": ["#IA", "#TerrorTecnologico"]},
+    {"tema": "llamada_misteriosa", "seed": "llamada misteriosa terror", "angulo": "Un número desconocido llama a la misma hora y sabe cosas que nadie debería saber.",
+     "keywords": ["llamada misteriosa", "teléfono", "número desconocido", "voz"],
+     "contextos": ["casa sola", "oficina nocturna", "sótano", "cabina telefónica"],
+     "visuales": ["old telephone dark", "phone booth night", "ringing phone dark", "dark basement", "empty office night"],
+     "hashtags": ["#LlamadaMisteriosa"]},
+    {"tema": "deep_web", "seed": "deep web terror historia", "angulo": "Un archivo encontrado en foros oscuros parece describir la vida del narrador.",
+     "keywords": ["deep web", "archivos", "foro oscuro", "internet"],
+     "contextos": ["cuarto oscuro", "cibercafé viejo", "sótano", "departamento en la madrugada"],
+     "visuales": ["dark room computer", "monitor glow dark", "bunker corridor", "cables dark", "hooded figure dark"],
+     "hashtags": ["#DeepWeb", "#TerrorDigital"]},
+    {"tema": "creepypasta", "seed": "creepypasta relato", "angulo": "Una leyenda de internet resulta tener un punto de origen físico y cercano.",
+     "keywords": ["creepypasta", "leyenda urbana", "internet", "origen"],
+     "contextos": ["parque abandonado", "calle solitaria", "bosque nocturno", "casa del barrio"],
+     "visuales": ["dark forest night", "abandoned playground", "empty street night", "old house night", "foggy park night"],
+     "hashtags": ["#Creepypasta", "#LeyendasUrbanas"]},
+    {"tema": "objeto_maldito", "seed": "objeto maldito historia", "angulo": "Un objeto comprado barato trae reglas silenciosas y consecuencias cada noche.",
+     "keywords": ["objeto maldito", "antigüedad", "espejo", "muñeca"],
+     "contextos": ["tienda de antigüedades", "mercado de pulgas", "casa heredada", "subasta"],
+     "visuales": ["antique shop", "old doll", "old mirror dark", "antique room dark", "pawn shop night"],
+     "hashtags": ["#ObjetoMaldito"]},
+    {"tema": "velador", "seed": "trabajé de velador terror", "angulo": "Turno nocturno de vigilante; las cámaras muestran algo que no está en el pasillo real.",
+     "keywords": ["velador", "turno de noche", "cámaras de seguridad", "trabajo nocturno"],
+     "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento"],
+     "visuales": ["security guard night", "empty factory night", "warehouse dark", "cctv camera", "parking lot night"],
+     "hashtags": ["#Velador", "#TurnoDeNoche"]},
+    {"tema": "hospital", "seed": "hospital terror historia", "angulo": "Guardia nocturna en un hospital donde un paciente ya no debería existir.",
+     "keywords": ["hospital", "guardia nocturna", "paciente", "enfermera"],
+     "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue"],
+     "visuales": ["hospital corridor dark", "abandoned hospital", "empty hospital bed", "wheelchair dark", "operating room old"],
+     "hashtags": ["#HospitalEmbrujado"]},
+    {"tema": "carretera", "seed": "carretera de noche terror historia", "angulo": "Un viaje nocturno por carretera con un pasajero o una señal que no debieron existir.",
+     "keywords": ["carretera", "viaje nocturno", "taxi", "autoestopista"],
+     "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte"],
+     "visuales": ["highway night fog", "taxi night city", "road tunnel dark", "truck night highway", "gas station night"],
+     "hashtags": ["#CarreteraMaldita"]},
+    {"tema": "leyenda_mexicana", "seed": "leyenda mexicana terror", "angulo": "Una leyenda del pueblo (llorona, nahual, charro negro) cobra vida en versión contemporánea.",
+     "keywords": ["leyendas mexicanas", "nahual", "la llorona", "pueblo"],
+     "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
+     "visuales": ["old village night", "colonial church night", "dirt road night", "river fog night", "candles altar"],
+     "hashtags": ["#LeyendasMexicanas", "#TerrorMexicano"]},
 ]
 
-# ================================================================
-# 🔥 FÓRMULAS DE TÍTULOS VIRALES
-# ================================================================
-FORMULAS_TITULOS_LARGOS = {
-    "experiencia_extrema": [
-        "Sobreviví {numero} noches en {lugar} - Testimonio REAL",
-        "Estuve {horas} horas atrapado en {lugar} - Esto vi",
-        "{dias} días explorando {lugar} - Lo que descubrí",
-    ],
-    "numero_especifico": [
-        "{numero} veces que vi al mismo fantasma en {lugar}",
-        "{hora} exacto: Lo que pasó en {lugar}",
-        "Día {numero} en {lugar}: Algo me seguía",
-    ],
-    "advertencia_real": [
-        "⚠️ NO vayas a {lugar} si ves ESTO - Testigo lo confirma",
-        "🚨 ALERTA: Algo acecha en {lugar} - Múltiples avistamientos",
-        "PELIGRO REAL en {lugar} - Lo que las autoridades ocultan",
-    ],
-    "secreto_revelado": [
-        "El SECRETO que {lugar} esconde (FILTRADO)",
-        "Lo que NADIE te cuenta sobre {lugar} - Investigación",
-        "Descubrí algo PROHIBIDO en {lugar} - Evidencia",
-    ],
-    "pregunta_misterio": [
-        "¿Qué hay realmente en {lugar}? - Investigación completa",
-        "¿Por qué NADIE entra a {lugar} después de {hora}?",
-        "¿Sobrevivirías {horas} horas en {lugar}? - Experimento",
-    ],
+ESCENAS_FALLBACK = {
+    "apertura": ["dark hallway night", "old house interior dark", "flickering light bulb", "lonely street night"],
+    "tension": ["foggy road night", "empty highway night", "car headlights fog", "dark forest path"],
+    "destino": ["abandoned building", "creepy old house", "dark forest fog", "abandoned corridor"],
+    "climax": ["shadow figure dark", "scary dark room", "flashlight darkness", "silhouette door light"],
+    "resolucion": ["sunrise fog road", "dawn empty street", "morning mist forest", "walking away silhouette dawn"],
 }
 
 # ================================================================
-# 🧠 CONFIGURACIÓN DE PUBLICACIÓN HUMANA
+# UTILIDADES
 # ================================================================
-MAX_VIDEOS_DIA = 1
-PROBABILIDAD_DESCANSO = 0.20
-PROBABILIDAD_CAPRICHO = 0.15
-INTERVALO_MIN_HORAS = 24
-INTERVALO_MAX_HORAS = 72
-RETRASO_MAX_MINUTOS = 45
-
-UMBRAL_DEMANDA_VIEWS = 10000
-
-# ================================================================
-# 🎬 DECISIONES DE PUBLICACIÓN
-# ================================================================
-def deberia_publicar_ahora(estado):
-    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
-    fecha_hoy = hoy.isoformat()
-
-    if estado.get("fecha") != fecha_hoy:
-        estado["fecha"] = fecha_hoy
-        estado["publicaciones_hoy"] = 0
-        if random.random() < PROBABILIDAD_DESCANSO:
-            estado["dia_descanso"] = fecha_hoy
-            print("🛌 Día de descanso activado. No se publicará nada hoy.")
-        else:
-            estado["dia_descanso"] = None
-        print(f"📅 Nuevo día. Contador reiniciado.")
-
-    if estado.get("dia_descanso") == fecha_hoy:
-        return False
-
-    publicadas_hoy = estado.get("publicaciones_hoy", 0)
-    if publicadas_hoy >= MAX_VIDEOS_DIA:
-        print(f"✅ Límite de {MAX_VIDEOS_DIA} video diario alcanzado.")
-        return False
-
-    ultima_hora = estado.get("ultima_publicacion")
-    if ultima_hora:
-        ultima_hora = datetime.fromisoformat(ultima_hora)
-        hora_actual = datetime.now(ZoneInfo("America/Mexico_City"))
-        diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
-        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
-        if diff_horas < intervalo_requerido:
-            print(f" Esperando {intervalo_requerido:.1f}h desde la última publicación.")
-            print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
-            return False
-        else:
-            print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
-
-    if random.random() < PROBABILIDAD_CAPRICHO:
-        print("🎲 Capricho aleatorio: no publicar esta vez.")
-        return False
-
-    print("✅ Decisión: Publicar video largo.")
-
-    retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
-    if retraso_segundos > 0:
-        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
-        time.sleep(retraso_segundos)
-
-    return True
-
-# ================================================================
-# VALIDAR PEXELS API KEY
-# ================================================================
-def validar_pexels_api_key():
-    if not PEXELS_API_KEY:
-        print("⚠️ PEXELS_API_KEY no configurada.")
-        return False
+def cargar_json(ruta, default):
     try:
-        headers = {"Authorization": PEXELS_API_KEY}
-        r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
-        if r.status_code == 200:
-            print("✅ API Key de Pexels válida.")
-            return True
-        else:
-            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
-            return False
-    except Exception as e:
-        print(f"⚠️ Error probando API Key: {e}")
-        return False
-
-PEXELS_VALIDA = validar_pexels_api_key()
-
-# ================================================================
-# 🎯 GENERAR TÍTULO ULTRA-VIRAL (CORREGIDO)
-# ================================================================
-def generar_titulo_viral_largo(keywords, lugar, tema_viral):
-    categorias = list(FORMULAS_TITULOS_LARGOS.keys())
-    categoria = random.choice(categorias)
-    
-    formulas = FORMULAS_TITULOS_LARGOS[categoria]
-    formula = random.choice(formulas)
-    
-    horas = ["3:33 AM", "2:00 AM", "4:44 AM", "medianoche", "3:00 AM", "12 horas", "24 horas"]
-    numeros = ["3", "7", "13", "47", "9", "5", "10"]
-    dias = ["3", "7", "5", "10", "13"]
-    
-    titulo = formula.replace("{hora}", random.choice(horas))
-    titulo = titulo.replace("{lugar}", lugar)
-    titulo = titulo.replace("{numero}", random.choice(numeros))
-    titulo = titulo.replace("{dias}", random.choice(dias))
-    
-    # CORRECCIÓN: Solo 2-3 palabras CLAVE en mayúsculas
-    palabras = titulo.split()
-    palabras_procesadas = []
-    contador_caps = 0
-    
-    for i, palabra in enumerate(palabras):
-        palabra_limpia = palabra.upper().strip(".,:;!?¿¡")
-        
-        if contador_caps < 3:
-            if palabra_limpia in PALABRAS_PODER:
-                palabras_procesadas.append(palabra.upper())
-                contador_caps += 1
-            elif i == 0 and len(palabra) > 3 and palabra_limpia not in ["el", "la", "los", "las", "un", "una", "de", "del"]:
-                palabras_procesadas.append(palabra.upper())
-                contador_caps += 1
-            else:
-                palabras_procesadas.append(palabra.lower())
-        else:
-            palabras_procesadas.append(palabra.lower())
-    
-    titulo = " ".join(palabras_procesadas)
-    
-    # CORRECCIÓN: Agregar "Relato de Terror" al final
-    if not titulo.lower().endswith("relato de terror"):
-        titulo = f"{titulo} - Relato de Terror"
-    
-    if len(titulo) > 95:
-        titulo = titulo[:92] + "..."
-    
-    return titulo
-
-# ================================================================
-# VERIFICAR DEMANDA EN YOUTUBE
-# ================================================================
-def verificar_demanda_youtube(tema, umbral_views=UMBRAL_DEMANDA_VIEWS):
-    try:
-        creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
-        youtube = build("youtube", "v3", credentials=creds)
-        request = youtube.search().list(
-            part="snippet",
-            q=tema,
-            maxResults=10,
-            type="video"
-        )
-        response = request.execute()
-        items = response.get("items", [])
-        if not items:
-            print(f"⚠️ No se encontraron videos para el tema '{tema}'.")
-            return False
-
-        video_ids = [item["id"]["videoId"] for item in items if item["id"]["kind"] == "youtube#video"]
-        if not video_ids:
-            return False
-
-        stats_request = youtube.videos().list(
-            part="statistics",
-            id=",".join(video_ids[:5])
-        )
-        stats_response = stats_request.execute()
-        stats_items = stats_response.get("items", [])
-        if not stats_items:
-            return False
-
-        total_views = 0
-        for stat in stats_items:
-            views = int(stat["statistics"].get("viewCount", 0))
-            total_views += views
-
-        avg_views = total_views / len(stats_items)
-        print(f" Demanda para '{tema}': {len(stats_items)} videos, promedio de vistas: {avg_views:,.0f}")
-        if avg_views >= umbral_views:
-            print("✅ Demanda suficiente.")
-            return True
-        else:
-            print(f"⛔ Demanda baja (promedio < {umbral_views:,}). Cancelando publicación.")
-            return False
-    except Exception as e:
-        print(f"⚠️ Error verificando demanda: {e}")
-        return True
-
-# ================================================================
-# ÉPOCA DEL SUCESO
-# ================================================================
-ANIO_SUCESO = None
-EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
-
-def construir_modificadores_epoca(anio):
-    if anio is None or anio >= 2015:
-        return "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, LED lighting, smartphones era"
-    elif anio >= 2000:
-        return f"early 2000s era (year {anio}): 2000s cars, CRT televisions, old flip cellphones, 2000s fashion and architecture, no smartphones"
-    elif anio >= 1990:
-        return f"1990s era (year {anio}): 90s cars, cassette players, CRT TVs, analog phones, 90s fashion, older architecture, no smartphones, no modern tech"
-    elif anio >= 1980:
-        return f"1980s era (year {anio}): 80s cars, analog rotary phones, vintage clothing, older buildings, no modern technology"
-    else:
-        return f"past era (year {anio}): old classic cars, analog technology, period clothing, aged architecture, no modern devices"
-
-def actualizar_epoca(anio):
-    global ANIO_SUCESO, EPOCA_MOD
-    try:
-        ANIO_SUCESO = int(anio)
-    except Exception:
-        ANIO_SUCESO = None
-    EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"🗓️ Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
-
-# ================================================================
-# VOCES NEURALES
-# ================================================================
-VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz"},
-    {"voz": "es-MX-DaliaNeural", "velocidad": "+12%", "tono": "+0Hz"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+12%", "tono": "-3Hz"},
-    {"voz": "es-ES-ElviraNeural", "velocidad": "+12%", "tono": "+1Hz"},
-    {"voz": "es-CO-GonzaloNeural", "velocidad": "+12%", "tono": "-1Hz"},
-    {"voz": "es-CO-SalomeNeural", "velocidad": "+12%", "tono": "-1Hz"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+12%", "tono": "+2Hz"},
-    {"voz": "es-AR-DiegoNeural", "velocidad": "+12%", "tono": "-2Hz"},
-    {"voz": "es-US-AlonsoNeural", "velocidad": "+12%", "tono": "-1Hz"},
-    {"voz": "es-US-PalomaNeural", "velocidad": "+12%", "tono": "-1Hz"},
-    {"voz": "es-PE-CamilaNeural", "velocidad": "+12%", "tono": "+0Hz"},
-    {"voz": "es-PE-AlexNeural", "velocidad": "+12%", "tono": "-1Hz"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+12%", "tono": "-2Hz"},
-    {"voz": "es-CL-CatalinaNeural", "velocidad": "+12%", "tono": "+1Hz"},
-]
-CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
-
-# ================================================================
-# PALETAS Y ESTILOS
-# ================================================================
-PALETAS_COLOR = [
-    "Cold cyan blue LED fog, navy blue modern shadows, crisp white moonlight",
-    "Emerald green twilight, modern city haze, muted sage ambient lighting",
-    "Deep violet haze, electric purple ambient light, dark magenta shadows",
-    "Slate gray tones, freezing ice blue highlight, dim overcast ambient",
-    "Dark teal and deep blue, oceanic midnight, cold misty atmosphere",
-    "Stark black and white high contrast, silver moonlight, pitch shadows",
-    "Desaturated cold film look, moody cinematic lighting, hyperrealistic",
-    "Warm amber and dark mahogany, golden lighting, deep brown shadows",
-    "Fiery sunset orange, deep purple shadows, red highlights",
-    "Deep crimson red, pitch black shadow, intense orange emergency lights",
-    "Muted sepia-toned film look, faded analog colors, nostalgic atmosphere",
-    "Warm tungsten indoor glow, soft yellow lamplight, aged shadows",
-]
-PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
-
-ESTILOS_VISUALES = [
-    "Cinematic photograph, dramatic lighting, sharp focus, film still",
-    "Thriller photography, soft ambient diffusion, high contrast",
-    "Documentary realistic photo, natural skin texture, authentic",
-    "8k resolution cinematic frame, ultra clear details",
-    "Noir style, high contrast, moody urban atmosphere",
-    "Analog film photograph, grain of the period, authentic era look",
-]
-ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
-
-# ================================================================
-# ESTADOS DE MÉXICO
-# ================================================================
-ESTADOS_MEXICO = [
-    "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
-    "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México",
-    "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit",
-    "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí",
-    "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"
-]
-
-# ================================================================
-# GENERADOR DE PERSONAJES
-# ================================================================
-def generar_perfil_personaje():
-    edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old", "60-year-old"]
-    generos = ["man", "woman"]
-    vestimentas = [
-        "wearing a denim jacket and t-shirt",
-        "wearing a dark green coat and wool scarf",
-        "wearing a simple white shirt and leather belt",
-        "wearing a blue mechanic uniform",
-        "wearing a dark sweater and trousers",
-        "wearing a red flannel shirt and jeans",
-        "wearing a black leather jacket and boots",
-        "wearing a hoodie and baseball cap",
-        "wearing a polo shirt and dark pants",
-        "wearing a work uniform with reflective stripes",
-    ]
-    cabellos = [
-        "short curly dark hair",
-        "grey cropped hair",
-        "bald with a short beard",
-        "short spiky black hair",
-        "chestnut brown curly hair",
-        "short salt-and-pepper hair",
-    ]
-    rasgos = [
-        "with mestizo features and light olive skin",
-        "with light brown skin and freckles",
-        "with olive skin and a strong jaw",
-        "with pale skin and green eyes",
-        "with tan skin and a warm smile",
-    ]
-    perfil = (
-        f"a {random.choice(edades)} Mexican {random.choice(generos)}, "
-        f"{random.choice(rasgos)}, "
-        f"with {random.choice(cabellos)}, {random.choice(vestimentas)}"
-    )
-    return perfil
-
-PERFIL_PERSONAJE = generar_perfil_personaje()
-UBICACION_HISTORIA = random.choice(ESTADOS_MEXICO)
-
-# ================================================================
-# AUDIO DE FONDO
-# ================================================================
-FONDOS_DISPONIBLES = [
-    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
-    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
-]
-
-def cargar_estado_musica():
-    try:
-        with open(MUSICA_ESTADO_FILE, "r", encoding="utf-8") as f:
-            estado = json.load(f)
-        if "ultimo_fondo" in estado and "ultimos_fondos" not in estado:
-            estado["ultimos_fondos"] = [estado["ultimo_fondo"]]
-            del estado["ultimo_fondo"]
-            guardar_estado_musica(estado)
-        return estado
-    except:
-        return {"ultimos_fondos": []}
-
-def guardar_estado_musica(estado):
-    with open(MUSICA_ESTADO_FILE, "w", encoding="utf-8") as f:
-        json.dump(estado, f, indent=2, ensure_ascii=False)
-
-def seleccionar_fondo_disponible():
-    estado = cargar_estado_musica()
-    ultimos = estado.get("ultimos_fondos", [])
-    excluir = set(ultimos[-3:]) if ultimos else set()
-    disponibles = [f for f in FONDOS_DISPONIBLES if f not in excluir]
-    if not disponibles:
-        disponibles = FONDOS_DISPONIBLES.copy()
-    for _ in range(5):
-        elegido = random.choice(disponibles)
-        for root, dirs, files in os.walk("."):
-            if "/." in root or "\\." in root:
-                continue
-            if elegido in files:
-                full_path = os.path.join(root, elegido)
-                ultimos.append(elegido)
-                if len(ultimos) > 10:
-                    ultimos = ultimos[-10:]
-                estado["ultimos_fondos"] = ultimos
-                guardar_estado_musica(estado)
-                print(f"✅ Audio de fondo seleccionado: {full_path}")
-                return full_path
-        disponibles.remove(elegido)
-        if not disponibles:
-            break
-    for fondo in FONDOS_DISPONIBLES:
-        for root, dirs, files in os.walk("."):
-            if "/." in root or "\\." in root:
-                continue
-            if fondo in files:
-                full_path = os.path.join(root, fondo)
-                print(f"⚠️ Fallback: {full_path}")
-                return full_path
-    print("⚠️ No se encontró ningún archivo de fondo.")
-    return None
-
-FONDO_AUDIO_FILE = seleccionar_fondo_disponible()
-
-# ================================================================
-# GESTIÓN DE TÍTULOS PUBLICADOS
-# ================================================================
-def cargar_titulos_largos():
-    try:
-        with open(TITULOS_LARGOS_FILE, "r", encoding="utf-8") as f:
+        with open(ruta, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"titulos": []}
+        return default
+
+
+def guardar_json(ruta, data):
+    tmp = ruta + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, ruta)
+
+
+def cargar_estado():
+    estado = cargar_json(MUSICA_ESTADO_FILE, {})
+    if "ultimo_fondo" in estado and "ultimos_fondos" not in estado:
+        estado["ultimos_fondos"] = [estado.pop("ultimo_fondo")]
+    estado.setdefault("ultimos_fondos", [])
+    estado.setdefault("videos", [])
+    estado.setdefault("temas_recientes", [])
+    return estado
+
+
+def parsear_json(texto):
+    if not texto:
+        raise ValueError("respuesta vacía")
+    t = re.sub(r"```(?:json)?", "", texto, flags=re.I)
+    i, j = t.find("{"), t.rfind("}")
+    if i == -1 or j == -1:
+        raise ValueError("sin JSON")
+    t = t[i:j + 1]
+    t = re.sub(r",\s*([}\]])", r"\1", t)
+    if json5:
+        try:
+            return json5.loads(t)
+        except Exception:
+            pass
+    return json.loads(t, strict=False)
+
+
+def llm(prompt, temperature=0.8, max_tokens=1500, json_mode=False, system=None, intentos=3):
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
+    payload = {"model": DEEPSEEK_MODEL, "messages": msgs, "temperature": temperature, "max_tokens": max_tokens}
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+    for i in range(intentos):
+        try:
+            r = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=150)
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            print(f"⚠️ LLM intento {i+1}/{intentos}: {e}")
+            time.sleep(5 * (i + 1))
+    return None
+
+
+def descargar(url, ruta, max_bytes=20 * 1024 * 1024):
+    try:
+        with requests.get(url, stream=True, timeout=40) as r:
+            r.raise_for_status()
+            total = 0
+            with open(ruta, "wb") as f:
+                for chunk in r.iter_content(1 << 16):
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise ValueError("archivo demasiado grande")
+                    f.write(chunk)
+        return os.path.getsize(ruta) > 1000
+    except Exception as e:
+        print(f"⚠️ Descarga fallida: {e}")
+        if os.path.exists(ruta):
+            os.remove(ruta)
+        return False
+
+
+def fmt_ts(seg):
+    seg = int(seg)
+    h, m, s = seg // 3600, seg % 3600 // 60, seg % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+
+
+# ================================================================
+# HISTORIAL (títulos y temas ya usados)
+# ================================================================
+def titulo_largo_ya_publicado(titulo):
+    data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
+    n = titulo.lower().strip()
+    p1 = set(re.findall(r"\w+", n))
+    for t in data["titulos"]:
+        tn = t.lower().strip()
+        if n == tn:
+            return True
+        p2 = set(re.findall(r"\w+", tn))
+        if len(p1) > 3 and len(p2) > 3 and len(p1 & p2) / min(len(p1), len(p2)) > 0.7:
+            return True
+    return False
+
 
 def guardar_titulo_largo(titulo):
-    data = cargar_titulos_largos()
+    data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
     if titulo not in data["titulos"]:
         data["titulos"].append(titulo)
-    with open(TITULOS_LARGOS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    guardar_json(TITULOS_LARGOS_FILE, data)
 
-def titulo_largo_ya_publicado(titulo):
-    data = cargar_titulos_largos()
-    titulo_norm = titulo.lower().strip()
-    for t in data["titulos"]:
-        t_norm = t.lower().strip()
-        if titulo_norm == t_norm:
-            return True
-        palabras1 = set(re.findall(r'\w+', titulo_norm))
-        palabras2 = set(re.findall(r'\w+', t_norm))
-        if len(palabras1) > 3 and len(palabras2) > 3:
-            interseccion = palabras1.intersection(palabras2)
-            similitud = len(interseccion) / min(len(palabras1), len(palabras2))
-            if similitud > 0.7:
-                return True
-    return False
-
-# ================================================================
-# GESTIÓN DE TEMAS
-# ================================================================
-def cargar_temas_shorts():
-    try:
-        with open(TEMAS_SHORTS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {"temas": []}
-
-def guardar_tema_shorts(tema):
-    data = cargar_temas_shorts()
-    if tema not in data["temas"]:
-        data["temas"].append(tema)
-    with open(TEMAS_SHORTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def tema_ya_usado(tema, umbral=0.5):
-    data = cargar_temas_shorts()
-    if not data["temas"]:
-        return False
-    palabras_nuevas = set(re.findall(r'\w+', tema.lower()))
-    if not palabras_nuevas:
-        return False
-    for tema_antiguo in data["temas"][-20:]:
-        palabras_antiguas = set(re.findall(r'\w+', tema_antiguo.lower()))
-        if not palabras_antiguas:
-            continue
-        interseccion = palabras_nuevas.intersection(palabras_antiguas)
-        union = palabras_nuevas.union(palabras_antiguas)
-        similitud = len(interseccion) / len(union) if union else 0
-        if similitud > umbral:
-            print(f"⚠️ Tema similar: '{tema_antiguo}' (similitud {similitud:.2f})")
+    data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
+    nuevas = set(re.findall(r"\w+", tema.lower()))
+    for antiguo in data["temas"][-20:]:
+        viejas = set(re.findall(r"\w+", antiguo.lower()))
+        union = nuevas | viejas
+        if union and len(nuevas & viejas) / len(union) > umbral:
+            print(f"⚠️ Tema similar a: '{antiguo}'")
             return True
     return False
 
-# ================================================================
-# VALIDACIÓN DE TÍTULO GANCHO
-# ================================================================
-def validar_titulo_gancho(titulo):
-    if not titulo or len(titulo) < 30:
-        return False
 
-    genericas = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
-    if any(titulo.lower().startswith(g) for g in genericas):
-        return False
+def guardar_tema(tema):
+    data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
+    if tema not in data["temas"]:
+        data["temas"].append(tema)
+    guardar_json(TEMAS_SHORTS_FILE, data)
 
-    ganchos_fuertes = [
-        "vi", "escuché", "sobreviví", "regresé", "volví", "fui", "estuve", "viví",
-        "descubrí", "encontré", "pasó", "ocurrió", "sucedió", "oí", "sentí",
-        "3:33", "3:00", "medianoche", "nunca", "jamás", "solo", "primero",
-        "último", "desapareció", "regresó", "volvió", "entró", "salió", "huyó",
-        "escapé", "corrí", "grité", "lloré", "rogué", "supliqué", "¿", "?",
-        "cómo", "por qué", "qué", "dónde", "cuándo", "horas", "días", "noches"
-    ]
-    tiene_gancho = any(g in titulo.lower() for g in ganchos_fuertes)
-    longitud_ok = 35 <= len(titulo) <= 95
-    tiene_separador = any(c in titulo for c in [":", "-", "|", ","])
-
-    if tiene_gancho and longitud_ok:
-        return True
-    if longitud_ok and tiene_separador and len(titulo) > 40:
-        return True
-    if any(titulo.startswith(p) for p in ["Trabajé", "Fui", "El pozo", "Encontré", "Vi lo que", "Exploré", "Sobreviví"]):
-        return True
-
-    return False
 
 # ================================================================
-# EVALUAR CLARIDAD DEL TÍTULO
+# YOUTUBE: cliente, demanda, rendimiento propio
 # ================================================================
-def evaluar_claridad_titulo(titulo, historia_resumen):
-    prompt = f"""
-Eres un EXPERTO EN TÍTULOS DE YOUTUBE. Evalúa el siguiente título para un video de terror/paranormal.
-
-Título: "{titulo}"
-Resumen de la historia: "{historia_resumen[:200]}..."
-
-Responde únicamente con un JSON:
-{{
-    "claro": true/false,
-    "razon": "Breve explicación",
-    "sugerencia": "Si no es claro, una sugerencia de mejora"
-}}
-
-Criterios:
-- ¿Se entiende de qué trata el video en menos de 10 segundos?
-- ¿Genera curiosidad o promete algo concreto?
-- ¿Evita ser genérico?
-"""
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3,
-        "max_tokens": 150,
-        "response_format": {"type": "json_object"}
-    }
+def crear_cliente_youtube():
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=30)
-        r.raise_for_status()
-        respuesta = r.json()["choices"][0]["message"]["content"].strip()
-        data = json.loads(limpiar_respuesta_json(respuesta))
-        claro = data.get("claro", False)
-        if not claro:
-            print(f"⚠️ Título no claro: {data.get('razon', 'sin razón')}")
-            print(f"   Sugerencia: {data.get('sugerencia', '')}")
-        return claro
+        creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
+        return build("youtube", "v3", credentials=creds)
     except Exception as e:
-        print(f"⚠️ Error evaluando claridad del título: {e}")
-        return True
-
-# ================================================================
-# LIMPIAR RESPUESTA JSON
-# ================================================================
-def limpiar_respuesta_json(respuesta):
-    if not respuesta:
-        return ""
-    respuesta = re.sub(r"```json\s*", "", respuesta, flags=re.IGNORECASE)
-    respuesta = re.sub(r"```\s*", "", respuesta)
-    inicio = respuesta.find("{")
-    fin = respuesta.rfind("}")
-    if inicio != -1 and fin != -1:
-        json_str = respuesta[inicio : fin + 1]
-        json_str = re.sub(r",\s*}", "}", json_str)
-        json_str = re.sub(r",\s*\]", "]", json_str)
-        return json_str
-    return respuesta
-
-# ================================================================
-# 🎯 GENERAR HISTORIA COMPLETA CON SEO ÉLITE (CORREGIDO)
-# ================================================================
-def generar_historia_completa():
-    tema_viral = random.choice(TEMAS_VIRALES_LARGOS)
-    contexto = random.choice(tema_viral["contextos"])
-    keywords = tema_viral["keywords"]
-    
-    # CORRECCIÓN: Agregar keywords de terror/paranormal
-    keywords_terror = ["relato de terror", "paranormal", "miedo", "terror real", "caso real"]
-    keywords_completas = keywords + keywords_terror[:2]
-    
-    temas_recientes = cargar_temas_shorts()["temas"][-20:]
-    temas_texto = "\n".join([f"- {t}" for t in temas_recientes]) if temas_recientes else "Ninguno aún."
-
-    titulos_pub = cargar_titulos_largos()["titulos"][-20:]
-    titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
-
-    prompt_base = f"""
-Eres un GUIONISTA EXPERTO en TERROR, SUSPENSO y NARRATIVA DE ALTO IMPACTO para YouTube.
-
- TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
-📍 CONTEXTO: {contexto}
-🔑 KEYWORDS SEO: {', '.join(keywords_completas)}
-⏱️ DURACIÓN OBJETIVO: {tema_viral['duracion_objetivo']//60} minutos
-
- TÍTULOS YA PUBLICADOS (NO REPETIR):
-{titulos_referencia}
-
-🚫 TEMAS YA PUBLICADOS (EVITAR):
-{temas_texto}
-
- REGLA DE ORO: Tu historia debe tener una PREMISA FUERTE que genere CURIOSIDAD INMEDIATA.
-
-🎯 REGLA DE TÍTULO SEO (CRÍTICA):
-El título debe ser un GANCHO que se entienda en 10 segundos.
-- Usa MAYÚSCULAS solo en 2-3 palabras de poder (NO en todo el título)
-- AL FINAL del título agrega SIEMPRE: "- Relato de Terror"
-- Longitud: 40-95 caracteres
-
-EJEMPLOS DE TÍTULOS GANADORES:
-✅ "Exploré los Backrooms de {contexto} durante 12 horas - Relato de Terror"
-✅ "SOBREVIVÍ 7 noches en {contexto} - Testimonio REAL - Relato de Terror"
-✅ "Una IA PREDIJO mi muerte - 3 días después - Relato de Terror"
-❌ NUNCA: "El misterio de...", "La leyenda de...", "Relato de..."
-
-🎯 REGLA DE PALABRAS CLAVE PARA MINIATURA:
-"palabras_portada": TEXTO GANCHO de 2-4 palabras emocionales y ESPECÍFICAS (ej: "NO DEBÍ ENTRAR", "QUÉ VI").
-
-🎯 REGLA DE ÉPOCA Y AMBIENTACIÓN:
-"anio_suceso": año específico del suceso (1970-2020).
-
-🎯 REGLA DE PERSONAJE:
-Personaje principal fijo: "{PERFIL_PERSONAJE}"
-
-🎯 ESTRUCTURA DEL RELATO (texto_completo - 1600-2000 palabras):
-1. GANCHO DE RETENCIÓN (PRIMEROS 30 SEGUNDOS): Frase o acción impactante
-2. CONTEXTO DETALLADO: Quién, dónde, cuándo, por qué
-3. DESARROLLO PROGRESIVO: Aumento constante de tensión
-4. CLÍMAX MÚLTIPLE: Varios momentos aterradores
-5. DESENLACE ABIERTO: Reflexión o pregunta final
-- Tono: Natural, coloquial, en primera persona
-- Incluye timestamps naturales cada 2-3 minutos
-
-🎯 REGLA DE CAPÍTULOS:
-Genera 5-7 capítulos con timestamps REALISTAS basados en {tema_viral['duracion_objetivo']//60}-{(tema_viral['duracion_objetivo']+120)//60} minutos.
-
-🎯 SEO ÉLITE - KEYWORDS DE TERROR:
-Incluye en descripción y tags: "relato de terror", "paranormal", "miedo", "terror real", "caso real"
-
-Responde ESTRICTAMENTE en este JSON:
-{{
-  "titulo": "Título ultra-viral 2024 (40-95 caracteres) CON '- Relato de Terror' al final",
-  "titulo_alternativo": "Título alternativo",
-  "anio_suceso": 2019,
-  "palabras_clave": ["{keywords_completas[0]}", "{keywords_completas[1]}", "{keywords_completas[2]}", "relato de terror", "paranormal"],
-  "palabras_portada": "TEXTO GANCHO 2-4 palabras",
-  "descripcion": "Descripción SEO completa. LAS KEYWORDS DEBEN ESTAR EN LAS PRIMERAS 2 LÍNEAS. Incluye 'relato de terror' y 'paranormal'.",
-  "tags": "15-20 tags separados por coma. Incluye: relato de terror, paranormal, miedo, terror real, caso real",
-  "hashtags": "#Terror #Paranormal #RelatosDeTerror #Mexico #Viral2024 #Miedo #CasosReales",
-  "miniatura_prompt": "YouTube horror thumbnail 16:9: [escena MÁS impactante del relato]",
-  "capitulos": [
-    {{"tiempo": "00:00", "titulo": "El Comienzo"}},
-    {{"tiempo": "02:30", "titulo": "Los Primeros Signos"}},
-    {{"tiempo": "05:45", "titulo": "El Encuentro"}},
-    {{"tiempo": "09:15", "titulo": "El Clímax"}},
-    {{"tiempo": "12:00", "titulo": "La Revelación"}}
-  ],
-  "texto_completo": "Relato completo de 1600-2000 palabras con timestamps naturales"
-}}
-"""
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt_base}],
-        "temperature": 0.75,
-        "max_tokens": 5000,
-        "response_format": {"type": "json_object"}
-    }
-
-    for intento in range(6):
-        try:
-            print(f"🔄 Intento {intento+1}/6 generando historia viral...")
-            r = requests.post(url, headers=headers, json=payload, timeout=120)
-            r.raise_for_status()
-            respuesta_json = r.json()
-            respuesta = respuesta_json["choices"][0]["message"]["content"].strip()
-            json_str = limpiar_respuesta_json(respuesta)
-            data = None
-            try:
-                data = json5.loads(json_str)
-            except Exception as e5:
-                try:
-                    data = json.loads(json_str, strict=False)
-                except json.JSONDecodeError as e:
-                    print(f"❌ JSON inválido: {e}")
-                    raise
-
-            texto = data.get("texto_completo", "")
-            palabras = len(texto.split())
-            print(f"📊 Palabras del relato: {palabras}")
-
-            if "texto_completo" in data and palabras >= 500:
-                titulo_generado = data.get("titulo", "")
-
-                if not validar_titulo_gancho(titulo_generado):
-                    print(f"️ Título no pasa validación básica: '{titulo_generado}'. Reintentando...")
-                    raise ValueError("Título no cumple estándar de gancho")
-
-                if not evaluar_claridad_titulo(titulo_generado, texto[:300]):
-                    print(f"⚠️ Título no pasa evaluación de claridad. Reintentando...")
-                    raise ValueError("Título no claro")
-
-                if titulo_largo_ya_publicado(titulo_generado):
-                    print(f"⚠️ Título YA PUBLICADO: '{titulo_generado}'. Regenerando...")
-                    raise ValueError("Título duplicado")
-
-                keywords = data.get("palabras_clave", [])
-                if keywords:
-                    tema = " ".join(keywords)
-                    if tema_ya_usado(tema):
-                        print(f"⚠️ Tema YA PUBLICADO: '{tema}'. Regenerando...")
-                        raise ValueError("Tema duplicado")
-
-                anio_suceso = data.get("anio_suceso", None)
-                actualizar_epoca(anio_suceso)
-                print(f"✅ Historia generada: {palabras} palabras.")
-                print(f"🔥 Título VIRAL: {titulo_generado}")
-                print(f"🎯 Tema viral: {tema_viral['tema']}")
-                return data
-            else:
-                print(f"️ Texto insuficiente ({palabras} palabras). Reintentando en 10s...")
-                raise ValueError("Texto insuficiente")
-        except Exception as e:
-            print(f" Intento {intento+1}/6 falló: {e}")
-            if intento < 5:
-                time.sleep(10)
-    print("❌ No se pudo generar historia válida después de 6 intentos.")
-    sys.exit(1)
-
-# ================================================================
-# DIVIDIR TEXTO EN SEGMENTOS
-# ================================================================
-def dividir_en_segmentos(texto, max_palabras_por_segmento=55):
-    oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
-    oraciones = [o.strip() for o in oraciones if o.strip()]
-    if not oraciones:
-        return [texto]
-    segmentos = []
-    segmento_actual = []
-    palabras_actuales = 0
-    for oracion in oraciones:
-        palabras_oracion = len(oracion.split())
-        if palabras_actuales + palabras_oracion > max_palabras_por_segmento and segmento_actual:
-            segmentos.append(" ".join(segmento_actual))
-            segmento_actual = [oracion]
-            palabras_actuales = palabras_oracion
-        else:
-            segmento_actual.append(oracion)
-            palabras_actuales += palabras_oracion
-    if segmento_actual:
-        segmentos.append(" ".join(segmento_actual))
-    return segmentos
-
-# ================================================================
-# ASIGNAR ETAPAS VISUALES
-# ================================================================
-def asignar_etapas_visuales(segmentos, ubicacion):
-    n = len(segmentos)
-    etapas = []
-    ubicaciones = []
-    for i in range(n):
-        progreso = i / max(n - 1, 1)
-        if progreso < 0.2:
-            etapa = "inicio_casa"; ubic = f"interior del hogar en {ubicacion}"
-        elif progreso < 0.4:
-            etapa = "desplazamiento"; ubic = f"calle o vehículo en movimiento, {ubicacion}"
-        elif progreso < 0.65:
-            etapa = "lugar_destino"; ubic = f"lugar específico del suceso en {ubicacion}"
-        elif progreso < 0.85:
-            etapa = "climax_evento"; ubic = f"mismo lugar del suceso en {ubicacion}, momento del evento"
-        else:
-            etapa = "resolucion"; ubic = f"salida o regreso desde el lugar, {ubicacion}"
-        etapas.append(etapa)
-        ubicaciones.append(ubic)
-    return etapas, ubicaciones
-
-# ================================================================
-# 🎬 GENERAR QUERY CINEMATOGRÁFICO PARA PEXELS
-# ================================================================
-def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral):
-    prompts_cinematograficos = {
-        "inicio_casa": f"""
-            POV shot from inside dark mexican {ubicacion_escena}, 
-            single flickering light bulb, long hallway leading to darkness, 
-            cinematic horror photography, shallow depth of field, 
-            shot on 35mm, film grain, cold blue tones, unsettling atmosphere
-        """,
-        "desplazamiento": f"""
-            Night driving shot, dark mexican road through {ubicacion_escena}, 
-            fog, headlights illuminating mist, cinematic thriller photography, 
-            motion blur, shallow focus, eerie atmosphere, 35mm film look
-        """,
-        "lugar_destino": f"""
-            Wide establishing shot of {ubicacion_escena} at night, 
-            mexican location, fog, dramatic lighting, cinematic horror photography, 
-            ultra wide angle, deep shadows, mysterious atmosphere
-        """,
-        "climax_evento": f"""
-            Extreme close-up of terrified eyes reflecting something horrifying 
-            in {ubicacion_escena}, dramatic chiaroscuro lighting, 
-            horror movie still, hyperrealistic, shallow focus, tension, fear
-        """,
-        "resolucion": f"""
-            Person walking away from {ubicacion_escena} at dawn, 
-            silhouette against morning light, cinematic horror photography, 
-            wide shot, atmospheric fog, emotional aftermath
-        """
-    }
-    
-    prompt_base = prompts_cinematograficos.get(etapa, prompts_cinematograficos["inicio_casa"])
-    
-    if "backrooms" in tema_viral:
-        prompt_base += ", liminal space, endless corridors, yellow wallpaper, fluorescent lights"
-    elif "skinwalker" in tema_viral:
-        prompt_base += ", creature silhouette, forest, antlers, glowing eyes"
-    elif "ritual" in tema_viral:
-        prompt_base += ", candles, ritual circle, ancient symbols, mystical atmosphere"
-    elif "ia" in tema_viral:
-        prompt_base += ", computer screen, code, digital horror, glitch effects"
-    
-    prompt_base = re.sub(r'\s+', ' ', prompt_base).strip()
-    return prompt_base[:200]
-
-# ================================================================
-# 🎬 GENERAR QUERY PARA MINIATURA EN PEXELS
-# ================================================================
-def generar_query_miniatura_pexels(miniatura_prompt):
-    prompt = f"""Genera SOLO 4-6 palabras clave en inglés para buscar una foto HORIZONTAL (16:9) en Pexels para una miniatura de YouTube de terror.
-    Idea: "{miniatura_prompt[:150]}"
-    Época: {EPOCA_MOD}
-    Devuelve SOLO las palabras clave.
-    """
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.5,
-        "max_tokens": 40,
-    }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=20)
-        r.raise_for_status()
-        query = r.json()["choices"][0]["message"]["content"].strip()
-        query = re.sub(r'["\']', '', query)
-        query = re.sub(r',', ' ', query)
-        query = re.sub(r'\s+', ' ', query)
-        return query if len(query) > 5 else "horror night dark landscape cinematic"
-    except Exception as e:
-        print(f"⚠️ Error generando query de miniatura: {e}")
-        return "horror night dark landscape cinematic"
-
-# ================================================================
-# BUSCAR IMAGEN EN PEXELS
-# ================================================================
-ULTIMA_URL_PEXELS = None
-
-def buscar_imagen_pexels(query, orientation="landscape", intentos=3):
-    global ULTIMA_URL_PEXELS
-    if not PEXELS_VALIDA:
-        print("⚠️ Pexels no disponible.")
+        print(f"⚠️ No se pudo crear cliente YouTube: {e}")
         return None
 
-    variantes = ["cinematic", "dramatic", "atmospheric", "moody", "film"]
-    variacion = random.choice(variantes)
-    query_variada = f"{query} {variacion}"
 
-    url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": PEXELS_API_KEY}
-    params = {
-        "query": query_variada,
-        "orientation": orientation,
-        "per_page": 10,
-        "page": random.randint(1, 8)
-    }
-
-    for intento in range(intentos):
-        try:
-            print(f" Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}' ({orientation})...")
-            r = requests.get(url, headers=headers, params=params, timeout=25)
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("photos") and len(data["photos"]) > 0:
-                    fotos = data["photos"][:min(5, len(data["photos"]))]
-                    foto = random.choice(fotos)
-                    image_url = foto["src"]["large2x"] or foto["src"]["large"] or foto["src"]["original"]
-                    if ULTIMA_URL_PEXELS and image_url == ULTIMA_URL_PEXELS:
-                        print("   ⚠️ URL repetida, buscando otra página...")
-                        params["page"] = (params["page"] % 8) + 1
-                        continue
-                    ULTIMA_URL_PEXELS = image_url
-                    print(f"✅ Imagen encontrada: {image_url[:80]}...")
-                    return image_url
-                else:
-                    print("⚠️ No se encontraron fotos para esta consulta.")
-            else:
-                print(f"️ Error Pexels: {r.status_code} - {r.text[:100]}")
-        except requests.exceptions.Timeout:
-            print(" Timeout en Pexels. Reintentando...")
-        except Exception as e:
-            print(f"⚠️ Error conexión Pexels: {e}")
-        if intento < intentos - 1:
-            print(f"   ⏳ Esperando 5s antes de reintentar...")
-            time.sleep(5)
-
-    print("❌ No se pudo obtener imagen de Pexels.")
-    return None
-
-# ================================================================
-# ️ BUSCAR MINIATURA EN PEXELS
-# ================================================================
-def buscar_miniatura_pexels(query, intentos=5):
-    variantes_texto = [
-        "empty space", "copy space", "negative space", 
-        "dark background", "blurry background", "minimal"
-    ]
-    
-    url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": PEXELS_API_KEY}
-    
-    for intento in range(intentos):
-        try:
-            variante = random.choice(variantes_texto)
-            query_completa = f"{query} {variante}"
-            
-            params = {
-                "query": query_completa,
-                "orientation": "landscape",
-                "per_page": 10,
-                "page": random.randint(1, 5),
-                "size": "large"
-            }
-            
-            print(f" Intento {intento+1}/{intentos}: '{query_completa}'...")
-            r = requests.get(url, headers=headers, params=params, timeout=25)
-            
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("photos") and len(data["photos"]) > 0:
-                    for foto in data["photos"][:5]:
-                        img_url = foto["src"]["large2x"] or foto["src"]["large"]
-                        
-                        try:
-                            r_img = requests.get(img_url, timeout=10)
-                            if r_img.status_code == 200:
-                                print(f"✅ Miniatura encontrada: {img_url[:80]}...")
-                                return img_url
-                        except:
-                            continue
-                    
-            else:
-                print(f"⚠️ Error Pexels: {r.status_code}")
-                
-        except Exception as e:
-            print(f"⚠️ Error: {e}")
-        
-        if intento < intentos - 1:
-            time.sleep(3)
-    
-    print("⚠️ Usando búsqueda de fallback...")
-    params = {
-        "query": query,
-        "orientation": "landscape",
-        "per_page": 5,
-        "page": 1
-    }
+def sugerencias_youtube(seed):
+    """Autocompletado real de YouTube (gratis): lo que la gente escribe de verdad."""
     try:
-        r = requests.get(url, headers=headers, params=params, timeout=25)
-        if r.status_code == 200:
-            data = r.json()
-            if data.get("photos"):
-                return data["photos"][0]["src"]["large2x"]
-    except:
-        pass
-    
-    return None
+        r = requests.get("https://suggestqueries.google.com/complete/search", timeout=10,
+                         params={"client": "firefox", "ds": "yt", "hl": "es", "gl": "mx", "q": seed})
+        return [s for s in r.json()[1] if isinstance(s, str)][:8]
+    except Exception:
+        return []
+
+
+def puntuar_demanda(youtube, consulta):
+    """Vistas promedio de los videos más vistos en 90 días para esa búsqueda (101 unidades de cuota)."""
+    if youtube is None:
+        return None
+    try:
+        desde = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        r = youtube.search().list(part="id", q=consulta, type="video", order="viewCount", publishedAfter=desde,
+                                  relevanceLanguage="es", regionCode="MX", maxResults=8).execute()
+        ids = [i["id"]["videoId"] for i in r.get("items", [])]
+        if not ids:
+            return 0
+        s = youtube.videos().list(part="statistics", id=",".join(ids)).execute()
+        vistas = [int(i["statistics"].get("viewCount", 0)) for i in s.get("items", [])]
+        return sum(vistas) / len(vistas) if vistas else 0
+    except Exception as e:
+        print(f"⚠️ Demanda no disponible ({consulta}): {e}")
+        return None
+
+
+def actualizar_rendimiento(youtube, estado):
+    ids = [v["id"] for v in estado["videos"][-30:] if v.get("id")]
+    if not ids or youtube is None:
+        return
+    try:
+        r = youtube.videos().list(part="statistics", id=",".join(ids)).execute()
+        vistas = {i["id"]: int(i["statistics"].get("viewCount", 0)) for i in r.get("items", [])}
+        for v in estado["videos"]:
+            if v.get("id") in vistas:
+                v["vistas"] = vistas[v["id"]]
+    except Exception as e:
+        print(f"⚠️ No se pudo leer rendimiento: {e}")
+
+
+def elegir_tema(estado, youtube):
+    recientes = estado["temas_recientes"][-4:]
+    pool = [t for t in TEMAS if t["tema"] not in recientes] or TEMAS[:]
+    candidatos = random.sample(pool, min(4, len(pool)))
+    acum = {}
+    for v in estado["videos"]:
+        if "vistas" in v:
+            acum.setdefault(v["tema"], []).append(v["vistas"])
+    rend = {k: sum(x) / len(x) for k, x in acum.items()}
+    max_r = max(rend.values()) if rend else 1
+    demandas = {t["tema"]: puntuar_demanda(youtube, t["seed"]) for t in candidatos}
+    max_d = max([d for d in demandas.values() if d] or [1])
+
+    def score(t):
+        d = demandas[t["tema"]]
+        sd = d / max_d if d else 0.4
+        sr = rend[t["tema"]] / max_r if t["tema"] in rend and max_r else 0.6  # 0.6 = explorar
+        return 0.5 * sd + 0.5 * sr + random.uniform(0, 0.15)
+
+    elegido = max(candidatos, key=score)
+    print(f"🎯 Tema elegido: {elegido['tema']} (demanda={demandas[elegido['tema']]}, propio={rend.get(elegido['tema'])})")
+    return elegido
+
 
 # ================================================================
-# EXPANDIR TEXTO
+# TÍTULOS: puntuación CTR + honestidad (sin "REAL/evidencia/filtrado")
 # ================================================================
+GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "madrugada", "medianoche",
+           "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si "]
+PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidencia", "pruebas", "autoridades",
+              "filtrado", "es real", "historia real", "hechos reales"]
+GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
+
+
+def limpiar_titulo(t):
+    t = re.sub(r"\s+", " ", t.strip().strip("\"“”'").rstrip("."))
+    t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", "", t, flags=re.I)
+    palabras = t.split()
+    caps = [w for w in palabras if len(re.sub(r"\W", "", w)) >= 3 and w.isupper()]
+    if len(caps) > 3:
+        keep = set(caps[:2])
+        palabras = [w if (not w.isupper() or w in keep or len(w) < 3) else w.capitalize() for w in palabras]
+    return " ".join(palabras)
+
+
+def puntuar_titulo(t):
+    s, n, tl = 0, len(t), t.lower()
+    if 45 <= n <= 68:
+        s += 4
+    elif 30 <= n < 45 or 68 < n <= 80:
+        s += 2
+    elif n > 95 or n < 25:
+        s -= 6
+    if re.search(r"\d", t):
+        s += 2
+    s += min(3, sum(1 for g in GANCHOS if g in tl))
+    caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
+    s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
+    if any(p in tl for p in PROHIBIDAS):
+        s -= 8
+    if any(tl.startswith(g) for g in GENERICAS):
+        s -= 6
+    if "!" in t:
+        s -= 1
+    return s
+
+
+def elegir_titulo(candidatos):
+    puntuados = []
+    for c in candidatos:
+        if not isinstance(c, str):
+            continue
+        base = limpiar_titulo(c)
+        if len(base) < 25 or titulo_largo_ya_publicado(base):
+            continue
+        puntuados.append((puntuar_titulo(base), base))
+    if not puntuados:
+        return None
+    puntuados.sort(reverse=True)
+    for sc, t in puntuados[:3]:
+        print(f"   📝 [{sc:>2}] {t}")
+    titulo = puntuados[0][1]
+    if "relato" not in titulo.lower() and len(titulo) + len(SUFIJO_TITULO) <= 80:
+        titulo += SUFIJO_TITULO
+    return titulo[:100]
+
+
+def elegir_texto_portada(opciones, titulo):
+    pt = set(re.findall(r"\w+", titulo.lower()))
+    mejor = None
+    for o in opciones or []:
+        if not isinstance(o, str):
+            continue
+        o = re.sub(r"[^\w¿?¡! ]", "", o).strip().upper()
+        w = o.split()
+        if not 1 <= len(w) <= 4:
+            continue
+        solape = len({x.lower() for x in w} & pt) / len(w)
+        sc = (3 if len(w) in (2, 3) else 1) - 2 * solape + (1 if "?" in o else 0)
+        if mejor is None or sc > mejor[0]:
+            mejor = (sc, o)
+    return mejor[1] if mejor else "NO ENTRES"
+
+
+# ================================================================
+# HISTORIA: plan SEO + relato por capítulos
+# ================================================================
+ESQUEMA_PLAN = """{
+  "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres, SIN el sufijo 'Relato de Terror'"],
+  "anio_suceso": 2014,
+  "protagonista": "nombre de pila del narrador",
+  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
+  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
+  "palabras_clave": ["5 keywords SEO en español"],
+  "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que provoquen curiosidad"],
+  "miniatura_escena": "4-6 palabras en inglés para buscar la foto de portada en un banco de stock (ej: dark hallway door)",
+  "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
+  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
+  "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
+  "tags": ["15 tags SEO"],
+  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
+}"""
+
+
+def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
+    prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
+    sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
+    prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
+Diseña el PLAN de un relato de ficción narrado en primera persona (~13 minutos, {NUM_CAPITULOS} capítulos).
+
+TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
+LUGAR: {contexto}, en {estado_mx}, México
+BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
+{sug}
+TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
+{prev}
+
+REGLAS DE TÍTULO (clave para CTR):
+- 45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
+- Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
+- Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
+- PROHIBIDO decir que es real, verídico, testimonio, evidencia o que 'las autoridades ocultan' algo: es ficción.
+- Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
+El gancho debe ser lo más perturbador del relato, no una presentación.
+Cada capítulo termina en un cliffhanger, excepto el último.
+
+Responde SOLO con este JSON:
+{ESQUEMA_PLAN}"""
+    txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
+    plan = parsear_json(txt)
+    if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= 5
+            and plan.get("gancho") and plan.get("palabras_portada")):
+        raise ValueError("plan incompleto")
+    return plan
+
+
+def limpiar_texto_narracion(t):
+    t = re.sub(r"[\U00010000-\U0010ffff]", "", t)
+    t = re.sub(r"(?im)^\s*(cap[ií]tulo|parte)\s*\d+.*$", "", t)
+    t = re.sub(r"\[[^\]]*\]", "", t)
+    t = re.sub(r"[*_#>`~]+", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def generar_capitulos(plan, tema, contexto, estado_mx):
+    caps = plan["capitulos"][:NUM_CAPITULOS + 1]
+    indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
+    textos = []
+    for i, cap in enumerate(caps):
+        previo = textos[-1][-700:] if textos else ""
+        extra = ""
+        if i == 0:
+            extra = f"Empieza EXACTAMENTE con esta frase de gancho: \"{plan['gancho']}\" y luego retrocede para dar contexto sin bajar la tensión."
+        elif i == len(caps) - 1:
+            extra = "Cierra con un final abierto e inquietante que deje una duda, sin explicar todo."
+        else:
+            extra = "Termina con un cliffhanger (algo se revela, alguien aparece, un sonido cambia todo)."
+        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror en primera persona.
+Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
+Ángulo: {tema['angulo']}
+Sinopsis: {plan.get('resumen','')}
+ÍNDICE COMPLETO:
+{indice}
+
+ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
+{extra}
+{('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
+
+ESTILO (se leerá en voz alta):
+- 400-480 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
+- Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
+- Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
+- No menciones que es ficción ni que eres una IA.
+Devuelve SOLO el texto del capítulo."""
+        texto = None
+        for intento in range(3):
+            t = llm(prompt, temperature=0.85, max_tokens=1200)
+            t = limpiar_texto_narracion(t) if t else ""
+            if len(t.split()) >= 280:
+                texto = t
+                break
+            print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
+        if not texto:
+            raise RuntimeError(f"No se pudo generar el capítulo {i+1}")
+        textos.append(texto)
+        print(f"   ✅ Capítulo {i+1}/{len(caps)}: {len(texto.split())} palabras")
+    return textos
+
+
 def expandir_texto(titulo, texto_actual):
-    prompt = f"""Historia: "{titulo}"
-
-Final actual del relato:
-\"\"\"
-{texto_actual[-400:]}
-\"\"\"
-
-Continúa la historia con 300-400 palabras más en primera persona, mismo tono.
-Devuelve SOLO el texto de continuación.
-"""
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 900,
-    }
-    for intento in range(2):
-        try:
-            r = requests.post(url, headers=headers, json=payload, timeout=90)
-            r.raise_for_status()
-            extra = r.json()["choices"][0]["message"]["content"].strip()
-            if len(extra.split()) > 100:
-                print(f"✅ Expansión: {len(extra.split())} palabras adicionales.")
-                return extra
-        except Exception as e:
-            print(f"❌ Expansión intento {intento+1}/2 falló: {e}")
-        if intento < 1:
-            print("⏳ Esperando 10 segundos...")
-            time.sleep(10)
+    prompt = f"""Relato de terror en primera persona: "{titulo}".
+Final actual:
+\"\"\"{texto_actual[-500:]}\"\"\"
+Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
+Devuelve SOLO el texto."""
+    for _ in range(2):
+        t = llm(prompt, temperature=0.8, max_tokens=900)
+        t = limpiar_texto_narracion(t) if t else ""
+        if len(t.split()) > 150:
+            return t
     return ""
 
+
+OUTROS = [
+    "Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame en los comentarios: ¿tú qué habrías hecho?",
+    "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete para no perderte la próxima. ¿Tú habrías entrado? Te leo en los comentarios.",
+]
+
+
 # ================================================================
-# 🎨 CREAR MINIATURA PROFESIONAL (CORREGIDA - SIN CUADRO)
+# SEGMENTOS, ETAPAS Y ESCENAS
 # ================================================================
-def crear_miniatura_profesional(img_path, texto, output_path):
-    colores_impacto = [
-        {"texto": (255, 255, 0), "borde": (0, 0, 0)},    # Amarillo
-        {"texto": (255, 50, 50), "borde": (0, 0, 0)},    # Rojo
-        {"texto": (255, 255, 255), "borde": (0, 0, 0)},  # Blanco
-        {"texto": (255, 140, 0), "borde": (0, 0, 0)},    # Naranja
-    ]
-    
-    color_elegido = random.choice(colores_impacto)
-    color_texto = color_elegido["texto"]
-    color_borde = color_elegido["borde"]
-    
-    font_paths = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    ]
-    
+def dividir_en_segmentos(texto, max_palabras=SEG_MAX_PALABRAS):
+    oraciones = [o.strip() for o in re.split(r"(?<=[.!?…])\s+", texto) if o.strip()]
+    if not oraciones:
+        return [texto]
+    segs, actual, cuenta = [], [], 0
+    for o in oraciones:
+        n = len(o.split())
+        if cuenta + n > max_palabras and actual:
+            segs.append(" ".join(actual))
+            actual, cuenta = [o], n
+        else:
+            actual.append(o)
+            cuenta += n
+    if actual:
+        segs.append(" ".join(actual))
+    if len(segs) > 1 and len(segs[-1].split()) < 12:
+        segs[-2] += " " + segs.pop()
+    return segs
+
+
+def crear_segmentos(capitulos_txt):
+    segs = []
+    for ci, txt in enumerate(capitulos_txt):
+        for k, p in enumerate(dividir_en_segmentos(txt)):
+            segs.append({"cap": ci, "texto": p, "cap_ini": k == 0})
+    n = len(segs)
+    for i, s in enumerate(segs):
+        p = i / max(n - 1, 1)
+        s["etapa"] = ("apertura" if p < 0.15 else "tension" if p < 0.40 else "destino" if p < 0.62
+                      else "climax" if p < 0.85 else "resolucion")
+    return segs
+
+
+# ================================================================
+# VOZ
+# ================================================================
+def duracion_audio(ruta):
+    a = AudioFileClip(ruta)
+    d = a.duration
+    a.close()
+    return d
+
+
+def generar_audio(texto, nombre, etapa):
+    limpio = re.sub(r'[\{\}\[\]"]', "", texto)
+    limpio = re.sub(r"\s+", " ", limpio).strip()
+    if len(limpio) < 10:
+        return None
+    ruta = f"temp_audio_{nombre}.mp3"
+    rate, pitch = RATE_ETAPA.get(etapa, "+4%"), VOZ_CANAL["tono"]
+    voces = [VOZ_CANAL["voz"]] + [v for v in VOCES_RESPALDO if v != VOZ_CANAL["voz"]]
+    for voz in voces:
+        for intento in range(2):
+            async def _go():
+                await edge_tts.Communicate(limpio, voz, rate=rate, pitch=pitch).save(ruta)
+            try:
+                asyncio.run(_go())
+                if os.path.exists(ruta) and os.path.getsize(ruta) > 500:
+                    return ruta
+            except Exception as e:
+                print(f"❌ TTS {voz}: {e}")
+            time.sleep(2 * (intento + 1))
+    return None
+
+
+def sintetizar(segs):
+    ok = []
+    for i, s in enumerate(segs):
+        ruta = generar_audio(s["texto"], s.get("id", i), s["etapa"])
+        if not ruta:
+            print(f"⚠️ Segmento {i} sin audio, se omite")
+            continue
+        s["audio"] = ruta
+        s["dur_audio"] = duracion_audio(ruta)
+        ok.append(s)
+        time.sleep(0.3)
+    if len(ok) < len(segs) * 0.9:
+        raise RuntimeError("Demasiados segmentos sin audio")
+    return ok
+
+
+def construir_timeline(segs):
+    t = 0.0
+    for s in segs:
+        s["inicio"] = t
+        s["dur"] = s["dur_audio"] + PAUSA_ETAPA.get(s["etapa"], 0.5)
+        t += s["dur"]
+    return t
+
+
+# ================================================================
+# PEXELS
+# ================================================================
+POOL, USADOS = [], set()
+
+
+def pexels_get(url, params, intentos=3):
+    for i in range(intentos):
+        try:
+            r = requests.get(url, headers={"Authorization": PEXELS_API_KEY}, params=params, timeout=25)
+            if r.status_code == 200:
+                time.sleep(0.6)
+                return r.json()
+            if r.status_code == 429:
+                time.sleep(25 * (i + 1))
+                continue
+            print(f"⚠️ Pexels {r.status_code}")
+        except Exception as e:
+            print(f"⚠️ Pexels: {e}")
+        time.sleep(3)
+    return None
+
+
+def buscar_fotos(query, cantidad):
+    for pagina in (random.randint(1, 2), 1):
+        data = pexels_get("https://api.pexels.com/v1/search",
+                          {"query": query, "orientation": "landscape", "size": "large", "per_page": 15, "page": pagina})
+        fotos = [f["src"]["large2x"] for f in (data or {}).get("photos", [])]
+        random.shuffle(fotos)
+        fotos = [u for u in fotos if u not in USADOS]
+        if fotos:
+            return fotos[:cantidad]
+    return []
+
+
+def buscar_video(query):
+    data = pexels_get("https://api.pexels.com/videos/search",
+                      {"query": query, "orientation": "landscape", "size": "medium", "per_page": 10})
+    vids = (data or {}).get("videos", [])
+    random.shuffle(vids)
+    for v in vids:
+        if v["id"] in USADOS or v.get("duration", 0) < 5:
+            continue
+        archivos = [f for f in v.get("video_files", [])
+                    if f.get("file_type") == "video/mp4" and f.get("width") and 1280 <= f["width"] <= 1920]
+        if archivos:
+            f = min(archivos, key=lambda x: abs(x["width"] - 1920))
+            return v["id"], f["link"]
+    return None
+
+
+def video_valido(ruta):
     try:
-        with Image.open(img_path) as img:
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            
-            img = ImageOps.fit(img, (1280, 720), Image.LANCZOS)
-            
-            # MEJORA: Contraste y saturación
-            img = ImageEnhance.Contrast(img).enhance(1.4)
-            img = ImageEnhance.Color(img).enhance(1.2)
-            img = ImageEnhance.Sharpness(img).enhance(1.8)
-            
-            draw = ImageDraw.Draw(img)
-            width, height = img.size
-            
-            # CORRECCIÓN: Limitar a 3-4 palabras máximo
-            palabras = texto.upper().strip().split()
-            if len(palabras) > 4:
-                palabras = palabras[:4]
-            texto_final = " ".join(palabras)
-            
-            # Dividir en 1-2 líneas
-            lineas = [texto_final] if len(palabras) <= 2 else [" ".join(palabras[:len(palabras)//2]), " ".join(palabras[len(palabras)//2:])]
-            
-            # CORRECCIÓN: Font size ENORME (160px mínimo)
-            font_size = 160
-            font = None
-            
-            for size in range(200, 120, -5):
-                try:
-                    font = ImageFont.truetype(font_paths[0], size)
-                    max_width = 0
-                    total_height = 0
-                    for linea in lineas:
-                        bbox = draw.textbbox((0, 0), linea, font=font)
-                        w = bbox[2] - bbox[0]
-                        h = bbox[3] - bbox[1]
-                        max_width = max(max_width, w)
-                        total_height += h + 15
-                    
-                    if max_width < width * 0.90 and total_height < height * 0.50:
-                        font_size = size
-                        break
-                except:
-                    continue
-            
-            if font is None:
-                try:
-                    font = ImageFont.truetype(font_paths[0], font_size)
-                except:
-                    font = ImageFont.load_default()
-            
-            # Calcular posición centrada
-            total_height = 0
-            heights = []
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                h = bbox[3] - bbox[1]
-                heights.append(h)
-                total_height += h + 15
-            
-            y_start = (height - total_height) // 2
-            
-            # CORRECCIÓN: SIN CUADRO DE FONDO que obstruya
-            # Solo agregamos contorno grueso al texto, sin rectángulo
-            
-            y_current = y_start
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                w = bbox[2] - bbox[0]
-                h = bbox[3] - bbox[1]
-                
-                x = (width - w) // 2
-                
-                # CORRECCIÓN: Contorno negro ULTRA GRUESO (sin fondo)
-                for dx in [-7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7]:
-                    for dy in [-7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7]:
-                        draw.text(
-                            (x + dx, y_current + dy),
-                            linea,
-                            font=font,
-                            fill=color_borde
-                        )
-                
-                # Texto principal en color
-                draw.text(
-                    (x, y_current),
-                    linea,
-                    font=font,
-                    fill=color_texto
-                )
-                
-                # Sombra suave para más profundidad
-                for dx in [-2, 2]:
-                    for dy in [-2, 2]:
-                        draw.text(
-                            (x + dx, y_current + dy),
-                            linea,
-                            font=font,
-                            fill=(0, 0, 0, 100)
-                        )
-                
-                y_current += h + 15
-            
-            # Agregar flecha roja señalando (opcional, aumenta CTR)
-            if random.random() > 0.3:  # 70% de probabilidad
-                draw.line(
-                    [(width - 100, height - 150), (width - 280, height - 300)],
-                    fill=(255, 0, 0), width=18
-                )
-                draw.polygon(
-                    [
-                        (width - 280, height - 300),
-                        (width - 265, height - 325),
-                        (width - 295, height - 325)
-                    ],
-                    fill=(255, 0, 0)
-                )
-            
-            img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
-            
-            print(f"✅ Miniatura ÉLITE creada: {output_path}")
-            print(f"   📝 Texto: '{texto_final}'")
-            print(f"   📏 Tamaño fuente: {font_size}px")
-            print(f"   🎨 Color: {color_texto}")
-            print(f"   ✨ SIN CUADRO DE FONDO - Solo contorno")
-            return True
-            
+        c = VideoFileClip(ruta, audio=False)
+        ok = (c.duration or 0) > 2
+        c.close()
+        return ok
+    except Exception:
+        return False
+
+
+def fallback_consultas(tema, etapa):
+    return ESCENAS_FALLBACK.get(etapa, ESCENAS_FALLBACK["tension"]) + tema["visuales"]
+
+
+def planificar_consultas(segs, tema, anio):
+    out = [None] * len(segs)
+    for ini in range(0, len(segs), 15):
+        lote = segs[ini:ini + 15]
+        listado = "\n".join(f"{j+1}. {s['texto'][:230]}" for j, s in enumerate(lote))
+        prompt = f"""Eres director de fotografía de un canal de terror. Para CADA fragmento numerado devuelve UNA consulta
+corta (2-4 palabras, EN INGLÉS) para buscar en Pexels una foto o video de stock que ilustre la escena con atmósfera de
+terror nocturno. Usa cosas que existan en bancos de stock (lugares, objetos, clima, siluetas). Sin nombres propios.
+Ejemplos: "abandoned hospital corridor", "foggy road night", "old wooden door", "flashlight dark forest".
+Tema: {tema['tema']}.
+Fragmentos:
+{listado}
+Responde SOLO JSON: {{"consultas": ["..."]}} con exactamente {len(lote)} elementos."""
+        lista = []
+        try:
+            lista = parsear_json(llm(prompt, 0.4, 700, json_mode=True)).get("consultas", [])
+        except Exception as e:
+            print(f"⚠️ Consultas de escena: {e}")
+        for j, s in enumerate(lote):
+            q = lista[j] if j < len(lista) and isinstance(lista[j], str) else ""
+            q = " ".join(re.sub(r"[^a-zA-Z ]", " ", q).split()[:5])
+            if len(q) < 6:
+                q = random.choice(fallback_consultas(tema, s["etapa"]))
+            if anio and anio < 2005 and "vintage" not in q:
+                q += " vintage"
+            out[ini + j] = q
+    return out
+
+
+def obtener_medios(idx, etapa, query, n, tema):
+    medios = []
+    if USAR_VIDEOS and random.random() < PROB_VIDEO.get(etapa, 0.5):
+        r = buscar_video(query)
+        if r:
+            vid, url = r
+            ruta = f"temp_vid_{idx}.mp4"
+            if descargar(url, ruta, 70 * 1024 * 1024) and video_valido(ruta):
+                USADOS.add(vid)
+                medios.append({"tipo": "video", "path": ruta})
+    faltan = n - len(medios)
+    if faltan > 0:
+        urls = buscar_fotos(query, faltan)
+        if len(urls) < faltan:
+            for q in random.sample(fallback_consultas(tema, etapa), 2):
+                urls += [u for u in buscar_fotos(q, faltan - len(urls)) if u not in urls]
+                if len(urls) >= faltan:
+                    break
+        for k, u in enumerate(urls[:faltan]):
+            ruta = f"temp_img_{idx}_{k}.jpg"
+            if descargar(u, ruta, 15 * 1024 * 1024):
+                USADOS.add(u)
+                medios.append({"tipo": "img", "path": ruta})
+    while len(medios) < n and POOL:
+        medios.append(dict(random.choice(POOL)))
+    for m in medios:
+        if m not in POOL:
+            POOL.append(m)
+    if not medios:
+        raise RuntimeError("Sin imágenes disponibles: revisa PEXELS_API_KEY")
+    return medios
+
+
+# ================================================================
+# RENDER DE VIDEO (una sola función make_frame sobre la línea de escenas)
+# ================================================================
+_VIG = {}
+
+
+def vignette(size, base=1.0, fuerza=0.55):
+    k = (size, base)
+    if k not in _VIG:
+        w, h = size
+        y, x = np.ogrid[-1:1:h * 1j, -1:1:w * 1j]
+        d = np.clip(np.sqrt(x ** 2 + y ** 2) / 1.414, 0, 1)
+        _VIG[k] = ((1 - fuerza * d ** 2.2) * base).astype(np.float32)[..., None]
+    return _VIG[k]
+
+
+def grade(img, etapa):
+    """Look unificado de canal: desaturado, contrastado, sombras frías."""
+    img = ImageEnhance.Color(img).enhance(0.82)
+    img = ImageEnhance.Contrast(img).enhance({"climax": 1.3, "apertura": 1.1}.get(etapa, 1.15))
+    img = ImageEnhance.Brightness(img).enhance({"apertura": 0.8, "climax": 0.95}.get(etapa, 0.88))
+    return Image.blend(img, Image.new("RGB", img.size, (8, 24, 40)), 0.10)
+
+
+class RenderEscenas:
+    def __init__(self, escenas, size, total):
+        self.esc, self.size, self.total = escenas, size, total
+        self.starts = [e["inicio"] for e in escenas]
+        self._ikey = self._img = self._vpath = self._vid = None
+        self.vig_img = vignette(size, 1.0)
+        self.vig_vid = vignette(size, 0.85)
+
+    def cerrar(self):
+        if self._vid is not None:
+            try:
+                self._vid.close()
+            except Exception:
+                pass
+
+    def _base(self, e):
+        key = (e["path"], e["etapa"])
+        if self._ikey != key:
+            sz = (int(self.size[0] * 1.2), int(self.size[1] * 1.2))
+            im = ImageOps.fit(Image.open(e["path"]).convert("RGB"), sz, Image.LANCZOS)
+            arr = np.asarray(grade(im, e["etapa"]), dtype=np.float32) * vignette(sz, 1.0)
+            self._img, self._ikey = Image.fromarray(arr.astype(np.uint8)), key
+        return self._img
+
+    def _frame_img(self, e, lt):
+        base = self._base(e)
+        bw, bh = base.size
+        p = min(max(lt / e["dur"], 0), 1) if e["dur"] > 0 else 0
+        if not e["zin"]:
+            p = 1 - p
+        cw = bw / (1 + 0.2 * p)
+        ch = cw * bh / bw
+        mx, my = bw - cw, bh - ch
+        x0 = min(max(mx / 2 + e["ax"] * mx / 2 * 0.8, 0), mx)
+        y0 = min(max(my / 2 + e["ay"] * my / 2 * 0.8, 0), my)
+        return np.asarray(base.resize(self.size, Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + ch)))
+
+    def _frame_video(self, e, lt):
+        if self._vpath != e["path"]:
+            self.cerrar()
+            self._vid, self._vpath = VideoFileClip(e["path"], audio=False), e["path"]
+        v = self._vid
+        d = v.duration or 1
+        off = e["off"] * max(0, d - e["dur"])
+        tt = max(0, min((off + lt) % d, d - 0.05))
+        im = ImageOps.fit(Image.fromarray(v.get_frame(tt)), self.size, Image.BILINEAR)
+        return (np.asarray(im, dtype=np.float32) * self.vig_vid).astype(np.uint8)
+
+    def frame(self, t):
+        i = max(0, bisect.bisect_right(self.starts, t) - 1)
+        e = self.esc[i]
+        lt = t - e["inicio"]
+        fr = self._frame_video(e, lt) if e["tipo"] == "video" else self._frame_img(e, lt)
+        f = 1.0
+        if e.get("fade") and lt < 0.6:
+            f = lt / 0.6
+        if t > self.total - 1.5:
+            f = min(f, max(0.0, (self.total - t) / 1.5))
+        if f < 1.0:
+            fr = (fr.astype(np.float32) * f).astype(np.uint8)
+        return fr
+
+
+def construir_escenas(segs):
+    esc = []
+    for s in segs:
+        m = s["medios"]
+        d = s["dur"] / len(m)
+        for k, med in enumerate(m):
+            esc.append({"tipo": med["tipo"], "path": med["path"], "inicio": s["inicio"] + k * d, "dur": d,
+                        "etapa": s["etapa"], "fade": bool(k == 0 and s.get("cap_ini")), "off": random.random(),
+                        "zin": random.random() < 0.6, "ax": random.uniform(-1, 1), "ay": random.uniform(-1, 1)})
+    return esc
+
+
+def mezclar_audio(segs, total, fondo, extras=()):
+    clips = [AudioFileClip(s["audio"]).set_start(s["inicio"]) for s in segs]
+    clips += list(extras)
+    narr = CompositeAudioClip(clips)
+    capas = [narr]
+    if fondo and os.path.exists(fondo):
+        try:
+            bg = AudioFileClip(fondo)
+            if bg.duration < total:
+                bg = concatenate_audioclips([bg] * (int(total / bg.duration) + 1))
+            capas.append(bg.subclip(0, total).volumex(VOL_FONDO).audio_fadein(2).audio_fadeout(3))
+        except Exception as e:
+            print(f"⚠️ Fondo: {e}")
+    return CompositeAudioClip(capas).set_duration(total), clips
+
+
+def renderizar(escenas, total, audio, size, salida):
+    render = RenderEscenas(escenas, size, total)
+    video = VideoClip(render.frame, duration=total).set_audio(audio)
+    video.write_videofile(salida, fps=FPS, codec="libx264", audio_codec="aac", audio_bitrate="192k", threads=4,
+                          preset="veryfast", temp_audiofile="temp_audio_final.m4a",
+                          ffmpeg_params=["-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart"])
+    render.cerrar()
+    video.close()
+    return salida
+
+
+# ================================================================
+# MINIATURA
+# ================================================================
+def obtener_fuente(size):
+    os.makedirs("fonts", exist_ok=True)
+    ruta = "fonts/Anton-Regular.ttf"
+    if not os.path.exists(ruta):
+        try:
+            r = requests.get(FUENTE_URL, timeout=20)
+            if r.status_code == 200 and len(r.content) > 20000:
+                with open(ruta, "wb") as f:
+                    f.write(r.content)
+        except Exception:
+            pass
+    for p in [ruta, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+              "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"]:
+        try:
+            return ImageFont.truetype(p, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+
+def puntuar_miniatura(ruta):
+    try:
+        a = np.asarray(Image.open(ruta).convert("L").resize((320, 180)), dtype=np.float32)
+        w = a.shape[1]
+        return a.std() + 0.5 * a[:, w // 2:].std() - 0.3 * a[:, :w // 2].std() - 0.4 * abs(a.mean() - 90)
+    except Exception:
+        return -999
+
+
+def elegir_base_miniatura(query):
+    urls = []
+    for q in (query, query + " dark", "dark horror night"):
+        data = pexels_get("https://api.pexels.com/v1/search",
+                          {"query": q, "orientation": "landscape", "size": "large", "per_page": 8, "page": 1})
+        urls += [f["src"]["large2x"] for f in (data or {}).get("photos", [])[:6] if f["src"]["large2x"] not in urls]
+        if len(urls) >= 6:
+            break
+    mejor = (-999, None)
+    for i, u in enumerate(urls[:6]):
+        ruta = f"temp_thumb_{i}.jpg"
+        if descargar(u, ruta, 15 * 1024 * 1024):
+            sc = puntuar_miniatura(ruta)
+            if sc > mejor[0]:
+                mejor = (sc, ruta)
+    return mejor[1]
+
+
+def dividir_lineas(palabras):
+    if len(palabras) <= 2:
+        return palabras[:]
+    mejor = None
+    for i in range(1, len(palabras)):
+        a, b = " ".join(palabras[:i]), " ".join(palabras[i:])
+        m = max(len(a), len(b))
+        if mejor is None or m < mejor[0]:
+            mejor = (m, [a, b])
+    return mejor[1]
+
+
+def crear_miniatura(img_path, texto, salida):
+    TW, TH = 1280, 720
+    try:
+        img = Image.open(img_path).convert("RGB") if img_path else Image.new("RGB", (TW, TH), (14, 14, 24))
+        img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
+        img = ImageEnhance.Contrast(img).enhance(1.25)
+        img = ImageEnhance.Color(img).enhance(1.2)
+        img = ImageEnhance.Sharpness(img).enhance(1.6)
+        # degradado oscuro a la izquierda (legibilidad sin cuadro) + viñeta
+        grad = Image.new("L", (TW, TH), 0)
+        gd = ImageDraw.Draw(grad)
+        for x in range(TW):
+            gd.line([(x, 0), (x, TH)], fill=int(215 * max(0, 1 - x / (TW * 0.7)) ** 1.3))
+        img = Image.composite(Image.new("RGB", (TW, TH), (0, 0, 0)), img, grad)
+        arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.45)
+        img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
+
+        lineas = dividir_lineas(texto.upper().split()[:4])
+        max_w, max_h = int(TW * 0.58), int(TH * 0.78)
+        for size in range(280, 60, -6):
+            font = obtener_fuente(size)
+            cajas = [font.getbbox(l) for l in lineas]
+            alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
+            if max(b[2] - b[0] for b in cajas) <= max_w and alto <= max_h:
+                break
+        acento = random.choice([(255, 214, 0), (255, 45, 45)])
+        y = (TH - alto) // 2 + 10
+        pos = []
+        for l, b in zip(lineas, cajas):
+            pos.append((l, 60, y - b[1]))
+            y += (b[3] - b[1]) + 18
+        glow = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+        gdraw = ImageDraw.Draw(glow)
+        for l, x, yy in pos:
+            gdraw.text((x, yy), l, font=font, fill=acento + (255,), stroke_width=10, stroke_fill=acento + (255,))
+        img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(24)))
+        draw = ImageDraw.Draw(img)
+        borde = max(7, size // 20)
+        for i, (l, x, yy) in enumerate(pos):
+            color = acento if (i == len(pos) - 1) else (255, 255, 255)
+            draw.text((x, yy), l, font=font, fill=color + (255,), stroke_width=borde, stroke_fill=(0, 0, 0, 255))
+        rgb = img.convert("RGB")
+        for q in (92, 87, 82, 76, 70):  # YouTube limita miniaturas a 2 MB
+            rgb.save(salida, "JPEG", quality=q, optimize=True)
+            if os.path.getsize(salida) < 1_900_000:
+                break
+        print(f"✅ Miniatura: '{' / '.join(lineas)}' ({size}px)")
+        return True
     except Exception as e:
-        print(f"❌ Error creando miniatura: {e}")
-        import traceback
+        print(f"❌ Error miniatura: {e}")
         traceback.print_exc()
         return False
 
+
 # ================================================================
-# GENERAR AUDIO
+# SEO: descripción, tags, subtítulos
 # ================================================================
-def generar_audio(texto, index, intentos_por_voz=2):
-    global CONFIG_VOZ_ACTUAL
-    texto_limpio = re.sub(r"imagen_prompt.*", "", texto, flags=re.IGNORECASE)
-    texto_limpio = re.sub(r"prompt.*", "", texto_limpio, flags=re.IGNORECASE)
-    texto_limpio = re.sub(r'[\{\}\[\]"]', "", texto_limpio)
-    texto_limpio = re.sub(r"\s+", " ", texto_limpio).strip()
-    if len(texto_limpio) < 10:
-        return None
-    filename = f"audio_{index}.mp3"
-    voces_a_probar = [CONFIG_VOZ_ACTUAL]
-    for voz_config in VOCES_DISPONIBLES:
-        if voz_config["voz"] != CONFIG_VOZ_ACTUAL["voz"]:
-            voces_a_probar.append(voz_config)
-    for intento_voz, voz_config in enumerate(voces_a_probar):
-        voz = voz_config["voz"]; rate = voz_config["velocidad"]; pitch = voz_config["tono"]
-        for intento in range(intentos_por_voz):
-            async def _generar():
-                communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
-                await communicate.save(filename)
-            try:
-                asyncio.run(_generar())
-                if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f"🔄 Voz cambiada: {CONFIG_VOZ_ACTUAL['voz']} → {voz}")
-                    CONFIG_VOZ_ACTUAL = voz_config
-                    return filename
-            except Exception as e:
-                print(f"❌ Falló {voz}: {e}")
-            if intento < intentos_por_voz - 1:
-                time.sleep(3 * (intento + 1))
-    if os.path.exists(filename):
+def construir_tags(plan, tema, sugerencias):
+    base = ["relato de terror", "relatos de terror", "historias de terror", "terror", "paranormal", "miedo",
+            "creepypasta", "leyendas urbanas", "terror mexicano", "relatos paranormales", "sombras de medianoche"]
+    extra = plan.get("tags", [])
+    if isinstance(extra, str):
+        extra = [x.strip() for x in extra.split(",")]
+    finales, total = [], 0
+    for t in tema["keywords"] + list(extra) + sugerencias + base:
+        t = re.sub(r"[<>]", "", str(t)).strip().lower()
+        costo = len(t) + 1 + (2 if " " in t else 0)
+        if 2 <= len(t) <= 40 and t not in finales and total + costo <= 480:
+            finales.append(t)
+            total += costo
+    return finales
+
+
+def construir_hashtags(tema):
+    hs = ["#RelatosDeTerror", "#Terror", "#Paranormal"] + tema.get("hashtags", [])[:2] + ["#Mexico"]
+    return " ".join(hs[:6])  # YouTube muestra los 3 primeros sobre el título
+
+
+def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
+    gancho = plan.get("descripcion_gancho", "").strip() or plan["gancho"]
+    if "relato de terror" not in gancho.lower()[:220]:
+        gancho = "Relato de terror: " + gancho
+    capitulos = "\n".join(f"{ts} {t}" for ts, t in caps_ts)
+    rel = ", ".join(sugerencias[:5])
+    partes = [
+        gancho,
+        f"🔔 Suscríbete para un relato nuevo cada semana: {CANAL_LINK}?sub_confirmation=1",
+        f"⏰ CAPÍTULOS\n{capitulos}",
+        f"📖 SOBRE ESTE RELATO\n{plan.get('resumen','')}",
+        (f"🔎 Temas relacionados: {rel}" if rel else ""),
+        f"📱 Facebook: {FACEBOOK_LINK}",
+        hashtags,
+    ]
+    desc = "\n\n".join(p for p in partes if p)
+    if ACTIVAR_DISCLOSURE_IA:
+        desc = desc.replace(f"\n\n{hashtags}", DISCLOSURE_TEXT + f"\n\n{hashtags}")
+    return desc[:4900]
+
+
+def generar_srt(segs, ruta):
+    def ts(x):
+        h, m, s = int(x // 3600), int(x % 3600 // 60), x % 60
+        return f"{h:02d}:{m:02d}:{int(s):02d},{int((s - int(s)) * 1000):03d}"
+    lineas, n = [], 1
+    for s in segs:
+        pal = s["texto"].split()
+        if not pal:
+            continue
+        t = s["inicio"]
+        for i in range(0, len(pal), 9):
+            tr = pal[i:i + 9]
+            d = s["dur_audio"] * len(tr) / len(pal)
+            lineas.append(f"{n}\n{ts(t)} --> {ts(t + d)}\n{' '.join(tr)}\n")
+            n, t = n + 1, t + d
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write("\n".join(lineas))
+    return ruta
+
+
+# ================================================================
+# PUBLICACIÓN
+# ================================================================
+def deberia_publicar(estado):
+    ult = estado.get("ultima_publicacion")
+    if not ult:
+        return True
+    try:
+        dt = datetime.fromisoformat(ult)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=TZ)
+        horas = (datetime.now(TZ) - dt).total_seconds() / 3600
+        if horas < INTERVALO_MIN_HORAS:
+            print(f"⏸️ Han pasado {horas:.1f}h (mínimo {INTERVALO_MIN_HORAS}h).")
+            return False
+    except ValueError:
+        pass
+    return True
+
+
+def proximo_slot():
+    ahora = datetime.now(TZ)
+    slot = ahora.replace(hour=HORA_PICO, minute=0, second=0, microsecond=0)
+    if slot - ahora < timedelta(minutes=30):
+        slot += timedelta(days=1)
+    return slot
+
+
+def utc_iso(dt):
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
+    status = {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
+    if publish_at:
+        status.update({"privacyStatus": "private", "publishAt": publish_at})
+    body = {"snippet": {"title": titulo[:100], "description": descripcion[:5000], "tags": tags,
+                        "categoryId": "24", "defaultLanguage": "es", "defaultAudioLanguage": "es"},
+            "status": status}
+    media = MediaFileUpload(ruta, chunksize=8 * 1024 * 1024, resumable=True, mimetype="video/mp4")
+    req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    resp, reintentos = None, 0
+    while resp is None:
         try:
-            os.remove(filename)
-        except:
-            pass
-    print("❌ Todas las voces neurales fallaron.")
+            st, resp = req.next_chunk()
+            if st:
+                print(f"   ⬆️ {int(st.progress() * 100)}%")
+        except HttpError as e:
+            if e.resp.status in (500, 502, 503, 504) and reintentos < 8:
+                reintentos += 1
+                time.sleep(2 ** reintentos)
+                continue
+            raise
+    print(f"✅ Video subido: https://youtu.be/{resp['id']}" + (f" (programado {publish_at})" if publish_at else ""))
+    return resp["id"]
+
+
+def extras_post_subida(youtube, vid, miniatura, srt, comentario):
+    if miniatura and os.path.exists(miniatura):
+        try:
+            youtube.thumbnails().set(videoId=vid, media_body=MediaFileUpload(miniatura, mimetype="image/jpeg")).execute()
+            print("✅ Miniatura subida")
+        except Exception as e:
+            print(f"⚠️ Miniatura: {e}")
+    if srt and os.path.exists(srt):
+        try:
+            youtube.captions().insert(part="snippet", body={"snippet": {"videoId": vid, "language": "es",
+                                      "name": "Español", "isDraft": False}},
+                                      media_body=MediaFileUpload(srt, mimetype="application/octet-stream")).execute()
+            print("✅ Subtítulos subidos")
+        except Exception as e:
+            print(f"⚠️ Subtítulos (requiere scope youtube.force-ssl): {e}")
+    if PLAYLIST_ID:
+        try:
+            youtube.playlistItems().insert(part="snippet", body={"snippet": {"playlistId": PLAYLIST_ID,
+                                           "resourceId": {"kind": "youtube#video", "videoId": vid}}}).execute()
+            print("✅ Añadido a playlist")
+        except Exception as e:
+            print(f"⚠️ Playlist: {e}")
+    if comentario:
+        try:
+            youtube.commentThreads().insert(part="snippet", body={"snippet": {"videoId": vid, "topLevelComment": {
+                "snippet": {"textOriginal": comentario}}}}).execute()
+            print("✅ Comentario publicado (fíjalo a mano en Studio)")
+        except Exception as e:
+            print(f"⚠️ Comentario: {e}\n   Texto sugerido para fijar: {comentario}")
+
+
+# ================================================================
+# SHORT EMBUDO
+# ================================================================
+def crear_short(segs, plan, fondo, salida="short_final.mp4"):
+    sel, t = [], 0.0
+    for s in segs:
+        if sel and t + s["dur"] > 50:
+            break
+        sel.append(s)
+        t += s["dur"]
+        if t >= 32:
+            break
+    cta = generar_audio("La historia completa ya está en el canal. Suscríbete para no perderte la siguiente.", "cta", "resolucion")
+    escenas = construir_escenas(sel)
+    extras, total = [], t
+    if cta:
+        d = duracion_audio(cta)
+        extras.append(AudioFileClip(cta).set_start(t))
+        ult = escenas[-1]
+        escenas.append({**ult, "inicio": t, "dur": d + 0.6, "fade": False})
+        total = t + d + 0.6
+    audio, _ = mezclar_audio(sel, total, fondo, extras)
+    renderizar(escenas, total, audio, (1080, 1920), salida)
+    return salida
+
+
+# ================================================================
+# MÚSICA DE FONDO
+# ================================================================
+def buscar_archivo(nombre):
+    for root, _, files in os.walk("."):
+        if "/." in root or "\\." in root:
+            continue
+        if nombre in files:
+            return os.path.join(root, nombre)
     return None
 
-# ================================================================
-# 🎬 MONTAR VIDEO CON EFECTOS CINEMATOGRÁFICOS
-# ================================================================
-def montar_video(elementos, salida="video_final.mp4"):
-    clips_video = []
-    clips_audio = []
-    for i, elem in enumerate(elementos):
-        try:
-            audio_clip = AudioFileClip(elem["audio_path"])
-            duracion = audio_clip.duration
-            r = requests.get(elem["imagen_url"], timeout=30)
-            r.raise_for_status()
-            img_path = f"temp_img_{i}.jpg"
-            with open(img_path, "wb") as f:
-                f.write(r.content)
-            with Image.open(img_path) as img:
-                img = ImageOps.fit(img, (1920, 1080), Image.LANCZOS)
-                
-                # Aplicar efectos según etapa
-                if "climax" in elem.get("etapa", ""):
-                    img = ImageEnhance.Contrast(img).enhance(1.4)
-                    img = img.filter(ImageFilter.SHARPEN)
-                elif "inicio" in elem.get("etapa", ""):
-                    img = ImageEnhance.Brightness(img).enhance(0.8)
-                    img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
-                
-                img.save(img_path)
-                
-            if duracion > 35:
-                duracion_mitad = duracion / 2
-                clips_video.extend([ImageClip(img_path, duration=duracion_mitad), ImageClip(img_path, duration=duracion_mitad)])
-                clips_audio.extend([audio_clip.subclip(0, duracion_mitad), audio_clip.subclip(duracion_mitad, duracion)])
-            else:
-                clips_video.append(ImageClip(img_path, duration=duracion))
-                clips_audio.append(audio_clip)
-        except Exception as e:
-            print(f"⚠️ Error en segmento {i}: {e}")
-            continue
-    if not clips_video or not clips_audio:
-        raise ValueError("No se pudieron procesar los clips.")
-    video = concatenate_videoclips(clips_video, method="compose")
-    audio_narracion = concatenate_audioclips(clips_audio)
-    duracion_total = audio_narracion.duration
-    if FONDO_AUDIO_FILE and os.path.exists(FONDO_AUDIO_FILE):
-        try:
-            fondo_clip = AudioFileClip(FONDO_AUDIO_FILE)
-            if fondo_clip.duration < duracion_total:
-                veces = int(duracion_total / fondo_clip.duration) + 1
-                fondo_clip = concatenate_audioclips([fondo_clip] * veces)
-            fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
-            fondo_clip = fondo_clip.audio_fadein(2).audio_fadeout(2)
-            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-        except Exception as e:
-            print(f"⚠️ Error en audio fondo: {e}")
-            audio_final = audio_narracion
-    else:
-        audio_final = audio_narracion
-    video = video.set_audio(audio_final)
-    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
-    video.close()
-    audio_final.close()
-    for c in clips_video:
-        c.close()
-    for a in clips_audio:
-        a.close()
-    return salida, duracion_total
+
+def seleccionar_fondo(estado):
+    ultimos = estado["ultimos_fondos"]
+    disp = [f for f in FONDOS_DISPONIBLES if f not in ultimos[-3:]] or FONDOS_DISPONIBLES[:]
+    random.shuffle(disp)
+    for f in disp + FONDOS_DISPONIBLES:
+        ruta = buscar_archivo(f)
+        if ruta:
+            estado["ultimos_fondos"] = (ultimos + [f])[-10:]
+            print(f"🎵 Fondo: {ruta}")
+            return ruta
+    print("⚠️ Sin música de fondo")
+    return None
+
 
 # ================================================================
-# LIMPIEZA
+# LIMPIEZA Y VALIDACIONES
 # ================================================================
-def limpiar_archivos_temporales():
+def limpiar_temporales():
     for f in os.listdir("."):
-        if (f.startswith("temp_img_") or f.startswith("audio_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
+        if f.startswith("temp_") or f in ("video_final.mp4", "short_final.mp4", "miniatura.jpg", "subtitulos.srt"):
             try:
                 os.remove(f)
-            except:
-                pass
-    for aux in ["video_final.mp4", "miniatura.jpg", "miniatura_base.jpg"]:
-        if os.path.exists(aux):
-            try:
-                os.remove(aux)
-            except:
+            except OSError:
                 pass
 
-# ================================================================
-# SUBIR A YOUTUBE
-# ================================================================
-def subir_a_youtube(video_path, miniatura_path, titulo, descripcion, etiquetas, capitulos=None, duracion_real_minutos=0):
-    creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
-    youtube = build("youtube", "v3", credentials=creds)
-    if isinstance(etiquetas, str):
-        etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
 
-    if capitulos and "⏰ Capítulos" not in descripcion:
-        capitulos_texto = "\n⏰ Capítulos del relato:\n"
-        for cap in capitulos:
-            capitulos_texto += f"{cap['tiempo']} - {cap['titulo']}\n"
-        if "#" in descripcion:
-            partes = descripcion.rsplit("#", 1)
-            descripcion = partes[0] + capitulos_texto + "#" + partes[1]
-        else:
-            descripcion += capitulos_texto
+def verificar_envs():
+    faltan = [v for v in ("DEEPSEEK_API_KEY", "PEXELS_API_KEY", "YOUTUBE_USER_TOKEN") if not os.getenv(v)]
+    if faltan:
+        print(f"❌ Faltan variables: {', '.join(faltan)}")
+        sys.exit(1)
+    r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1",
+                     headers={"Authorization": PEXELS_API_KEY}, timeout=10)
+    if r.status_code != 200:
+        print(f"❌ PEXELS_API_KEY inválida ({r.status_code})")
+        sys.exit(1)
 
-    if ACTIVAR_DISCLOSURE_IA:
-        descripcion += DISCLOSURE_TEXT
-
-    body = {
-        "snippet": {
-            "title": titulo[:100],
-            "description": descripcion[:5000],
-            "tags": etiquetas[:30],
-            "categoryId": "24",
-            "defaultLanguage": "es",
-            "defaultAudioLanguage": "es",
-        },
-        "status": {
-            "privacyStatus": "public",
-            "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,
-        },
-    }
-    media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
-    response = request.execute()
-    video_id = response["id"]
-    print(f"✅ Video subido: https://youtu.be/{video_id}")
-    if miniatura_path and os.path.exists(miniatura_path):
-        try:
-            media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
-            youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-            print("✅ Miniatura ÉLITE subida correctamente")
-        except Exception as e:
-            print(f"⚠️ Error miniatura: {e}")
-
-# ================================================================
-# PUBLICACIÓN DIARIA
-# ================================================================
-def verificar_publicacion_hoy():
-    estado = cargar_estado_musica()
-    ultima = estado.get("ultima_publicacion_exitosa")
-    if not ultima:
-        return False
-    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()
-    return ultima == hoy
-
-def marcar_publicacion_exitosa():
-    estado = cargar_estado_musica()
-    hoy = datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()
-    estado["ultima_publicacion_exitosa"] = hoy
-    guardar_estado_musica(estado)
-
-# ================================================================
-# PROCESAR SEGMENTOS CON EFECTOS
-# ================================================================
-def procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0):
-    elementos = []
-    imagen_ultimo_recurso = None
-    for i, seg_texto in enumerate(segmentos):
-        idx = offset + i
-        etapa = etapas[i] if i < len(etapas) else "lugar_destino"
-        ubic = ubicaciones[i] if i < len(ubicaciones) else UBICACION_HISTORIA
-        print(f"\n📍 Segmento {idx+1} - Etapa: {etapa} | {ubic}")
-
-        query = generar_query_cinematografico(seg_texto, etapa, ubic, tema_viral)
-
-        if i > 0:
-            time.sleep(3)
-
-        url_img = buscar_imagen_pexels(query, orientation="landscape")
-        if url_img:
-            imagen_ultimo_recurso = url_img
-        else:
-            if imagen_ultimo_recurso:
-                print(f"⚠️ Reutilizando imagen anterior para segmento {idx+1}.")
-                url_img = imagen_ultimo_recurso
-            else:
-                query_fallback = "mexican night landscape dark cinematic"
-                url_img = buscar_imagen_pexels(query_fallback, orientation="landscape")
-                if url_img:
-                    print(f"⚠️ Usando imagen genérica para segmento {idx+1}.")
-                    imagen_ultimo_recurso = url_img
-                else:
-                    continue
-
-        audio_file = generar_audio(seg_texto, idx)
-        if not audio_file:
-            continue
-
-        elementos.append({"imagen_url": url_img, "audio_path": audio_file, "etapa": etapa})
-    return elementos
 
 # ================================================================
 # MAIN
 # ================================================================
-def verificar_envs():
-    required = ["DEEPSEEK_API_KEY", "PEXELS_API_KEY", "YOUTUBE_USER_TOKEN"]
-    missing = [var for var in required if not os.getenv(var)]
-    if missing:
-        print(f"❌ Faltan variables: {', '.join(missing)}")
-        sys.exit(1)
-
 def main():
     verificar_envs()
-
+    limpiar_temporales()
+    estado = cargar_estado()
     if os.getenv("FORCE_PUBLISH") == "true":
-        print("⚡ FORCE_PUBLISH activado: se publicará aunque ya haya video hoy.")
-    else:
-        estado_musica = cargar_estado_musica()
-        if verificar_publicacion_hoy():
-            print("✅ Ya se publicó hoy. Saliendo.")
-            sys.exit(0)
-
-    estado_publicacion = cargar_estado_musica()
-
-    if not deberia_publicar_ahora(estado_publicacion):
-        print("⏸️ Decisión: No publicar en esta ejecución.")
-        guardar_estado_musica(estado_publicacion)
+        print("⚡ FORCE_PUBLISH activo")
+    elif not deberia_publicar(estado):
         sys.exit(0)
 
-    print("="*70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT VIDEOS LARGOS VIRAL 2024 (NIVEL ÉLITE)")
-    print("   ✦ Temas virales trending (Backrooms, Skinwalker, IA, etc.)")
-    print("   ✦ Títulos ultra-virales con palabras de poder")
-    print("   ✦ Miniaturas profesionales SIN CUADRO - Solo contorno")
-    print("   ✦ Imágenes cinematográficas con efectos")
-    print("   ✦ Verificación de demanda real")
-    print("="*70)
-    print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['voz']} (+12%)")
-    print(f" Personaje: {PERFIL_PERSONAJE}")
-    print(f"📍 Ubicación: {UBICACION_HISTORIA}")
-    print(f" Paleta: {PALETA_COLOR_ACTUAL[:80]}...")
-    print(f"🎵 Fondo: {FONDO_AUDIO_FILE if FONDO_AUDIO_FILE else 'Ninguno'}")
-    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("-"*70)
+    print("=" * 70)
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v3")
+    print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
+    print("=" * 70)
 
-    historia = generar_historia_completa()
-    titulo_video = historia.get("titulo", "Relato Paranormal Real")
-    palabras_portada = historia.get("palabras_portada", "TERROR")
-    descripcion_base = historia.get("descripcion", f"Relato paranormal.\n{FACEBOOK_LINK}")
-    tags_video = historia.get("tags", "relatos, leyendas, mexico")
-    hashtags_video = historia.get("hashtags", "#Terror #Mexico #RelatosReales #Viral2024")
-    capitulos_video = historia.get("capitulos", [])
-    texto_completo = historia.get("texto_completo", "")
-    keywords = historia.get("palabras_clave", [])
-    
-    tema_viral = historia.get("tema", {}).get("tipo", "paranormal")
+    youtube = crear_cliente_youtube()
+    actualizar_rendimiento(youtube, estado)
+    tema = elegir_tema(estado, youtube)
+    contexto, estado_mx = random.choice(tema["contextos"]), random.choice(ESTADOS_MEXICO)
+    sugerencias = list(dict.fromkeys(sugerencias_youtube(tema["seed"]) +
+                                     sugerencias_youtube("relato de terror " + tema["keywords"][0])))[:10]
+    print(f"🔎 Sugerencias YouTube: {sugerencias[:5]}")
+    fondo = seleccionar_fondo(estado)
 
-    if keywords:
-        tema_busqueda = keywords[0]
-    else:
-        tema_busqueda = titulo_video.split()[0]
-    if not verificar_demanda_youtube(tema_busqueda):
-        print(" Demanda insuficiente. Cancelando publicación.")
-        sys.exit(0)
-
-    # MEJORA ÉLITE: Asegurar que las keywords estén en las primeras 2 líneas de la descripción
-    keywords_str = " ".join(keywords)
-    descripcion_completa = f"""{keywords_str}. {descripcion_base}
-
-🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
-📱 Facebook: {FACEBOOK_LINK}
-
-{hashtags_video}"""
-
-    print(f"\n📊 SEO VIRAL GENERADO:")
-    print(f"   🔥 Título VIRAL: {titulo_video}")
-    print(f"    Texto miniatura: {palabras_portada}")
-    print(f"   🗓️ Año del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
-    print(f"   📚 Capítulos: {len(capitulos_video)}")
-    print(f"   🔑 Keywords: {keywords}")
-    print(f"   🎯 Tema viral: {tema_viral}")
-
-    segmentos = dividir_en_segmentos(texto_completo, 55)
-    etapas, ubicaciones = asignar_etapas_visuales(segmentos, UBICACION_HISTORIA)
-    print(f"\n {len(segmentos)} segmentos con efectos cinematográficos.")
-
-    elementos_validos = procesar_segmentos(segmentos, etapas, ubicaciones, tema_viral, offset=0)
-    if not elementos_validos:
-        print("❌ No hay elementos válidos.")
-        sys.exit(1)
-
-    duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
-    print(f"⏱️ Duración: {duracion_actual/60:.1f} minutos")
-
-    intentos_expansion = 0
-    while duracion_actual < DURACION_MINIMA_SEGUNDOS and intentos_expansion < MAX_INTENTOS_EXPANSION:
-        print(f"️ Duración insuficiente. Expandiendo intento {intentos_expansion+1}...")
-        texto_extra = expandir_texto(titulo_video, texto_completo)
-        if texto_extra:
-            texto_completo += " " + texto_extra
-            nuevos = dividir_en_segmentos(texto_extra, 55)
-            etapas_n, ubic_n = asignar_etapas_visuales(nuevos, UBICACION_HISTORIA)
-            elems_n = procesar_segmentos(nuevos, etapas_n, ubic_n, tema_viral, offset=len(elementos_validos))
-            elementos_validos.extend(elems_n)
-            duracion_actual = sum(AudioFileClip(e["audio_path"]).duration for e in elementos_validos)
-            intentos_expansion += 1
-        else:
-            break
-
-    if duracion_actual < DURACION_MINIMA_SEGUNDOS:
-        print(f"❌ Duración final insuficiente. Abortando.")
-        sys.exit(1)
-
-    print(f"✅ Duración final: {duracion_actual/60:.1f} minutos.")
-
-    print("️ Creando miniatura profesional ÉLITE...")
-    miniatura_path = None
-    
-    query_miniatura = generar_query_miniatura_pexels(historia.get("miniatura_prompt", "scary horror night"))
-    miniatura_base_url = buscar_miniatura_pexels(query_miniatura)
-
-    if miniatura_base_url:
+    # ---- Plan + título
+    titulos_previos = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})["titulos"][-20:]
+    plan = titulo = None
+    for intento in range(4):
         try:
-            r = requests.get(miniatura_base_url, timeout=30)
-            r.raise_for_status()
-            
-            temp_base = "miniatura_base.jpg"
-            with open(temp_base, "wb") as f:
-                f.write(r.content)
-            
-            if crear_miniatura_profesional(temp_base, palabras_portada, "miniatura.jpg"):
-                miniatura_path = "miniatura.jpg"
-                print(f"✅ Miniatura ÉLITE generada con texto: '{palabras_portada}'")
-            else:
-                import shutil
-                shutil.copy(temp_base, "miniatura.jpg")
-                miniatura_path = "miniatura.jpg"
-                print(f"️ Miniatura guardada sin texto")
-            
-            if os.path.exists(temp_base):
-                os.remove(temp_base)
-                
+            plan = generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos)
+            if plan.get("palabras_clave") and tema_ya_usado(" ".join(map(str, plan["palabras_clave"]))):
+                raise ValueError("tema repetido")
+            titulo = elegir_titulo(plan["titulos"])
+            if not titulo:
+                raise ValueError("sin título válido")
+            break
         except Exception as e:
-            print(f"⚠️ Error con miniatura: {e}")
-            miniatura_path = None
-    else:
-        print("❌ No se pudo obtener imagen para miniatura.")
-        miniatura_path = None
+            print(f"⚠️ Plan intento {intento+1}/4: {e}")
+            plan = None
+            time.sleep(5)
+    if not plan:
+        print("❌ No se pudo generar un plan válido.")
+        sys.exit(1)
+    try:
+        anio = int(plan.get("anio_suceso"))
+    except (TypeError, ValueError):
+        anio = None
+    print(f"🔥 Título: {titulo}")
 
-    print("🎬 Montando video HORIZONTAL (1920x1080) con efectos...")
-    video_path, duracion_final = montar_video(elementos_validos)
-    duracion_minutos = duracion_final / 60
-    print(f"️ Duración final: {duracion_minutos:.1f} minutos")
+    # ---- Relato
+    capitulos_txt = generar_capitulos(plan, tema, contexto, estado_mx)
+    n_caps = len(capitulos_txt)
+    segs = crear_segmentos(capitulos_txt)
+    print(f"🧩 {len(segs)} segmentos, {sum(len(c.split()) for c in capitulos_txt)} palabras")
 
-    print("️ Subiendo a YouTube...")
-    subir_a_youtube(
-        video_path,
-        miniatura_path,
-        titulo_video,
-        descripcion_completa,
-        tags_video,
-        capitulos_video,
-        duracion_real_minutos=duracion_minutos
-    )
+    # ---- Voz + expansión si hace falta
+    segs = sintetizar(segs)
+    total = construir_timeline(segs)
+    intentos = 0
+    while total < DURACION_MINIMA_SEGUNDOS and intentos < MAX_INTENTOS_EXPANSION:
+        print(f"⚠️ {total/60:.1f} min < mínimo. Expandiendo ({intentos+1})...")
+        extra = expandir_texto(titulo, " ".join(s["texto"] for s in segs))
+        intentos += 1
+        if not extra:
+            break
+        nuevos = [{"cap": n_caps - 1, "texto": p, "cap_ini": False, "etapa": "resolucion", "id": f"x{intentos}_{k}"}
+                  for k, p in enumerate(dividir_en_segmentos(extra))]
+        segs += sintetizar(nuevos)
+        total = construir_timeline(segs)
+    if total < DURACION_MINIMA_SEGUNDOS:
+        print("❌ Duración insuficiente. Abortando.")
+        sys.exit(1)
+    outro = [{"cap": n_caps - 1, "texto": random.choice(OUTROS), "cap_ini": False, "etapa": "resolucion", "id": "outro", "outro": True}]
+    segs += sintetizar(outro)
+    total = construir_timeline(segs)
+    print(f"⏱️ Duración: {total/60:.1f} min")
 
-    guardar_titulo_largo(titulo_video)
-    if keywords:
-        tema = " ".join(keywords)
-        if not tema_ya_usado(tema):
-            guardar_tema_shorts(tema)
-    else:
-        tema = f"{UBICACION_HISTORIA} {titulo_video.split()[0]}"
-        guardar_tema_shorts(tema)
+    # ---- Escenas (Pexels)
+    consultas = planificar_consultas(segs, tema, anio)
+    for i, s in enumerate(segs):
+        n = max(1, round(s["dur"] / SEG_ESCENA))
+        print(f"🖼️ {i+1}/{len(segs)} [{s['etapa']}] '{consultas[i]}' x{n}")
+        s["medios"] = obtener_medios(i, s["etapa"], consultas[i], n, tema)
 
-    estado_publicacion["publicaciones_hoy"] = estado_publicacion.get("publicaciones_hoy", 0) + 1
-    estado_publicacion["ultima_publicacion"] = datetime.now(ZoneInfo("America/Mexico_City")).isoformat()
-    marcar_publicacion_exitosa()
-    guardar_estado_musica(estado_publicacion)
+    # ---- Capítulos con timestamps REALES
+    caps_ts = []
+    for c in range(n_caps):
+        primero = next((s for s in segs if s["cap"] == c), None)
+        nombre = str(plan["capitulos"][c].get("titulo", f"Parte {c+1}"))[:50] if c < len(plan["capitulos"]) else f"Parte {c+1}"
+        if primero:
+            caps_ts.append((fmt_ts(primero["inicio"]), nombre))
+    caps_ts[0] = ("00:00", caps_ts[0][1])
 
-    limpiar_archivos_temporales()
-    print(" Proceso completado. ¡Video viral ÉLITE listo!")
+    hashtags = construir_hashtags(tema)
+    descripcion = construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags)
+    tags = construir_tags(plan, tema, sugerencias)
+    srt = generar_srt(segs, "subtitulos.srt")
+
+    # ---- Miniatura
+    portada = elegir_texto_portada(plan.get("palabras_portada"), titulo)
+    base = elegir_base_miniatura(re.sub(r"[^a-zA-Z ]", " ", str(plan.get("miniatura_escena", "dark hallway door"))) or "dark hallway door")
+    miniatura = "miniatura.jpg" if crear_miniatura(base, portada, "miniatura.jpg") else None
+
+    # ---- Render y subida
+    escenas = construir_escenas(segs)
+    audio, _ = mezclar_audio(segs, total, fondo)
+    print("🎬 Renderizando video largo...")
+    renderizar(escenas, total, audio, (W, H), "video_final.mp4")
+
+    slot = proximo_slot() if PROGRAMAR_PICO else None
+    print(f"🕖 Programación: {slot:%Y-%m-%d %H:%M} CDMX" if slot else "🕖 Publicación inmediata")
+    vid = subir_video(youtube, "video_final.mp4", titulo, descripcion, tags, utc_iso(slot) if slot else None)
+    comentario = str(plan.get("pregunta_comentario") or "¿Tú qué habrías hecho? Te leo 👇")
+    extras_post_subida(youtube, vid, miniatura, srt, comentario)
+
+    if GENERAR_SHORT:
+        try:
+            print("📱 Creando Short embudo...")
+            crear_short(segs, plan, fondo)
+            t_short = str(plan.get("titulo_short") or titulo)[:88] + " #Shorts"
+            d_short = (f"Historia completa 👉 https://youtu.be/{vid}\n\nSuscríbete: {CANAL_LINK}?sub_confirmation=1\n\n"
+                       f"#Shorts {hashtags}" + (DISCLOSURE_TEXT if ACTIVAR_DISCLOSURE_IA else ""))
+            slot_s = utc_iso(slot + timedelta(minutes=30)) if slot else None
+            subir_video(youtube, "short_final.mp4", t_short, d_short, tags[:15] + ["shorts"], slot_s)
+        except Exception as e:
+            print(f"⚠️ Short falló (el video largo ya está subido): {e}")
+            traceback.print_exc()
+
+    # ---- Estado
+    ahora = datetime.now(TZ).isoformat()
+    guardar_titulo_largo(titulo)
+    guardar_tema(" ".join(map(str, plan.get("palabras_clave", []))) or tema["tema"])
+    estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"], "fecha": ahora})
+    estado["videos"] = estado["videos"][-60:]
+    estado["temas_recientes"] = (estado["temas_recientes"] + [tema["tema"]])[-6:]
+    estado["ultima_publicacion"] = ahora
+    estado["ultima_publicacion_exitosa"] = datetime.now(TZ).date().isoformat()
+    guardar_json(MUSICA_ESTADO_FILE, estado)
+    limpiar_temporales()
+    print("🎉 Proceso completado.")
+
 
 if __name__ == "__main__":
     try:
         main()
+    except SystemExit:
+        raise
     except Exception as e:
         print(f"❌ Error fatal: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
