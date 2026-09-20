@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "ia_prediccion",
-      "lugar": "celular en la noche",
-      "contexto": "IA"
-    },
-    {
       "tipo": "glitch_realidad",
       "lugar": "casa propia",
       "contexto": "glitch"
@@ -33,6 +28,11 @@
     {
       "tipo": "glitch_realidad",
       "lugar": "calle familiar",
+      "contexto": "glitch"
+    },
+    {
+      "tipo": "glitch_realidad",
+      "lugar": "casa propia",
       "contexto": "glitch"
     }
   ]
