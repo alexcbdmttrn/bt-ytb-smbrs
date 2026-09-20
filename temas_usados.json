@@ -6,11 +6,6 @@
       "contexto": "muerte"
     },
     {
-      "tipo": "experiencia_cercana_muerte",
-      "lugar": "emergencia",
-      "contexto": "muerte"
-    },
-    {
       "tipo": "ia_prediccion",
       "lugar": "computadora antigua",
       "contexto": "IA"
@@ -33,6 +28,11 @@
     {
       "tipo": "experiencia_cercana_muerte",
       "lugar": "quirófano",
+      "contexto": "muerte"
+    },
+    {
+      "tipo": "experiencia_cercana_muerte",
+      "lugar": "hospital",
       "contexto": "muerte"
     }
   ]
