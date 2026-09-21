@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "ia_prediccion",
-      "lugar": "computadora antigua",
-      "contexto": "IA"
-    },
-    {
-      "tipo": "ia_prediccion",
       "lugar": "laboratorio",
       "contexto": "IA"
     },
@@ -33,6 +28,11 @@
     {
       "tipo": "glitch_realidad",
       "lugar": "calle familiar",
+      "contexto": "glitch"
+    },
+    {
+      "tipo": "glitch_realidad",
+      "lugar": "trabajo",
       "contexto": "glitch"
     }
   ]
