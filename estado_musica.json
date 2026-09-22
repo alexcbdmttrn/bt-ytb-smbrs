@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Cold Hollow.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
@@ -9,22 +8,30 @@
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Sunken Dread.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "The Deep Rot.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-09-20",
+  "ultima_publicacion_exitosa": "2026-09-22",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-09-20T13:02:40.586627-06:00",
+  "ultima_publicacion": "2026-09-22T11:05:34.717927-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
       "titulo": "Trabajé de noche en Cancún y la IA supo mi secreto | Relato de Terror",
       "tema": "ia_maldita",
       "fecha": "2026-09-20T13:02:40.586627-06:00"
+    },
+    {
+      "id": "gGM0WkZIKvM",
+      "titulo": "Escuché el audio maldito en mi casa de Nayarit a las 3 AM | Relato de Terror",
+      "tema": "creepypasta",
+      "fecha": "2026-09-22T11:05:34.717927-06:00"
     }
   ],
   "temas_recientes": [
-    "ia_maldita"
+    "ia_maldita",
+    "creepypasta"
   ]
 }
