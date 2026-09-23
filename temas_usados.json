@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "experiencia_cercana_muerte",
-      "lugar": "quirófano",
-      "contexto": "muerte"
-    },
-    {
-      "tipo": "experiencia_cercana_muerte",
       "lugar": "hospital",
       "contexto": "muerte"
     },
@@ -33,6 +28,11 @@
     {
       "tipo": "ia_prediccion",
       "lugar": "laboratorio",
+      "contexto": "IA"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "computadora antigua",
       "contexto": "IA"
     }
   ]
