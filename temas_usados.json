@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "glitch_realidad",
-      "lugar": "casa propia",
-      "contexto": "glitch"
-    },
-    {
       "tipo": "experiencia_cercana_muerte",
       "lugar": "quirófano",
       "contexto": "muerte"
@@ -34,6 +29,11 @@
       "tipo": "glitch_realidad",
       "lugar": "escuela",
       "contexto": "glitch"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "laboratorio",
+      "contexto": "IA"
     }
   ]
 }
