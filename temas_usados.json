@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "glitch_realidad",
-      "lugar": "calle familiar",
-      "contexto": "glitch"
-    },
-    {
-      "tipo": "glitch_realidad",
       "lugar": "trabajo",
       "contexto": "glitch"
     },
@@ -33,6 +28,11 @@
     {
       "tipo": "glitch_realidad",
       "lugar": "trabajo",
+      "contexto": "glitch"
+    },
+    {
+      "tipo": "glitch_realidad",
+      "lugar": "calle familiar",
       "contexto": "glitch"
     }
   ]
