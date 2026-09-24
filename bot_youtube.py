@@ -1,14 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v3
-
-Flujo: elegir tema (demanda + rendimiento propio) -> plan SEO -> relato por capítulos
--> voz -> escenas (video/foto Pexels con Ken Burns y grade unificado) -> miniatura
--> subtítulos SRT -> subida programada en hora pico -> Short embudo -> comentario/playlist.
-
-Archivos de estado: se mantienen los mismos 3 JSON de antes (tu workflow no cambia).
-Variables opcionales: YOUTUBE_PLAYLIST_ID, HORA_PICO, INTERVALO_MIN_HORAS,
-USAR_VIDEOS, GENERAR_SHORT, PROGRAMAR_PICO, DEEPSEEK_MODEL, FORCE_PUBLISH.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v3 (CORREGIDO)
+Flujo: elegir tema -> plan SEO -> relato por capítulos -> voz -> escenas (Pexels) 
+-> miniatura -> subtítulos SRT -> subida programada con reintentos robustos.
 """
 import asyncio
 import bisect
@@ -19,9 +13,10 @@ import re
 import sys
 import time
 import traceback
+import ssl
+import socket
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-
 import edge_tts
 import numpy as np
 import requests
@@ -38,10 +33,9 @@ from moviepy.editor import (
     concatenate_audioclips,
 )
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
-
 try:
     import json5
-except ImportError:  # opcional
+except ImportError:
     json5 = None
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -56,49 +50,45 @@ DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN") or "{}")
 PLAYLIST_ID = os.getenv("YOUTUBE_PLAYLIST_ID", "")
-
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
-# Archivos de estado (mismos nombres que la versión anterior)
+# Archivos de estado
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-DURACION_MINIMA_SEGUNDOS = 480
-MAX_INTENTOS_EXPANSION = 2
-NUM_CAPITULOS = 6
+# ✅ CORRECCIONES DE DURACIÓN Y ESTRUCTURA
+DURACION_MINIMA_SEGUNDOS = 480   # 8 minutos mínimo
+DURACION_MAXIMA_SEGUNDOS = 660   # 11 minutos máximo (TOPE DE SEGURIDAD)
+MAX_INTENTOS_EXPANSION = 1       # Reducido de 2 a 1
+NUM_CAPITULOS = 4                # Reducido de 6 a 4 capítulos
+
 SEG_MAX_PALABRAS = 55
-SEG_ESCENA = 9.0            # segundos por plano (retención: cortes frecuentes)
+SEG_ESCENA = 9.0
 W, H, FPS = 1920, 1080, 24
 VOL_FONDO = 0.10
-
 USAR_VIDEOS = os.getenv("USAR_VIDEOS", "true").lower() == "true"
 GENERAR_SHORT = os.getenv("GENERAR_SHORT", "true").lower() == "true"
 PROGRAMAR_PICO = os.getenv("PROGRAMAR_PICO", "true").lower() == "true"
-HORA_PICO = int(os.getenv("HORA_PICO", "19"))          # hora local CDMX. Valídala en Analytics
+HORA_PICO = int(os.getenv("HORA_PICO", "19"))
 INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
-
 ACTIVAR_DISCLOSURE_IA = True
 DISCLOSURE_TEXT = (
     "\n\n⚠️ Relato de ficción narrado con inteligencia artificial, inspirado en "
     "leyendas urbanas, creepypastas y folclor. Personajes y sucesos son ficticios."
 )
-
-VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}   # una sola voz = identidad de marca
+VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}
 VOCES_RESPALDO = ["es-MX-JorgeNeural", "es-ES-AlvaroNeural", "es-CO-GonzaloNeural", "es-US-AlonsoNeural"]
 RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "-2%", "resolucion": "+2%"}
 PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
-
 FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
 SUFIJO_TITULO = " | Relato de Terror"
-
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
 ]
-
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Campeche", "Chiapas", "Chihuahua", "Coahuila",
     "Colima", "Durango", "Estado de México", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco",
@@ -108,7 +98,7 @@ ESTADOS_MEXICO = [
 ]
 
 # ================================================================
-# TEMAS (cada uno con ángulo narrativo, semilla de búsqueda y visuales de stock)
+# TEMAS
 # ================================================================
 TEMAS = [
     {"tema": "backrooms", "seed": "backrooms historia", "angulo": "Un espacio liminal aparece al cruzar una puerta común; reglas extrañas, imposible salir.",
@@ -166,7 +156,7 @@ TEMAS = [
      "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte"],
      "visuales": ["highway night fog", "taxi night city", "road tunnel dark", "truck night highway", "gas station night"],
      "hashtags": ["#CarreteraMaldita"]},
-    {"tema": "leyenda_mexicana", "seed": "leyenda mexicana terror", "angulo": "Una leyenda del pueblo (llorona, nahual, charro negro) cobra vida en versión contemporánea.",
+    {"tema": "leyenda_mexicana", "seed": "leyenda mexicana terror", "angulo": "Una leyenda del pueblo cobra vida en versión contemporánea.",
      "keywords": ["leyendas mexicanas", "nahual", "la llorona", "pueblo"],
      "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
      "visuales": ["old village night", "colonial church night", "dirt road night", "river fog night", "candles altar"],
@@ -191,13 +181,11 @@ def cargar_json(ruta, default):
     except Exception:
         return default
 
-
 def guardar_json(ruta, data):
     tmp = ruta + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     os.replace(tmp, ruta)
-
 
 def cargar_estado():
     estado = cargar_json(MUSICA_ESTADO_FILE, {})
@@ -208,11 +196,10 @@ def cargar_estado():
     estado.setdefault("temas_recientes", [])
     return estado
 
-
 def parsear_json(texto):
     if not texto:
         raise ValueError("respuesta vacía")
-    t = re.sub(r"```(?:json)?", "", texto, flags=re.I)
+    t = re.sub(r"```(?:json)?", " ", texto, flags=re.I)
     i, j = t.find("{"), t.rfind("}")
     if i == -1 or j == -1:
         raise ValueError("sin JSON")
@@ -224,7 +211,6 @@ def parsear_json(texto):
         except Exception:
             pass
     return json.loads(t, strict=False)
-
 
 def llm(prompt, temperature=0.8, max_tokens=1500, json_mode=False, system=None, intentos=3):
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
@@ -242,7 +228,6 @@ def llm(prompt, temperature=0.8, max_tokens=1500, json_mode=False, system=None, 
             time.sleep(5 * (i + 1))
     return None
 
-
 def descargar(url, ruta, max_bytes=20 * 1024 * 1024):
     try:
         with requests.get(url, stream=True, timeout=40) as r:
@@ -254,22 +239,20 @@ def descargar(url, ruta, max_bytes=20 * 1024 * 1024):
                     if total > max_bytes:
                         raise ValueError("archivo demasiado grande")
                     f.write(chunk)
-        return os.path.getsize(ruta) > 1000
+            return os.path.getsize(ruta) > 1000
     except Exception as e:
         print(f"⚠️ Descarga fallida: {e}")
         if os.path.exists(ruta):
             os.remove(ruta)
         return False
 
-
 def fmt_ts(seg):
     seg = int(seg)
     h, m, s = seg // 3600, seg % 3600 // 60, seg % 60
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
-
 # ================================================================
-# HISTORIAL (títulos y temas ya usados)
+# HISTORIAL
 # ================================================================
 def titulo_largo_ya_publicado(titulo):
     data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
@@ -284,13 +267,11 @@ def titulo_largo_ya_publicado(titulo):
             return True
     return False
 
-
 def guardar_titulo_largo(titulo):
     data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
     if titulo not in data["titulos"]:
         data["titulos"].append(titulo)
     guardar_json(TITULOS_LARGOS_FILE, data)
-
 
 def tema_ya_usado(tema, umbral=0.5):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
@@ -303,13 +284,11 @@ def tema_ya_usado(tema, umbral=0.5):
             return True
     return False
 
-
 def guardar_tema(tema):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
     if tema not in data["temas"]:
         data["temas"].append(tema)
     guardar_json(TEMAS_SHORTS_FILE, data)
-
 
 # ================================================================
 # YOUTUBE: cliente, demanda, rendimiento propio
@@ -322,9 +301,7 @@ def crear_cliente_youtube():
         print(f"⚠️ No se pudo crear cliente YouTube: {e}")
         return None
 
-
 def sugerencias_youtube(seed):
-    """Autocompletado real de YouTube (gratis): lo que la gente escribe de verdad."""
     try:
         r = requests.get("https://suggestqueries.google.com/complete/search", timeout=10,
                          params={"client": "firefox", "ds": "yt", "hl": "es", "gl": "mx", "q": seed})
@@ -332,9 +309,7 @@ def sugerencias_youtube(seed):
     except Exception:
         return []
 
-
 def puntuar_demanda(youtube, consulta):
-    """Vistas promedio de los videos más vistos en 90 días para esa búsqueda (101 unidades de cuota)."""
     if youtube is None:
         return None
     try:
@@ -344,27 +319,25 @@ def puntuar_demanda(youtube, consulta):
         ids = [i["id"]["videoId"] for i in r.get("items", [])]
         if not ids:
             return 0
-        s = youtube.videos().list(part="statistics", id=",".join(ids)).execute()
+        s = youtube.videos().list(part="statistics", id=", ".join(ids)).execute()
         vistas = [int(i["statistics"].get("viewCount", 0)) for i in s.get("items", [])]
         return sum(vistas) / len(vistas) if vistas else 0
     except Exception as e:
         print(f"⚠️ Demanda no disponible ({consulta}): {e}")
         return None
 
-
 def actualizar_rendimiento(youtube, estado):
     ids = [v["id"] for v in estado["videos"][-30:] if v.get("id")]
     if not ids or youtube is None:
         return
     try:
-        r = youtube.videos().list(part="statistics", id=",".join(ids)).execute()
+        r = youtube.videos().list(part="statistics", id=", ".join(ids)).execute()
         vistas = {i["id"]: int(i["statistics"].get("viewCount", 0)) for i in r.get("items", [])}
         for v in estado["videos"]:
             if v.get("id") in vistas:
                 v["vistas"] = vistas[v["id"]]
     except Exception as e:
         print(f"⚠️ No se pudo leer rendimiento: {e}")
-
 
 def elegir_tema(estado, youtube):
     recientes = estado["temas_recientes"][-4:]
@@ -378,20 +351,19 @@ def elegir_tema(estado, youtube):
     max_r = max(rend.values()) if rend else 1
     demandas = {t["tema"]: puntuar_demanda(youtube, t["seed"]) for t in candidatos}
     max_d = max([d for d in demandas.values() if d] or [1])
-
+    
     def score(t):
         d = demandas[t["tema"]]
         sd = d / max_d if d else 0.4
-        sr = rend[t["tema"]] / max_r if t["tema"] in rend and max_r else 0.6  # 0.6 = explorar
+        sr = rend[t["tema"]] / max_r if t["tema"] in rend and max_r else 0.6
         return 0.5 * sd + 0.5 * sr + random.uniform(0, 0.15)
-
+        
     elegido = max(candidatos, key=score)
     print(f"🎯 Tema elegido: {elegido['tema']} (demanda={demandas[elegido['tema']]}, propio={rend.get(elegido['tema'])})")
     return elegido
 
-
 # ================================================================
-# TÍTULOS: puntuación CTR + honestidad (sin "REAL/evidencia/filtrado")
+# TÍTULOS: puntuación CTR + honestidad
 # ================================================================
 GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "madrugada", "medianoche",
            "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si "]
@@ -399,17 +371,15 @@ PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidenc
               "filtrado", "es real", "historia real", "hechos reales"]
 GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
 
-
 def limpiar_titulo(t):
-    t = re.sub(r"\s+", " ", t.strip().strip("\"“”'").rstrip("."))
+    t = re.sub(r"\s+", " ", t.strip().strip("“”'").rstrip("."))
     t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", "", t, flags=re.I)
     palabras = t.split()
-    caps = [w for w in palabras if len(re.sub(r"\W", "", w)) >= 3 and w.isupper()]
+    caps = [w for w in palabras if len(re.sub(r"\W", " ", w)) >= 3 and w.isupper()]
     if len(caps) > 3:
         keep = set(caps[:2])
         palabras = [w if (not w.isupper() or w in keep or len(w) < 3) else w.capitalize() for w in palabras]
     return " ".join(palabras)
-
 
 def puntuar_titulo(t):
     s, n, tl = 0, len(t), t.lower()
@@ -432,7 +402,6 @@ def puntuar_titulo(t):
         s -= 1
     return s
 
-
 def elegir_titulo(candidatos):
     puntuados = []
     for c in candidatos:
@@ -452,7 +421,6 @@ def elegir_titulo(candidatos):
         titulo += SUFIJO_TITULO
     return titulo[:100]
 
-
 def elegir_texto_portada(opciones, titulo):
     pt = set(re.findall(r"\w+", titulo.lower()))
     mejor = None
@@ -469,49 +437,44 @@ def elegir_texto_portada(opciones, titulo):
             mejor = (sc, o)
     return mejor[1] if mejor else "NO ENTRES"
 
-
 # ================================================================
 # HISTORIA: plan SEO + relato por capítulos
 # ================================================================
 ESQUEMA_PLAN = """{
-  "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres, SIN el sufijo 'Relato de Terror'"],
-  "anio_suceso": 2014,
-  "protagonista": "nombre de pila del narrador",
-  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
-  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
-  "palabras_clave": ["5 keywords SEO en español"],
-  "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que provoquen curiosidad"],
-  "miniatura_escena": "4-6 palabras en inglés para buscar la foto de portada en un banco de stock (ej: dark hallway door)",
-  "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
-  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
-  "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
-  "tags": ["15 tags SEO"],
-  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
+ "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres, SIN el sufijo 'Relato de Terror'"],
+ "anio_suceso": 2014,
+ "protagonista": "nombre de pila del narrador",
+ "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
+ "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
+ "palabras_clave": ["5 keywords SEO en español"],
+ "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que provoquen curiosidad"],
+ "miniatura_escena": "4-6 palabras en inglés para buscar la foto de portada en un banco de stock (ej: dark hallway door)",
+ "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
+ "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
+ "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
+ "tags": ["15 tags SEO"],
+ "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
-
 
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato de ficción narrado en primera persona (~13 minutos, {NUM_CAPITULOS} capítulos).
-
+Diseña el PLAN de un relato de ficción narrado en primera persona (~8-10 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
 {sug}
 TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
 {prev}
-
 REGLAS DE TÍTULO (clave para CTR):
-- 45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
-- Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
-- Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
-- PROHIBIDO decir que es real, verídico, testimonio, evidencia o que 'las autoridades ocultan' algo: es ficción.
-- Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
+45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
+Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
+Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
+PROHIBIDO decir que es real, verídico, testimonio, evidencia o que 'las autoridades ocultan' algo: es ficción.
+Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
 El gancho debe ser lo más perturbador del relato, no una presentación.
 Cada capítulo termina en un cliffhanger, excepto el último.
-
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
@@ -522,15 +485,13 @@ Responde SOLO con este JSON:
         raise ValueError("plan incompleto")
     return plan
 
-
 def limpiar_texto_narracion(t):
-    t = re.sub(r"[\U00010000-\U0010ffff]", "", t)
-    t = re.sub(r"(?im)^\s*(cap[ií]tulo|parte)\s*\d+.*$", "", t)
-    t = re.sub(r"\[[^\]]*\]", "", t)
-    t = re.sub(r"[*_#>`~]+", "", t)
+    t = re.sub(r"[\U00010000-\U0010ffff]", " ", t)
+    t = re.sub(r"(?im)^\s*(cap[ií]tulo|parte)\s*\d+.\s*$", " ", t)
+    t = re.sub(r"\[[^\]]*\]", " ", t)
+    t = re.sub(r"[*_#>`~]+", " ", t)
     t = re.sub(r"\s+", " ", t).strip()
     return t
-
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
     caps = plan["capitulos"][:NUM_CAPITULOS + 1]
@@ -551,22 +512,20 @@ Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','201
 Sinopsis: {plan.get('resumen','')}
 ÍNDICE COMPLETO:
 {indice}
-
 ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 {extra}
 {('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
-
 ESTILO (se leerá en voz alta):
-- 400-480 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
-- Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
-- Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
-- No menciones que es ficción ni que eres una IA.
+200-250 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
+Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
+Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
+No menciones que es ficción ni que eres una IA.
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
             t = llm(prompt, temperature=0.85, max_tokens=1200)
             t = limpiar_texto_narracion(t) if t else ""
-            if len(t.split()) >= 280:
+            if len(t.split()) >= 180:
                 texto = t
                 break
             print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
@@ -576,11 +535,10 @@ Devuelve SOLO el texto del capítulo."""
         print(f"   ✅ Capítulo {i+1}/{len(caps)}: {len(texto.split())} palabras")
     return textos
 
-
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Relato de terror en primera persona: "{titulo}".
 Final actual:
-\"\"\"{texto_actual[-500:]}\"\"\"
+"""{texto_actual[-500:]}"""
 Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
 Devuelve SOLO el texto."""
     for _ in range(2):
@@ -590,12 +548,10 @@ Devuelve SOLO el texto."""
             return t
     return ""
 
-
 OUTROS = [
     "Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame en los comentarios: ¿tú qué habrías hecho?",
     "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete para no perderte la próxima. ¿Tú habrías entrado? Te leo en los comentarios.",
 ]
-
 
 # ================================================================
 # SEGMENTOS, ETAPAS Y ESCENAS
@@ -619,7 +575,6 @@ def dividir_en_segmentos(texto, max_palabras=SEG_MAX_PALABRAS):
         segs[-2] += " " + segs.pop()
     return segs
 
-
 def crear_segmentos(capitulos_txt):
     segs = []
     for ci, txt in enumerate(capitulos_txt):
@@ -632,7 +587,6 @@ def crear_segmentos(capitulos_txt):
                       else "climax" if p < 0.85 else "resolucion")
     return segs
 
-
 # ================================================================
 # VOZ
 # ================================================================
@@ -642,9 +596,8 @@ def duracion_audio(ruta):
     a.close()
     return d
 
-
 def generar_audio(texto, nombre, etapa):
-    limpio = re.sub(r'[\{\}\[\]"]', "", texto)
+    limpio = re.sub(r'[{}[\]"]', " ", texto)
     limpio = re.sub(r"\s+", " ", limpio).strip()
     if len(limpio) < 10:
         return None
@@ -661,9 +614,8 @@ def generar_audio(texto, nombre, etapa):
                     return ruta
             except Exception as e:
                 print(f"❌ TTS {voz}: {e}")
-            time.sleep(2 * (intento + 1))
+                time.sleep(2 * (intento + 1))
     return None
-
 
 def sintetizar(segs):
     ok = []
@@ -680,7 +632,6 @@ def sintetizar(segs):
         raise RuntimeError("Demasiados segmentos sin audio")
     return ok
 
-
 def construir_timeline(segs):
     t = 0.0
     for s in segs:
@@ -689,12 +640,10 @@ def construir_timeline(segs):
         t += s["dur"]
     return t
 
-
 # ================================================================
 # PEXELS
 # ================================================================
 POOL, USADOS = [], set()
-
 
 def pexels_get(url, params, intentos=3):
     for i in range(intentos):
@@ -709,9 +658,8 @@ def pexels_get(url, params, intentos=3):
             print(f"⚠️ Pexels {r.status_code}")
         except Exception as e:
             print(f"⚠️ Pexels: {e}")
-        time.sleep(3)
+            time.sleep(3)
     return None
-
 
 def buscar_fotos(query, cantidad):
     for pagina in (random.randint(1, 2), 1):
@@ -723,7 +671,6 @@ def buscar_fotos(query, cantidad):
         if fotos:
             return fotos[:cantidad]
     return []
-
 
 def buscar_video(query):
     data = pexels_get("https://api.pexels.com/videos/search",
@@ -740,7 +687,6 @@ def buscar_video(query):
             return v["id"], f["link"]
     return None
 
-
 def video_valido(ruta):
     try:
         c = VideoFileClip(ruta, audio=False)
@@ -750,10 +696,8 @@ def video_valido(ruta):
     except Exception:
         return False
 
-
 def fallback_consultas(tema, etapa):
     return ESCENAS_FALLBACK.get(etapa, ESCENAS_FALLBACK["tension"]) + tema["visuales"]
-
 
 def planificar_consultas(segs, tema, anio):
     out = [None] * len(segs)
@@ -783,7 +727,6 @@ Responde SOLO JSON: {{"consultas": ["..."]}} con exactamente {len(lote)} element
             out[ini + j] = q
     return out
 
-
 def obtener_medios(idx, etapa, query, n, tema):
     medios = []
     if USAR_VIDEOS and random.random() < PROB_VIDEO.get(etapa, 0.5):
@@ -800,8 +743,8 @@ def obtener_medios(idx, etapa, query, n, tema):
         if len(urls) < faltan:
             for q in random.sample(fallback_consultas(tema, etapa), 2):
                 urls += [u for u in buscar_fotos(q, faltan - len(urls)) if u not in urls]
-                if len(urls) >= faltan:
-                    break
+        if len(urls) >= faltan:
+            pass
         for k, u in enumerate(urls[:faltan]):
             ruta = f"temp_img_{idx}_{k}.jpg"
             if descargar(u, ruta, 15 * 1024 * 1024):
@@ -816,12 +759,10 @@ def obtener_medios(idx, etapa, query, n, tema):
         raise RuntimeError("Sin imágenes disponibles: revisa PEXELS_API_KEY")
     return medios
 
-
 # ================================================================
-# RENDER DE VIDEO (una sola función make_frame sobre la línea de escenas)
+# RENDER DE VIDEO
 # ================================================================
 _VIG = {}
-
 
 def vignette(size, base=1.0, fuerza=0.55):
     k = (size, base)
@@ -832,14 +773,11 @@ def vignette(size, base=1.0, fuerza=0.55):
         _VIG[k] = ((1 - fuerza * d ** 2.2) * base).astype(np.float32)[..., None]
     return _VIG[k]
 
-
 def grade(img, etapa):
-    """Look unificado de canal: desaturado, contrastado, sombras frías."""
     img = ImageEnhance.Color(img).enhance(0.82)
     img = ImageEnhance.Contrast(img).enhance({"climax": 1.3, "apertura": 1.1}.get(etapa, 1.15))
     img = ImageEnhance.Brightness(img).enhance({"apertura": 0.8, "climax": 0.95}.get(etapa, 0.88))
     return Image.blend(img, Image.new("RGB", img.size, (8, 24, 40)), 0.10)
-
 
 class RenderEscenas:
     def __init__(self, escenas, size, total):
@@ -903,7 +841,6 @@ class RenderEscenas:
             fr = (fr.astype(np.float32) * f).astype(np.uint8)
         return fr
 
-
 def construir_escenas(segs):
     esc = []
     for s in segs:
@@ -914,7 +851,6 @@ def construir_escenas(segs):
                         "etapa": s["etapa"], "fade": bool(k == 0 and s.get("cap_ini")), "off": random.random(),
                         "zin": random.random() < 0.6, "ax": random.uniform(-1, 1), "ay": random.uniform(-1, 1)})
     return esc
-
 
 def mezclar_audio(segs, total, fondo, extras=()):
     clips = [AudioFileClip(s["audio"]).set_start(s["inicio"]) for s in segs]
@@ -931,7 +867,6 @@ def mezclar_audio(segs, total, fondo, extras=()):
             print(f"⚠️ Fondo: {e}")
     return CompositeAudioClip(capas).set_duration(total), clips
 
-
 def renderizar(escenas, total, audio, size, salida):
     render = RenderEscenas(escenas, size, total)
     video = VideoClip(render.frame, duration=total).set_audio(audio)
@@ -941,7 +876,6 @@ def renderizar(escenas, total, audio, size, salida):
     render.cerrar()
     video.close()
     return salida
-
 
 # ================================================================
 # MINIATURA
@@ -965,7 +899,6 @@ def obtener_fuente(size):
             continue
     return ImageFont.load_default()
 
-
 def puntuar_miniatura(ruta):
     try:
         a = np.asarray(Image.open(ruta).convert("L").resize((320, 180)), dtype=np.float32)
@@ -973,7 +906,6 @@ def puntuar_miniatura(ruta):
         return a.std() + 0.5 * a[:, w // 2:].std() - 0.3 * a[:, :w // 2].std() - 0.4 * abs(a.mean() - 90)
     except Exception:
         return -999
-
 
 def elegir_base_miniatura(query):
     urls = []
@@ -992,7 +924,6 @@ def elegir_base_miniatura(query):
                 mejor = (sc, ruta)
     return mejor[1]
 
-
 def dividir_lineas(palabras):
     if len(palabras) <= 2:
         return palabras[:]
@@ -1004,7 +935,6 @@ def dividir_lineas(palabras):
             mejor = (m, [a, b])
     return mejor[1]
 
-
 def crear_miniatura(img_path, texto, salida):
     TW, TH = 1280, 720
     try:
@@ -1013,7 +943,6 @@ def crear_miniatura(img_path, texto, salida):
         img = ImageEnhance.Contrast(img).enhance(1.25)
         img = ImageEnhance.Color(img).enhance(1.2)
         img = ImageEnhance.Sharpness(img).enhance(1.6)
-        # degradado oscuro a la izquierda (legibilidad sin cuadro) + viñeta
         grad = Image.new("L", (TW, TH), 0)
         gd = ImageDraw.Draw(grad)
         for x in range(TW):
@@ -1021,7 +950,6 @@ def crear_miniatura(img_path, texto, salida):
         img = Image.composite(Image.new("RGB", (TW, TH), (0, 0, 0)), img, grad)
         arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.45)
         img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
-
         lineas = dividir_lineas(texto.upper().split()[:4])
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         for size in range(280, 60, -6):
@@ -1047,7 +975,7 @@ def crear_miniatura(img_path, texto, salida):
             color = acento if (i == len(pos) - 1) else (255, 255, 255)
             draw.text((x, yy), l, font=font, fill=color + (255,), stroke_width=borde, stroke_fill=(0, 0, 0, 255))
         rgb = img.convert("RGB")
-        for q in (92, 87, 82, 76, 70):  # YouTube limita miniaturas a 2 MB
+        for q in (92, 87, 82, 76, 70):
             rgb.save(salida, "JPEG", quality=q, optimize=True)
             if os.path.getsize(salida) < 1_900_000:
                 break
@@ -1057,7 +985,6 @@ def crear_miniatura(img_path, texto, salida):
         print(f"❌ Error miniatura: {e}")
         traceback.print_exc()
         return False
-
 
 # ================================================================
 # SEO: descripción, tags, subtítulos
@@ -1070,21 +997,19 @@ def construir_tags(plan, tema, sugerencias):
         extra = [x.strip() for x in extra.split(",")]
     finales, total = [], 0
     for t in tema["keywords"] + list(extra) + sugerencias + base:
-        t = re.sub(r"[<>]", "", str(t)).strip().lower()
+        t = re.sub(r"[<>]", " ", str(t)).strip().lower()
         costo = len(t) + 1 + (2 if " " in t else 0)
         if 2 <= len(t) <= 40 and t not in finales and total + costo <= 480:
             finales.append(t)
             total += costo
     return finales
 
-
 def construir_hashtags(tema):
     hs = ["#RelatosDeTerror", "#Terror", "#Paranormal"] + tema.get("hashtags", [])[:2] + ["#Mexico"]
-    return " ".join(hs[:6])  # YouTube muestra los 3 primeros sobre el título
-
+    return " ".join(hs[:6])
 
 def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
-    gancho = plan.get("descripcion_gancho", "").strip() or plan["gancho"]
+    gancho = plan.get("descripcion_gancho", " ").strip() or plan["gancho"]
     if "relato de terror" not in gancho.lower()[:220]:
         gancho = "Relato de terror: " + gancho
     capitulos = "\n".join(f"{ts} {t}" for ts, t in caps_ts)
@@ -1094,7 +1019,7 @@ def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
         f"🔔 Suscríbete para un relato nuevo cada semana: {CANAL_LINK}?sub_confirmation=1",
         f"⏰ CAPÍTULOS\n{capitulos}",
         f"📖 SOBRE ESTE RELATO\n{plan.get('resumen','')}",
-        (f"🔎 Temas relacionados: {rel}" if rel else ""),
+        (f"🔎 Temas relacionados: {rel}" if rel else " "),
         f"📱 Facebook: {FACEBOOK_LINK}",
         hashtags,
     ]
@@ -1102,7 +1027,6 @@ def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
     if ACTIVAR_DISCLOSURE_IA:
         desc = desc.replace(f"\n\n{hashtags}", DISCLOSURE_TEXT + f"\n\n{hashtags}")
     return desc[:4900]
-
 
 def generar_srt(segs, ruta):
     def ts(x):
@@ -1123,7 +1047,6 @@ def generar_srt(segs, ruta):
         f.write("\n".join(lineas))
     return ruta
 
-
 # ================================================================
 # PUBLICACIÓN
 # ================================================================
@@ -1143,7 +1066,6 @@ def deberia_publicar(estado):
         pass
     return True
 
-
 def proximo_slot():
     ahora = datetime.now(TZ)
     slot = ahora.replace(hour=HORA_PICO, minute=0, second=0, microsecond=0)
@@ -1151,35 +1073,48 @@ def proximo_slot():
         slot += timedelta(days=1)
     return slot
 
-
 def utc_iso(dt):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-
+# ✅ CORRECCIÓN: Subida robusta con reintentos ante errores de red/SSL
 def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
     status = {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
     if publish_at:
         status.update({"privacyStatus": "private", "publishAt": publish_at})
+    
     body = {"snippet": {"title": titulo[:100], "description": descripcion[:5000], "tags": tags,
                         "categoryId": "24", "defaultLanguage": "es", "defaultAudioLanguage": "es"},
             "status": status}
-    media = MediaFileUpload(ruta, chunksize=8 * 1024 * 1024, resumable=True, mimetype="video/mp4")
+    
+    # Chunksize reducido a 4MB para mayor estabilidad en redes inestables
+    media = MediaFileUpload(ruta, chunksize=4 * 1024 * 1024, resumable=True, mimetype="video/mp4")
     req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    
     resp, reintentos = None, 0
     while resp is None:
         try:
             st, resp = req.next_chunk()
             if st:
-                print(f"   ⬆️ {int(st.progress() * 100)}%")
-        except HttpError as e:
-            if e.resp.status in (500, 502, 503, 504) and reintentos < 8:
+                print(f"   ⬆️ {int(st.progress() * 100)}% ")
+        except (HttpError, ssl.SSLError, ConnectionError, socket.timeout, OSError) as e:
+            es_reintento = False
+            if isinstance(e, HttpError) and e.resp.status in (429, 500, 502, 503, 504):
+                es_reintento = True
+            elif isinstance(e, (ssl.SSLError, ConnectionError, socket.timeout, OSError)):
+                es_reintento = True
+            
+            if es_reintento and reintentos < 8:
                 reintentos += 1
-                time.sleep(2 ** reintentos)
+                espera = 2 ** reintentos
+                print(f"⚠️ Error de red/SSL en la subida (intento {reintentos}/8). Reintentando en {espera}s...")
+                time.sleep(espera)
                 continue
+            
+            print(f"❌ Error fatal en la subida: {e}")
             raise
+            
     print(f"✅ Video subido: https://youtu.be/{resp['id']}" + (f" (programado {publish_at})" if publish_at else ""))
     return resp["id"]
-
 
 def extras_post_subida(youtube, vid, miniatura, srt, comentario):
     if miniatura and os.path.exists(miniatura):
@@ -1199,18 +1134,17 @@ def extras_post_subida(youtube, vid, miniatura, srt, comentario):
     if PLAYLIST_ID:
         try:
             youtube.playlistItems().insert(part="snippet", body={"snippet": {"playlistId": PLAYLIST_ID,
-                                           "resourceId": {"kind": "youtube#video", "videoId": vid}}}).execute()
+                                         "resourceId": {"kind": "youtube#video", "videoId": vid}}}).execute()
             print("✅ Añadido a playlist")
         except Exception as e:
             print(f"⚠️ Playlist: {e}")
     if comentario:
         try:
             youtube.commentThreads().insert(part="snippet", body={"snippet": {"videoId": vid, "topLevelComment": {
-                "snippet": {"textOriginal": comentario}}}}).execute()
+                                "snippet": {"textOriginal": comentario}}}}).execute()
             print("✅ Comentario publicado (fíjalo a mano en Studio)")
         except Exception as e:
             print(f"⚠️ Comentario: {e}\n   Texto sugerido para fijar: {comentario}")
-
 
 # ================================================================
 # SHORT EMBUDO
@@ -1237,7 +1171,6 @@ def crear_short(segs, plan, fondo, salida="short_final.mp4"):
     renderizar(escenas, total, audio, (1080, 1920), salida)
     return salida
 
-
 # ================================================================
 # MÚSICA DE FONDO
 # ================================================================
@@ -1248,7 +1181,6 @@ def buscar_archivo(nombre):
         if nombre in files:
             return os.path.join(root, nombre)
     return None
-
 
 def seleccionar_fondo(estado):
     ultimos = estado["ultimos_fondos"]
@@ -1263,7 +1195,6 @@ def seleccionar_fondo(estado):
     print("⚠️ Sin música de fondo")
     return None
 
-
 # ================================================================
 # LIMPIEZA Y VALIDACIONES
 # ================================================================
@@ -1274,7 +1205,6 @@ def limpiar_temporales():
                 os.remove(f)
             except OSError:
                 pass
-
 
 def verificar_envs():
     faltan = [v for v in ("DEEPSEEK_API_KEY", "PEXELS_API_KEY", "YOUTUBE_USER_TOKEN") if not os.getenv(v)]
@@ -1287,7 +1217,6 @@ def verificar_envs():
         print(f"❌ PEXELS_API_KEY inválida ({r.status_code})")
         sys.exit(1)
 
-
 # ================================================================
 # MAIN
 # ================================================================
@@ -1299,12 +1228,12 @@ def main():
         print("⚡ FORCE_PUBLISH activo")
     elif not deberia_publicar(estado):
         sys.exit(0)
-
+    
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v3")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v3 (CORREGIDO)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
-
+    
     youtube = crear_cliente_youtube()
     actualizar_rendimiento(youtube, estado)
     tema = elegir_tema(estado, youtube)
@@ -1313,7 +1242,7 @@ def main():
                                      sugerencias_youtube("relato de terror " + tema["keywords"][0])))[:10]
     print(f"🔎 Sugerencias YouTube: {sugerencias[:5]}")
     fondo = seleccionar_fondo(estado)
-
+    
     # ---- Plan + título
     titulos_previos = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})["titulos"][-20:]
     plan = titulo = None
@@ -1333,21 +1262,24 @@ def main():
     if not plan:
         print("❌ No se pudo generar un plan válido.")
         sys.exit(1)
+        
     try:
         anio = int(plan.get("anio_suceso"))
     except (TypeError, ValueError):
         anio = None
     print(f"🔥 Título: {titulo}")
-
+    
     # ---- Relato
     capitulos_txt = generar_capitulos(plan, tema, contexto, estado_mx)
     n_caps = len(capitulos_txt)
     segs = crear_segmentos(capitulos_txt)
     print(f"🧩 {len(segs)} segmentos, {sum(len(c.split()) for c in capitulos_txt)} palabras")
-
+    
     # ---- Voz + expansión si hace falta
     segs = sintetizar(segs)
     total = construir_timeline(segs)
+    
+    # ✅ CORRECCIÓN: Bucle de expansión con tope máximo
     intentos = 0
     while total < DURACION_MINIMA_SEGUNDOS and intentos < MAX_INTENTOS_EXPANSION:
         print(f"⚠️ {total/60:.1f} min < mínimo. Expandiendo ({intentos+1})...")
@@ -1359,21 +1291,38 @@ def main():
                   for k, p in enumerate(dividir_en_segmentos(extra))]
         segs += sintetizar(nuevos)
         total = construir_timeline(segs)
-    if total < DURACION_MINIMA_SEGUNDOS:
-        print("❌ Duración insuficiente. Abortando.")
-        sys.exit(1)
+        
+        if total > DURACION_MAXIMA_SEGUNDOS:
+            print(f"⚠️ Duración {total/60:.1f} min excede el máximo. Deteniendo expansión.")
+            break
+
+    # ✅ CORRECCIÓN: Truncado limpio si se pasa del máximo
+    if total > DURACION_MAXIMA_SEGUNDOS:
+        print(f"⚠️ Ajustando duración final a {DURACION_MAXIMA_SEGUNDOS/60:.1f} min...")
+        segs_truncados = []
+        tiempo_acumulado = 0
+        for s in segs:
+            if tiempo_acumulado + s["dur"] <= DURACION_MAXIMA_SEGUNDOS:
+                segs_truncados.append(s)
+                tiempo_acumulado += s["dur"]
+            else:
+                break
+        segs = segs_truncados
+        total = construir_timeline(segs)
+        print(f"✅ Duración ajustada a {total/60:.1f} min")
+
     outro = [{"cap": n_caps - 1, "texto": random.choice(OUTROS), "cap_ini": False, "etapa": "resolucion", "id": "outro", "outro": True}]
     segs += sintetizar(outro)
     total = construir_timeline(segs)
     print(f"⏱️ Duración: {total/60:.1f} min")
-
+    
     # ---- Escenas (Pexels)
     consultas = planificar_consultas(segs, tema, anio)
     for i, s in enumerate(segs):
         n = max(1, round(s["dur"] / SEG_ESCENA))
         print(f"🖼️ {i+1}/{len(segs)} [{s['etapa']}] '{consultas[i]}' x{n}")
         s["medios"] = obtener_medios(i, s["etapa"], consultas[i], n, tema)
-
+        
     # ---- Capítulos con timestamps REALES
     caps_ts = []
     for c in range(n_caps):
@@ -1382,29 +1331,30 @@ def main():
         if primero:
             caps_ts.append((fmt_ts(primero["inicio"]), nombre))
     caps_ts[0] = ("00:00", caps_ts[0][1])
-
+    
     hashtags = construir_hashtags(tema)
     descripcion = construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags)
     tags = construir_tags(plan, tema, sugerencias)
     srt = generar_srt(segs, "subtitulos.srt")
-
+    
     # ---- Miniatura
     portada = elegir_texto_portada(plan.get("palabras_portada"), titulo)
     base = elegir_base_miniatura(re.sub(r"[^a-zA-Z ]", " ", str(plan.get("miniatura_escena", "dark hallway door"))) or "dark hallway door")
     miniatura = "miniatura.jpg" if crear_miniatura(base, portada, "miniatura.jpg") else None
-
+    
     # ---- Render y subida
     escenas = construir_escenas(segs)
     audio, _ = mezclar_audio(segs, total, fondo)
     print("🎬 Renderizando video largo...")
     renderizar(escenas, total, audio, (W, H), "video_final.mp4")
-
+    
     slot = proximo_slot() if PROGRAMAR_PICO else None
     print(f"🕖 Programación: {slot:%Y-%m-%d %H:%M} CDMX" if slot else "🕖 Publicación inmediata")
+    
     vid = subir_video(youtube, "video_final.mp4", titulo, descripcion, tags, utc_iso(slot) if slot else None)
     comentario = str(plan.get("pregunta_comentario") or "¿Tú qué habrías hecho? Te leo 👇")
     extras_post_subida(youtube, vid, miniatura, srt, comentario)
-
+    
     if GENERAR_SHORT:
         try:
             print("📱 Creando Short embudo...")
@@ -1417,7 +1367,7 @@ def main():
         except Exception as e:
             print(f"⚠️ Short falló (el video largo ya está subido): {e}")
             traceback.print_exc()
-
+            
     # ---- Estado
     ahora = datetime.now(TZ).isoformat()
     guardar_titulo_largo(titulo)
@@ -1428,9 +1378,9 @@ def main():
     estado["ultima_publicacion"] = ahora
     estado["ultima_publicacion_exitosa"] = datetime.now(TZ).date().isoformat()
     guardar_json(MUSICA_ESTADO_FILE, estado)
+    
     limpiar_temporales()
     print("🎉 Proceso completado.")
-
 
 if __name__ == "__main__":
     try:
