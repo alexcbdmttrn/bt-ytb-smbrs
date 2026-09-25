@@ -535,10 +535,11 @@ Devuelve SOLO el texto del capítulo."""
         print(f"   ✅ Capítulo {i+1}/{len(caps)}: {len(texto.split())} palabras")
     return textos
 
+# ✅ CORRECCIÓN DE SINTAXIS AQUÍ:
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Relato de terror en primera persona: "{titulo}".
 Final actual:
-"""{texto_actual[-500:]}"""
+"{texto_actual[-500:]}"
 Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
 Devuelve SOLO el texto."""
     for _ in range(2):
