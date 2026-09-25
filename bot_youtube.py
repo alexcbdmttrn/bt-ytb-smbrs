@@ -460,7 +460,7 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato de ficción narrado en primera persona (~8-10 minutos, {NUM_CAPITULOS} capítulos).
+Diseña el PLAN de un relato de ficción narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
@@ -479,8 +479,9 @@ Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
     plan = parsear_json(txt)
+    # ✅ CORRECCIÓN: Validar dinámicamente según NUM_CAPITULOS
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
-            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= 5
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
             and plan.get("gancho") and plan.get("palabras_portada")):
         raise ValueError("plan incompleto")
     return plan
@@ -494,7 +495,7 @@ def limpiar_texto_narracion(t):
     return t
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
-    caps = plan["capitulos"][:NUM_CAPITULOS + 1]
+    caps = plan["capitulos"][:NUM_CAPITULOS]
     indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos = []
     for i, cap in enumerate(caps):
