@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Cold Hollow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-09-24",
+  "ultima_publicacion_exitosa": "2026-09-25",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-09-24T23:55:53.366896-06:00",
+  "ultima_publicacion": "2026-09-25T22:35:37.907628-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -34,11 +34,18 @@
       "titulo": "El archivo OCULTO en la deep web sabía mi nombre | Relato de Terror",
       "tema": "deep_web",
       "fecha": "2026-09-24T23:55:53.366896-06:00"
+    },
+    {
+      "id": "twrfVcu-bLw",
+      "titulo": "El número desconocido me llamó 7 noches al SÓTANO | Relato de Terror",
+      "tema": "llamada_misteriosa",
+      "fecha": "2026-09-25T22:35:37.907628-06:00"
     }
   ],
   "temas_recientes": [
     "ia_maldita",
     "creepypasta",
-    "deep_web"
+    "deep_web",
+    "llamada_misteriosa"
   ]
 }
