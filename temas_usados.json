@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "glitch_realidad",
-      "lugar": "escuela",
-      "contexto": "glitch"
-    },
-    {
       "tipo": "ia_prediccion",
       "lugar": "laboratorio",
       "contexto": "IA"
@@ -34,6 +29,11 @@
       "tipo": "ia_prediccion",
       "lugar": "computadora antigua",
       "contexto": "IA"
+    },
+    {
+      "tipo": "skinwalker",
+      "lugar": "carretera solitaria",
+      "contexto": "skinwalker"
     }
   ]
 }
