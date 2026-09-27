@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "glitch_realidad",
-      "lugar": "trabajo",
-      "contexto": "glitch"
-    },
-    {
-      "tipo": "glitch_realidad",
       "lugar": "calle familiar",
       "contexto": "glitch"
     },
@@ -34,6 +29,11 @@
       "tipo": "glitch_realidad",
       "lugar": "calle familiar",
       "contexto": "glitch"
+    },
+    {
+      "tipo": "experiencia_cercana_muerte",
+      "lugar": "carretera",
+      "contexto": "muerte"
     }
   ]
 }
