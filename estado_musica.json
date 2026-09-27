@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
     "The Deep Rot.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-09-25",
+  "ultima_publicacion_exitosa": "2026-09-27",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-09-25T22:35:37.907628-06:00",
+  "ultima_publicacion": "2026-09-27T02:03:05.026979-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -40,12 +40,19 @@
       "titulo": "El número desconocido me llamó 7 noches al SÓTANO | Relato de Terror",
       "tema": "llamada_misteriosa",
       "fecha": "2026-09-25T22:35:37.907628-06:00"
+    },
+    {
+      "id": "0Cpsfq5tqMM",
+      "titulo": "El espejo de la subasta en Colima me susurra a las 3:33 AM | Relato de Terror",
+      "tema": "objeto_maldito",
+      "fecha": "2026-09-27T02:03:05.026979-06:00"
     }
   ],
   "temas_recientes": [
     "ia_maldita",
     "creepypasta",
     "deep_web",
-    "llamada_misteriosa"
+    "llamada_misteriosa",
+    "objeto_maldito"
   ]
 }
