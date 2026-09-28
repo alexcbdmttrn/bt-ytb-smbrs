@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Cold Hollow.mp3",
-    "Sunken Dread.mp3"
+    "Sunken Dread.mp3",
+    "Ash and Marrow.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-09-27",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-09-27T02:03:05.026979-06:00",
+  "ultima_publicacion": "2026-09-27T22:53:30.851413-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -46,6 +46,12 @@
       "titulo": "El espejo de la subasta en Colima me susurra a las 3:33 AM | Relato de Terror",
       "tema": "objeto_maldito",
       "fecha": "2026-09-27T02:03:05.026979-06:00"
+    },
+    {
+      "id": "8m_Y0rHwvNo",
+      "titulo": "La IA en Tamaulipas supo lo que hice a las 3 AM | Relato de Terror",
+      "tema": "ia_maldita",
+      "fecha": "2026-09-27T22:53:30.851413-06:00"
     }
   ],
   "temas_recientes": [
@@ -53,6 +59,7 @@
     "creepypasta",
     "deep_web",
     "llamada_misteriosa",
-    "objeto_maldito"
+    "objeto_maldito",
+    "ia_maldita"
   ]
 }
