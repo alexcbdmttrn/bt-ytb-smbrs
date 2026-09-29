@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Cold Hollow.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
-    "Ash and Marrow.mp3"
+    "Ash and Marrow.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-09-27",
+  "ultima_publicacion_exitosa": "2026-09-28",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-09-27T22:53:30.851413-06:00",
+  "ultima_publicacion": "2026-09-28T19:50:17.242544-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -52,14 +52,20 @@
       "titulo": "La IA en Tamaulipas supo lo que hice a las 3 AM | Relato de Terror",
       "tema": "ia_maldita",
       "fecha": "2026-09-27T22:53:30.851413-06:00"
+    },
+    {
+      "id": "aiEJAgv2rzM",
+      "titulo": "Si ves una gasolinera abierta a las 3 AM en Zacatecas, NO pares",
+      "tema": "carretera",
+      "fecha": "2026-09-28T19:50:17.242544-06:00"
     }
   ],
   "temas_recientes": [
-    "ia_maldita",
     "creepypasta",
     "deep_web",
     "llamada_misteriosa",
     "objeto_maldito",
-    "ia_maldita"
+    "ia_maldita",
+    "carretera"
   ]
 }
