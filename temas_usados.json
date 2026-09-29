@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "ia_prediccion",
-      "lugar": "celular en la noche",
-      "contexto": "IA"
-    },
-    {
-      "tipo": "ia_prediccion",
       "lugar": "computadora antigua",
       "contexto": "IA"
     },
@@ -34,6 +29,11 @@
       "tipo": "experiencia_cercana_muerte",
       "lugar": "accidente",
       "contexto": "muerte"
+    },
+    {
+      "tipo": "glitch_realidad",
+      "lugar": "calle familiar",
+      "contexto": "glitch"
     }
   ]
 }
