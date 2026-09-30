@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Sunken Dread.mp3",
     "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Ash and Marrow.mp3",
     "Sunless Vault.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-09-29",
+  "ultima_publicacion_exitosa": "2026-09-30",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-09-29T16:16:00.616043-06:00",
+  "ultima_publicacion": "2026-09-30T13:12:05.283584-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -64,14 +64,20 @@
       "titulo": "La voz de mi mamá me siguió 4 noches en la carretera | Relato de Terror",
       "tema": "skinwalker",
       "fecha": "2026-09-29T16:16:00.616043-06:00"
+    },
+    {
+      "id": "caEDwB1xys8",
+      "titulo": "Si encuentras un ritual en una cueva, NO lo termines | Relato de Terror",
+      "tema": "ritual",
+      "fecha": "2026-09-30T13:12:05.283584-06:00"
     }
   ],
   "temas_recientes": [
-    "deep_web",
     "llamada_misteriosa",
     "objeto_maldito",
     "ia_maldita",
     "carretera",
-    "skinwalker"
+    "skinwalker",
+    "ritual"
   ]
 }
