@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "experiencia_cercana_muerte",
-      "lugar": "carretera",
-      "contexto": "muerte"
-    },
-    {
-      "tipo": "experiencia_cercana_muerte",
       "lugar": "accidente",
       "contexto": "muerte"
     },
@@ -34,6 +29,11 @@
       "tipo": "ia_prediccion",
       "lugar": "cuarto oscuro",
       "contexto": "IA"
+    },
+    {
+      "tipo": "glitch_realidad",
+      "lugar": "casa propia",
+      "contexto": "glitch"
     }
   ]
 }
