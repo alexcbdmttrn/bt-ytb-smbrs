@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-01",
+  "ultima_publicacion_exitosa": "2026-10-02",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-01T18:01:11.780526-06:00",
+  "ultima_publicacion": "2026-10-02T17:52:04.131858-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -76,14 +76,20 @@
       "titulo": "Trabajé de velador y la cámara 4 vio lo que no estaba | Relato de Terror",
       "tema": "velador",
       "fecha": "2026-10-01T18:01:11.780526-06:00"
+    },
+    {
+      "id": "1vePLa3tgIM",
+      "titulo": "Trabajé 7 noches de guardia y el paciente de la 3 seguía ahí después de morir",
+      "tema": "hospital",
+      "fecha": "2026-10-02T17:52:04.131858-06:00"
     }
   ],
   "temas_recientes": [
-    "objeto_maldito",
     "ia_maldita",
     "carretera",
     "skinwalker",
     "ritual",
-    "velador"
+    "velador",
+    "hospital"
   ]
 }
