@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Black Maw.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-02",
+  "ultima_publicacion_exitosa": "2026-10-03",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-02T17:52:04.131858-06:00",
+  "ultima_publicacion": "2026-10-03T17:00:44.094852-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -82,14 +82,20 @@
       "titulo": "Trabajé 7 noches de guardia y el paciente de la 3 seguía ahí después de morir",
       "tema": "hospital",
       "fecha": "2026-10-02T17:52:04.131858-06:00"
+    },
+    {
+      "id": "yJ9bRgL76s4",
+      "titulo": "El túnel de Nuevo León me llevó a los Backrooms y no encontré salida",
+      "tema": "backrooms",
+      "fecha": "2026-10-03T17:00:44.094852-06:00"
     }
   ],
   "temas_recientes": [
-    "ia_maldita",
     "carretera",
     "skinwalker",
     "ritual",
     "velador",
-    "hospital"
+    "hospital",
+    "backrooms"
   ]
 }
