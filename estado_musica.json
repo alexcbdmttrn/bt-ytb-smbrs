@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
     "Ash and Marrow.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-03",
+  "ultima_publicacion_exitosa": "2026-10-04",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-03T17:00:44.094852-06:00",
+  "ultima_publicacion": "2026-10-04T23:08:53.734382-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -88,14 +88,20 @@
       "titulo": "El túnel de Nuevo León me llevó a los Backrooms y no encontré salida",
       "tema": "backrooms",
       "fecha": "2026-10-03T17:00:44.094852-06:00"
+    },
+    {
+      "id": "5cncPgKLve8",
+      "titulo": "4 noches escuché mi voz en el desierto de Querétaro y no era yo",
+      "tema": "skinwalker",
+      "fecha": "2026-10-04T23:08:53.734382-06:00"
     }
   ],
   "temas_recientes": [
-    "carretera",
     "skinwalker",
     "ritual",
     "velador",
     "hospital",
-    "backrooms"
+    "backrooms",
+    "skinwalker"
   ]
 }
