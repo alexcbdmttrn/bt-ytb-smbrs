@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "glitch_realidad",
-      "lugar": "casa propia",
-      "contexto": "glitch"
-    },
-    {
       "tipo": "ia_prediccion",
       "lugar": "computadora antigua",
       "contexto": "IA"
@@ -34,6 +29,11 @@
       "tipo": "experiencia_cercana_muerte",
       "lugar": "accidente",
       "contexto": "muerte"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "cuarto oscuro",
+      "contexto": "IA"
     }
   ]
 }
