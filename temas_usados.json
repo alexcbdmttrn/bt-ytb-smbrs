@@ -2,11 +2,6 @@
   "temas": [
     {
       "tipo": "ia_prediccion",
-      "lugar": "computadora antigua",
-      "contexto": "IA"
-    },
-    {
-      "tipo": "ia_prediccion",
       "lugar": "laboratorio",
       "contexto": "IA"
     },
@@ -33,6 +28,11 @@
     {
       "tipo": "ia_prediccion",
       "lugar": "cuarto oscuro",
+      "contexto": "IA"
+    },
+    {
+      "tipo": "ia_prediccion",
+      "lugar": "laboratorio",
       "contexto": "IA"
     }
   ]
