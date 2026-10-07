@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v3 (CORREGIDO)
-Flujo: elegir tema -> plan SEO -> relato por capítulos -> voz -> escenas (Pexels) 
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (SEO EXPERTO + CAPÍTULOS OPTIMIZADOS)
+Flujo: elegir tema -> plan SEO (VidIQ Elite) -> relato por capítulos -> voz -> escenas (Pexels) 
 -> miniatura -> subtítulos SRT -> subida programada con reintentos robustos.
 """
 import asyncio
@@ -50,7 +50,6 @@ DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN") or "{}")
 PLAYLIST_ID = os.getenv("YOUTUBE_PLAYLIST_ID", "")
-FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
 # Archivos de estado
@@ -452,14 +451,14 @@ ESQUEMA_PLAN = """{
  "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
  "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
- "tags": ["15 tags SEO"],
+ "tags": ["15-20 tags SEO estilo VidIQ Premium: 3 amplias (ej: 'relatos de terror'), 5 específicas del tema (ej: 'skinwalker queretaro'), 5 de cola larga (ej: 'historias de terror para no dormir')"],
  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
-    prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
+    prompt = f"""Eres un EXPERTO EN SEO PARA YOUTUBE (Nivel VidIQ Premium) y showrunner de un canal de relatos de terror con millones de vistas.
 Diseña el PLAN de un relato de ficción narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
@@ -479,7 +478,6 @@ Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
     plan = parsear_json(txt)
-    # ✅ CORRECCIÓN: Validar dinámicamente según NUM_CAPITULOS
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
             and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
             and plan.get("gancho") and plan.get("palabras_portada")):
@@ -536,7 +534,6 @@ Devuelve SOLO el texto del capítulo."""
         print(f"   ✅ Capítulo {i+1}/{len(caps)}: {len(texto.split())} palabras")
     return textos
 
-# ✅ CORRECCIÓN DE SINTAXIS AQUÍ:
 def expandir_texto(titulo, texto_actual):
     prompt = f"""Relato de terror en primera persona: "{titulo}".
 Final actual:
@@ -992,18 +989,27 @@ def crear_miniatura(img_path, texto, salida):
 # SEO: descripción, tags, subtítulos
 # ================================================================
 def construir_tags(plan, tema, sugerencias):
-    base = ["relato de terror", "relatos de terror", "historias de terror", "terror", "paranormal", "miedo",
-            "creepypasta", "leyendas urbanas", "terror mexicano", "relatos paranormales", "sombras de medianoche"]
+    # El plan ya debería traer tags optimizados estilo VidIQ, pero aseguramos la estructura
     extra = plan.get("tags", [])
     if isinstance(extra, str):
         extra = [x.strip() for x in extra.split(",")]
+    
+    # Base de alto volumen garantizada
+    base = ["relato de terror", "relatos de terror", "historias de terror", "terror", "paranormal", "miedo",
+            "creepypasta", "leyendas urbanas", "terror mexicano", "relatos paranormales", "sombras de medianoche"]
+    
     finales, total = [], 0
-    for t in tema["keywords"] + list(extra) + sugerencias + base:
+    # Prioridad: Tags del plan (VidIQ) -> Keywords del tema -> Sugerencias -> Base
+    pool_tags = list(extra) + tema["keywords"] + sugerencias + base
+    
+    for t in pool_tags:
         t = re.sub(r"[<>]", " ", str(t)).strip().lower()
         costo = len(t) + 1 + (2 if " " in t else 0)
         if 2 <= len(t) <= 40 and t not in finales and total + costo <= 480:
             finales.append(t)
             total += costo
+        if len(finales) >= 20: # Límite práctico de YouTube
+            break
     return finales
 
 def construir_hashtags(tema):
@@ -1014,15 +1020,17 @@ def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
     gancho = plan.get("descripcion_gancho", " ").strip() or plan["gancho"]
     if "relato de terror" not in gancho.lower()[:220]:
         gancho = "Relato de terror: " + gancho
+    
     capitulos = "\n".join(f"{ts} {t}" for ts, t in caps_ts)
     rel = ", ".join(sugerencias[:5])
+    
+    # ✅ CORRECCIÓN: Se eliminó la línea de Facebook
     partes = [
         gancho,
         f"🔔 Suscríbete para un relato nuevo cada semana: {CANAL_LINK}?sub_confirmation=1",
         f"⏰ CAPÍTULOS\n{capitulos}",
         f"📖 SOBRE ESTE RELATO\n{plan.get('resumen','')}",
         (f"🔎 Temas relacionados: {rel}" if rel else " "),
-        f"📱 Facebook: {FACEBOOK_LINK}",
         hashtags,
     ]
     desc = "\n\n".join(p for p in partes if p)
@@ -1078,7 +1086,6 @@ def proximo_slot():
 def utc_iso(dt):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-# ✅ CORRECCIÓN: Subida robusta con reintentos ante errores de red/SSL
 def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
     status = {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
     if publish_at:
@@ -1088,8 +1095,7 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
                         "categoryId": "24", "defaultLanguage": "es", "defaultAudioLanguage": "es"},
             "status": status}
     
-    # Chunksize reducido a 4MB para mayor estabilidad en redes inestables
-    media = MediaFileUpload(ruta, chunksize=4 * 1024 * 1024, resumable=True, mimetype="video/mp4")
+    media = MediaFileUpload(ruta, chunksize=8 * 1024 * 1024, resumable=True, mimetype="video/mp4")
     req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     
     resp, reintentos = None, 0
@@ -1098,21 +1104,11 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
             st, resp = req.next_chunk()
             if st:
                 print(f"   ⬆️ {int(st.progress() * 100)}% ")
-        except (HttpError, ssl.SSLError, ConnectionError, socket.timeout, OSError) as e:
-            es_reintento = False
-            if isinstance(e, HttpError) and e.resp.status in (429, 500, 502, 503, 504):
-                es_reintento = True
-            elif isinstance(e, (ssl.SSLError, ConnectionError, socket.timeout, OSError)):
-                es_reintento = True
-            
-            if es_reintento and reintentos < 8:
+        except HttpError as e:
+            if e.resp.status in (500, 502, 503, 504) and reintentos < 8:
                 reintentos += 1
-                espera = 2 ** reintentos
-                print(f"⚠️ Error de red/SSL en la subida (intento {reintentos}/8). Reintentando en {espera}s...")
-                time.sleep(espera)
+                time.sleep(2 ** reintentos)
                 continue
-            
-            print(f"❌ Error fatal en la subida: {e}")
             raise
             
     print(f"✅ Video subido: https://youtu.be/{resp['id']}" + (f" (programado {publish_at})" if publish_at else ""))
@@ -1232,7 +1228,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v3 (CORREGIDO)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (SEO EXPERTO + CAPÍTULOS OPTIMIZADOS)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
@@ -1281,7 +1277,6 @@ def main():
     segs = sintetizar(segs)
     total = construir_timeline(segs)
     
-    # ✅ CORRECCIÓN: Bucle de expansión con tope máximo
     intentos = 0
     while total < DURACION_MINIMA_SEGUNDOS and intentos < MAX_INTENTOS_EXPANSION:
         print(f"⚠️ {total/60:.1f} min < mínimo. Expandiendo ({intentos+1})...")
@@ -1298,7 +1293,6 @@ def main():
             print(f"⚠️ Duración {total/60:.1f} min excede el máximo. Deteniendo expansión.")
             break
 
-    # ✅ CORRECCIÓN: Truncado limpio si se pasa del máximo
     if total > DURACION_MAXIMA_SEGUNDOS:
         print(f"⚠️ Ajustando duración final a {DURACION_MAXIMA_SEGUNDOS/60:.1f} min...")
         segs_truncados = []
@@ -1325,13 +1319,17 @@ def main():
         print(f"🖼️ {i+1}/{len(segs)} [{s['etapa']}] '{consultas[i]}' x{n}")
         s["medios"] = obtener_medios(i, s["etapa"], consultas[i], n, tema)
         
-    # ---- Capítulos con timestamps REALES
+    # ✅ CORRECCIÓN: Capítulos distribuidos proporcionalmente a lo largo de la duración TOTAL del video
     caps_ts = []
     for c in range(n_caps):
-        primero = next((s for s in segs if s["cap"] == c), None)
+        # Calcular el tiempo objetivo proporcional para este capítulo
+        target_time = int((c / n_caps) * total)
+        # Encontrar el segmento cuyo inicio esté más cerca de este tiempo objetivo
+        closest_seg = min(segs, key=lambda s: abs(s["inicio"] - target_time))
         nombre = str(plan["capitulos"][c].get("titulo", f"Parte {c+1}"))[:50] if c < len(plan["capitulos"]) else f"Parte {c+1}"
-        if primero:
-            caps_ts.append((fmt_ts(primero["inicio"]), nombre))
+        caps_ts.append((fmt_ts(closest_seg["inicio"]), nombre))
+    
+    # Asegurar que el primer capítulo sea exactamente 00:00
     caps_ts[0] = ("00:00", caps_ts[0][1])
     
     hashtags = construir_hashtags(tema)
