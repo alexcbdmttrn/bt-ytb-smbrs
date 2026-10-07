@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Ash and Marrow.mp3",
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "Black Maw.mp3",
     "Sunken Dread.mp3",
-    "The Deep Rot.mp3"
+    "The Deep Rot.mp3",
+    "Hollow Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-05",
+  "ultima_publicacion_exitosa": "2026-10-07",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-05T23:57:01.317033-06:00",
+  "ultima_publicacion": "2026-10-07T14:00:43.932010-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -100,14 +100,20 @@
       "titulo": "Si ves un círculo de sal en un cementerio, NO lo pises | Relato de Terror",
       "tema": "ritual",
       "fecha": "2026-10-05T23:57:01.317033-06:00"
+    },
+    {
+      "id": "Xi7LMRx9sdg",
+      "titulo": "Vi al Nahual del río a las 3 AM en Baja California | Relato de Terror",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-10-07T14:00:43.932010-06:00"
     }
   ],
   "temas_recientes": [
-    "ritual",
     "velador",
     "hospital",
     "backrooms",
     "skinwalker",
-    "ritual"
+    "ritual",
+    "leyenda_mexicana"
   ]
 }
