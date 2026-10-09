@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Ash and Marrow.mp3",
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "Sunken Dread.mp3",
     "The Deep Rot.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "Cold Hollow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-07",
+  "ultima_publicacion_exitosa": "2026-10-09",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-07T14:00:43.932010-06:00",
+  "ultima_publicacion": "2026-10-09T17:09:46.289899-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -106,14 +106,20 @@
       "titulo": "Vi al Nahual del río a las 3 AM en Baja California | Relato de Terror",
       "tema": "leyenda_mexicana",
       "fecha": "2026-10-07T14:00:43.932010-06:00"
+    },
+    {
+      "id": "4WwY21XJBVg",
+      "titulo": "No contestes si te llaman a las 10:17 desde un número oculto | Relato de Terror",
+      "tema": "llamada_misteriosa",
+      "fecha": "2026-10-09T17:09:46.289899-06:00"
     }
   ],
   "temas_recientes": [
-    "velador",
     "hospital",
     "backrooms",
     "skinwalker",
     "ritual",
-    "leyenda_mexicana"
+    "leyenda_mexicana",
+    "llamada_misteriosa"
   ]
 }
