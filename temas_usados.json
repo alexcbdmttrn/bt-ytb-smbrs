@@ -1,11 +1,6 @@
 {
   "temas": [
     {
-      "tipo": "experiencia_cercana_muerte",
-      "lugar": "accidente",
-      "contexto": "muerte"
-    },
-    {
       "tipo": "ia_prediccion",
       "lugar": "cuarto oscuro",
       "contexto": "IA"
@@ -34,6 +29,11 @@
       "tipo": "experiencia_cercana_muerte",
       "lugar": "quirófano",
       "contexto": "muerte"
+    },
+    {
+      "tipo": "skinwalker",
+      "lugar": "montaña aislada",
+      "contexto": "skinwalker"
     }
   ]
 }
