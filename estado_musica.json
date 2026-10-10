@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "The Deep Rot.mp3",
     "Hollow Marrow.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-09",
+  "ultima_publicacion_exitosa": "2026-10-10",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-09T17:09:46.289899-06:00",
+  "ultima_publicacion": "2026-10-10T17:33:22.401276-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -112,14 +112,20 @@
       "titulo": "No contestes si te llaman a las 10:17 desde un número oculto | Relato de Terror",
       "tema": "llamada_misteriosa",
       "fecha": "2026-10-09T17:09:46.289899-06:00"
+    },
+    {
+      "id": "e6Jt3gOWyr4",
+      "titulo": "Si compras un santito en el tianguis, NUNCA lo dejes solo de noche",
+      "tema": "objeto_maldito",
+      "fecha": "2026-10-10T17:33:22.401276-06:00"
     }
   ],
   "temas_recientes": [
-    "hospital",
     "backrooms",
     "skinwalker",
     "ritual",
     "leyenda_mexicana",
-    "llamada_misteriosa"
+    "llamada_misteriosa",
+    "objeto_maldito"
   ]
 }
