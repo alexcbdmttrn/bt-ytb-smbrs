@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "The Deep Rot.mp3",
     "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Black Maw.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-10",
+  "ultima_publicacion_exitosa": "2026-10-11",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-10T17:33:22.401276-06:00",
+  "ultima_publicacion": "2026-10-11T17:44:00.870252-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -118,14 +118,20 @@
       "titulo": "Si compras un santito en el tianguis, NUNCA lo dejes solo de noche",
       "tema": "objeto_maldito",
       "fecha": "2026-10-10T17:33:22.401276-06:00"
+    },
+    {
+      "id": "Fo9MN8egDbs",
+      "titulo": "4 noches de velador en Hidalgo y la cámara 3 no dejaba de verlo",
+      "tema": "velador",
+      "fecha": "2026-10-11T17:44:00.870252-06:00"
     }
   ],
   "temas_recientes": [
-    "backrooms",
     "skinwalker",
     "ritual",
     "leyenda_mexicana",
     "llamada_misteriosa",
-    "objeto_maldito"
+    "objeto_maldito",
+    "velador"
   ]
 }
