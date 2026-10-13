@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
     "Black Maw.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Ash and Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-11",
+  "ultima_publicacion_exitosa": "2026-10-13",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-11T17:44:00.870252-06:00",
+  "ultima_publicacion": "2026-10-13T10:05:28.445476-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -124,14 +124,20 @@
       "titulo": "4 noches de velador en Hidalgo y la cámara 3 no dejaba de verlo",
       "tema": "velador",
       "fecha": "2026-10-11T17:44:00.870252-06:00"
+    },
+    {
+      "id": "nMQZU2anKjY",
+      "titulo": "Toqué la puerta del sótano en Durango y algo tocó de vuelta | Relato de Terror",
+      "tema": "ritual",
+      "fecha": "2026-10-13T10:05:28.445476-06:00"
     }
   ],
   "temas_recientes": [
-    "skinwalker",
     "ritual",
     "leyenda_mexicana",
     "llamada_misteriosa",
     "objeto_maldito",
-    "velador"
+    "velador",
+    "ritual"
   ]
 }
