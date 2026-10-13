@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v4 (AUDIO ROBUSTO + SEO ÉLITE + MINIATURAS NEURO)
+Flujo: elegir tema -> plan SEO -> relato -> voz (con reintentos) -> escenas -> miniatura -> subida.
+"""
 import asyncio
 from datetime import datetime, timedelta
 import json
@@ -229,7 +234,7 @@ def calcular_puntuacion_viralidad(tema):
     }
 
 # ================================================================
-#  OPTIMIZADOR DE PALABRAS CLAVE SEMÁNTICO
+# 🧠 OPTIMIZADOR DE PALABRAS CLAVE SEMÁNTICO
 # ================================================================
 def generar_cluster_keywords(tema_principal):
     clusters = {
@@ -398,7 +403,7 @@ def crear_miniatura_elite_neuro(img_path, texto, tema_viral, output_path):
             
             print(f"✅ Miniatura ÉLITE creada: {output_path}")
             print(f"   📝 Texto: '{texto_final}'")
-            print(f"    Color: {color_scheme['acento']}")
+            print(f"   🎨 Color: {color_scheme['acento']}")
             print(f"   🎯 Contraste: {color_scheme['contraste_minimo']}:1")
             return True
             
@@ -409,13 +414,9 @@ def crear_miniatura_elite_neuro(img_path, texto, tema_viral, output_path):
         return False
 
 # ================================================================
-# 🎯 GENERADOR DE TÍTULOS VIRALES CON HASHTAGS (ESTILO EJEMPLOS)
+# 🎯 GENERADOR DE TÍTULOS VIRALES CON HASHTAGS
 # ================================================================
 def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=None):
-    """
-    Genera títulos virales CON HASHTAGS al final (estilo ejemplos del usuario)
-    Ej: "El repartidor que entró en una dimensión desconocida 🌀 #paranormal #glitch #misterio"
-    """
     categorias = list(FORMULAS_TITULOS_ELITE.keys())
     
     if tema_viral in ["ia_prediccion", "glitch_realidad"]:
@@ -428,7 +429,6 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
     formulas = FORMULAS_TITULOS_ELITE[categoria_principal]
     formula = random.choice(formulas)
     
-    # Variables dinámicas
     horas = ["3:33 AM", "2:00 AM", "4:44 AM", "medianoche", "3:00 AM"]
     numeros = ["3", "7", "13", "47", "9", "666"]
     segundos = ["47", "23", "66", "13", "99"]
@@ -438,7 +438,6 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
     titulo = titulo.replace("{numero}", random.choice(numeros))
     titulo = titulo.replace("{segundos}", random.choice(segundos))
     
-    # Capitalizar palabras de poder
     palabras = titulo.split()
     palabras_clave = ["PROHIBIDO", "ILEGAL", "NADIE", "SECRETO", "ALERTA", "PELIGRO", "REAL", "VERDAD"]
     for j, palabra in enumerate(palabras):
@@ -446,22 +445,13 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
             palabras[j] = palabra.upper()
     titulo = " ".join(palabras)
     
-    # ✅ AGREGAR EMOJIS ESTRATÉGICOS
     emojis_map = {
-        "backrooms": "🌀",
-        "skinwalker": "👁️",
-        "ia_prediccion": "🤖",
-        "glitch_realidad": "⚡",
-        "experiencia_cercana_muerte": "💀",
-        "ritual_tiktok": "🔮",
-        "numero_maldito": "📞",
-        "deep_web": "💻",
-        "creepypasta": "👻",
-        "objeto_maldito": "🪞"
+        "backrooms": "🌀", "skinwalker": "👁️", "ia_prediccion": "🤖", "glitch_realidad": "⚡",
+        "experiencia_cercana_muerte": "💀", "ritual_tiktok": "🔮", "numero_maldito": "📞",
+        "deep_web": "💻", "creepypasta": "👻", "objeto_maldito": "🪞"
     }
     emoji_principal = emojis_map.get(tema_viral, "😱")
     
-    # ✅ AGREGAR HASHTAGS AL FINAL (3-4 hashtags relevantes)
     hashtags = []
     hashtags.append(f"#{tema_viral.capitalize()}")
     
@@ -476,13 +466,10 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
     hashtags.append("#Misterio")
     
     hashtags_str = " " + " ".join(hashtags)
+    titulo_con_emoji = f"{titulo} {emoji_principal}{hashtags_str}"
     
-    # Agregar emoji al título
-    titulo_con_emoji = titulo + " " + emoji_principal + hashtags_str
-    
-    # Ajustar longitud máxima (YouTube Shorts permite hasta 100 chars en título)
     if len(titulo_con_emoji) > 100:
-        titulo_con_emoji = titulo[:60] + " " + emoji_principal + hashtags_str
+        titulo_con_emoji = f"{titulo[:60]} {emoji_principal}{hashtags_str}"
         if len(titulo_con_emoji) > 100:
             titulo_con_emoji = titulo_con_emoji[:97] + "..."
     
@@ -490,35 +477,28 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
 
 def calcular_score_titulo(titulo):
     score = 50
-    
     if 55 <= len(titulo) <= 100:
         score += 15
     elif 40 <= len(titulo) <= 110:
         score += 8
     
-    palabras_poder = ["PROHIBIDO", "SECRETO", "PELIGRO", "REAL", "VERDAD", "NADIE", "NUNCA"]
-    if any(p in titulo.upper() for p in palabras_poder):
+    if any(p in titulo.upper() for p in ["PROHIBIDO", "SECRETO", "PELIGRO", "REAL", "VERDAD", "NADIE", "NUNCA"]):
         score += 12
-    
     if any(c.isdigit() for c in titulo):
         score += 8
-    
     if "?" in titulo:
         score += 10
-    
     if any(ord(c) > 127743 for c in titulo):
         score += 5
-    
     if sum(1 for c in titulo if c.isupper()) > 3:
         score += 5
-    
     if "#" in titulo:
         score += 5
     
     return min(score, 100)
 
 # ================================================================
-#  ANALYTICS ÉLITE (Predicción y Optimización)
+# 🧠 ANALYTICS ÉLITE (Predicción y Optimización)
 # ================================================================
 def cargar_analytics_elite():
     try:
@@ -539,7 +519,6 @@ def guardar_analytics_elite(analytics):
 
 def predecir_rendimiento(tema, titulo, hora_publicacion):
     analytics = cargar_analytics_elite()
-    
     score_tema = next((t["ctr_potencial"] for t in TEMAS_VIRALES_2024 if t["tema"] == tema), 7.0)
     score_titulo = calcular_score_titulo(titulo)
     
@@ -558,7 +537,7 @@ def predecir_rendimiento(tema, titulo, hora_publicacion):
     }
 
 # ================================================================
-#  VALIDAR PEXELS API KEY
+# ✅ VALIDAR PEXELS API KEY
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
@@ -589,7 +568,7 @@ def deberia_publicar_ahora(estado):
     if estado.get("fecha") != fecha_hoy:
         estado["fecha"] = fecha_hoy
         estado["publicaciones_hoy"] = 0
-        print(f"📅 Nuevo día. Contador reiniciado.")
+        print("📅 Nuevo día. Contador reiniciado.")
 
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
     if publicadas_hoy >= MAX_SHORTS_DIA:
@@ -690,7 +669,7 @@ def actualizar_epoca(anio):
     except Exception:
         ANIO_SUCESO = None
     EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f" Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
+    print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # VOCES NEURALES PREMIUM (OPTIMIZADAS PARA RETENCIÓN)
@@ -842,7 +821,6 @@ def crear_miniatura_viral(img_path, texto, output_path):
                 img = img.convert('RGB')
             
             img = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
-            
             img = ImageEnhance.Contrast(img).enhance(1.3)
             img = ImageEnhance.Sharpness(img).enhance(1.5)
             
@@ -954,7 +932,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
             return True
             
     except Exception as e:
-        print(f" Error creando miniatura viral: {e}")
+        print(f"❌ Error creando miniatura viral: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -1028,16 +1006,16 @@ def generar_historia_completa():
     prompt = f"""Eres un CURADOR DE RELATOS PARANORMALES REALES de internet, especializado en SEO para YouTube Shorts.
 
 🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
- CONTEXTO: {contexto}
+📍 CONTEXTO: {contexto}
 🔑 KEYWORDS PRIMARIAS: {', '.join(keywords)}
 📝 KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
 📊 BUSQUEDAS/MES: {tema_viral['busquedas']:,}
- CTR POTENCIAL: {tema_viral['ctr_potencial']}%
-️ RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
-️ DURACIÓN ÓPTIMA: {tema_viral['duracion_optima']} segundos
+🎯 CTR POTENCIAL: {tema_viral['ctr_potencial']}%
+⏱️ RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
+⏱️ DURACIÓN ÓPTIMA: {tema_viral['duracion_optima']} segundos
 📊 SCORE VIRALIDAD: {score_viralidad['score']:.1f}/100 ({score_viralidad['categoria']})
 
- REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
+📚 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
 {outliers_texto}
 
 📊 ANÁLISIS DE COMPETENCIA:
@@ -1066,7 +1044,7 @@ FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
 ❌ PROHIBIDO empezar con "Intenté" a menos que la fórmula lo exija explícitamente. Varía al máximo.
 ❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
 
- PALABRAS DE PORTADA (máx 2 palabras)
+🎯 PALABRAS DE PORTADA (máx 2 palabras)
 🎯 DESCRIPCIÓN SEO
 🎯 TAGS (10-15)
 🎯 AÑO DEL SUCESO
@@ -1107,7 +1085,7 @@ Devuelve ESTRICTAMENTE este JSON:
 
     for intento in range(6):
         try:
-            print(f" Intento {intento+1}/6 generando historia viral...")
+            print(f"🔄 Intento {intento+1}/6 generando historia viral...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
@@ -1490,7 +1468,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
                 else:
                     print("⚠️ No se encontraron fotos.")
             else:
-                print(f"️ Error Pexels: {r.status_code}")
+                print(f"⚠️ Error Pexels: {r.status_code}")
                 if r.status_code == 401:
                     print("❌ API key inválida.")
                     break
@@ -1550,24 +1528,40 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# GENERAR AUDIO
+# 🎙️ GENERAR AUDIO ROBUSTO CON REINTENTOS
 # ================================================================
-def generar_audio(texto, index):
+def generar_audio(texto, index, max_intentos=3):
     global CONFIG_VOZ_ACTUAL
     texto_limpio = limpiar_caracteres_para_tts(limpiar_texto_para_audio(texto))
-    if not texto_limpio:
+    if not texto_limpio or len(texto_limpio.strip()) < 5:
+        print(f"⚠️ Texto inválido para audio en segmento {index}.")
         return None
+    
     filename = f"audio_short_{index}.mp3"
-    async def _generar(v, r, p):
-        communicate = edge_tts.Communicate(texto_limpio, v, rate=r, pitch=p)
-        await communicate.save(filename)
-    for voz_config in [CONFIG_VOZ_ACTUAL] + VOCES_DISPONIBLES:
-        try:
-            asyncio.run(_generar(voz_config["voz"], voz_config["velocidad"], voz_config["tono"]))
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                return filename
-        except Exception:
-            pass
+    voces_a_probar = [CONFIG_VOZ_ACTUAL] + [v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]]
+    
+    for intento in range(max_intentos):
+        for voz_config in voces_a_probar:
+            voz = voz_config["voz"]
+            rate = voz_config["velocidad"]
+            pitch = voz_config["tono"]
+            
+            async def _generar():
+                communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
+                await communicate.save(filename)
+            
+            try:
+                asyncio.run(_generar())
+                if os.path.exists(filename) and os.path.getsize(filename) > 500:
+                    if voz != CONFIG_VOZ_ACTUAL["voz"]:
+                        print(f"🔄 Cambiando a voz de respaldo: {voz}")
+                        CONFIG_VOZ_ACTUAL = voz_config
+                    return filename
+            except Exception as e:
+                print(f"⚠️ Fallo TTS (intento {intento+1}, voz {voz}): {e}")
+                time.sleep(2)
+                
+    print(f"❌ No se pudo generar audio para el segmento {index} tras {max_intentos} intentos.")
     return None
 
 def generar_audio_cta_final():
@@ -1596,7 +1590,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
         etapa = etapas[idx] if idx < len(etapas) else "lugar_destino"
         ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ESTADO_HISTORIA_SHORTS
         print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
-        print(f"      Ubicación: {ubic_escena}")
+        print(f"     📍 Ubicación: {ubic_escena}")
 
         query = generar_query_cinematografico(seg, etapa, ubic_escena, tema_viral, idx, total_seg)
         print(f"    🎥 Query cinematográfico: {query[:100]}...")
@@ -1665,7 +1659,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             audio_clip = AudioFileClip(recurso["audio_path"])
             clips_audio.append(audio_clip)
         except Exception as e:
-            print(f"️ Error cargando audio {i}: {e}")
+            print(f"⚠️ Error cargando audio {i}: {e}")
             continue
 
         try:
@@ -1757,7 +1751,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
             print("🎵 Audio de fondo mezclado al 8%")
         except Exception as e:
-            print(f"️ Error en audio de fondo: {e}")
+            print(f"⚠️ Error en audio de fondo: {e}")
             audio_final = audio_narracion
 
     video = video.set_audio(audio_final)
@@ -1821,7 +1815,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
     except Exception as e:
-        print(f" Error autenticando con YouTube: {e}")
+        print(f"❌ Error autenticando con YouTube: {e}")
         sys.exit(1)
 
     if isinstance(etiquetas, str):
@@ -1940,8 +1934,8 @@ def limpiar_temporales_shorts():
 # MAIN
 # ================================================================
 def main():
-    print(" Iniciando Bot de SHORTS VIRAL 2024-2025 (NIVEL ÉLITE MUNDIAL)")
-    print(f" {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("🚀 Iniciando Bot de SHORTS VIRAL 2024-2025 (NIVEL ÉLITE MUNDIAL)")
+    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} ({CONFIG_VOZ_ACTUAL['estilo']})")
 
     if not YOUTUBE_USER_TOKEN:
@@ -1990,7 +1984,7 @@ def main():
     print(f"\n📊 RESUMEN SEO ÉLITE:")
     print(f"   🔥 Título VIRAL: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
-    print(f"    Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
+    print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
     print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw['tags']}")
@@ -2094,7 +2088,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f" Error fatal: {e}")
+        print(f"❌ Error fatal: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
