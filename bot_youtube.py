@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (SEO EXPERTO + CAPÍTULOS OPTIMIZADOS + SUBIDA BLINDADA)
-Flujo: elegir tema -> plan SEO (VidIQ Elite) -> relato por capítulos -> voz -> escenas (Pexels) 
--> miniatura -> subtítulos SRT -> subida programada con reintentos robustos ante fallos de red.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4.1 (CORRECCIÓN DE TEMA REPETIDO + SUBIDA BLINDADA)
 """
 import asyncio
 import bisect
@@ -52,16 +50,14 @@ YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN") or "{}")
 PLAYLIST_ID = os.getenv("YOUTUBE_PLAYLIST_ID", "")
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
 
-# Archivos de estado
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-# ✅ CORRECCIONES DE DURACIÓN Y ESTRUCTURA
-DURACION_MINIMA_SEGUNDOS = 480   # 8 minutos mínimo
-DURACION_MAXIMA_SEGUNDOS = 660   # 11 minutos máximo (TOPE DE SEGURIDAD)
-MAX_INTENTOS_EXPANSION = 1       # Reducido de 2 a 1
-NUM_CAPITULOS = 4                # Reducido de 6 a 4 capítulos
+DURACION_MINIMA_SEGUNDOS = 480
+DURACION_MAXIMA_SEGUNDOS = 660
+MAX_INTENTOS_EXPANSION = 1
+NUM_CAPITULOS = 4
 
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
@@ -274,9 +270,26 @@ def guardar_titulo_largo(titulo):
 
 def tema_ya_usado(tema, umbral=0.5):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
-    nuevas = set(re.findall(r"\w+", tema.lower()))
+    
+    # ✅ CORRECCIÓN: Ignorar entradas corruptas o excesivamente largas
+    if isinstance(tema, str) and len(tema) > 80:
+        return False
+        
+    nuevas = set(re.findall(r"\w+", str(tema).lower()))
+    if not nuevas:
+        return False
+        
     for antiguo in data["temas"][-20:]:
+        if isinstance(antiguo, dict):
+            antiguo = antiguo.get("tema", "")
+        
+        # ✅ CORRECCIÓN: Ignorar entradas corruptas en el historial
+        if not isinstance(antiguo, str) or len(antiguo) > 80:
+            continue
+            
         viejas = set(re.findall(r"\w+", antiguo.lower()))
+        if not viejas:
+            continue
         union = nuevas | viejas
         if union and len(nuevas & viejas) / len(union) > umbral:
             print(f"⚠️ Tema similar a: '{antiguo}'")
@@ -285,8 +298,15 @@ def tema_ya_usado(tema, umbral=0.5):
 
 def guardar_tema(tema):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
-    if tema not in data["temas"]:
+    
+    # ✅ CORRECCIÓN: Limpiar entradas corruptas del historial
+    data["temas"] = [t for t in data["temas"] if isinstance(t, str) and len(t) < 80]
+    
+    if isinstance(tema, str) and len(tema) < 80 and tema not in data["temas"]:
         data["temas"].append(tema)
+    
+    # Mantener solo los últimos 20
+    data["temas"] = data["temas"][-20:]
     guardar_json(TEMAS_SHORTS_FILE, data)
 
 # ================================================================
@@ -445,13 +465,13 @@ ESQUEMA_PLAN = """{
  "protagonista": "nombre de pila del narrador",
  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
- "palabras_clave": ["5 keywords SEO en español"],
+ "palabras_clave": ["keyword1", "keyword2", "keyword3"],
  "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que provoquen curiosidad"],
  "miniatura_escena": "4-6 palabras en inglés para buscar la foto de portada en un banco de stock (ej: dark hallway door)",
  "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
  "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
- "tags": ["15-20 tags SEO estilo VidIQ Premium: 3 amplias (ej: 'relatos de terror'), 5 específicas del tema (ej: 'skinwalker queretaro'), 5 de cola larga (ej: 'historias de terror para no dormir')"],
+ "tags": ["15-20 tags SEO estilo VidIQ Premium: 3 amplias, 5 específicas, 5 de cola larga"],
  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
@@ -474,6 +494,10 @@ PROHIBIDO decir que es real, verídico, testimonio, evidencia o que 'las autorid
 Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
 El gancho debe ser lo más perturbador del relato, no una presentación.
 Cada capítulo termina en un cliffhanger, excepto el último.
+
+⚠️ REGLA CRÍTICA PARA "palabras_clave": DEBE ser una lista JSON de 3 a 5 palabras CORTAS (1-2 palabras cada una). 
+Ejemplo: ["carretera", "noche", "taxi", "misterio"]. NUNCA copies la lista de sugerencias de búsqueda aquí.
+
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
@@ -1082,7 +1106,6 @@ def proximo_slot():
 def utc_iso(dt):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-# ✅ CORRECCIÓN CRÍTICA: Subida robusta con reintentos ante errores de red/SSL
 def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
     status = {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
     if publish_at:
@@ -1092,7 +1115,6 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
                         "categoryId": "24", "defaultLanguage": "es", "defaultAudioLanguage": "es"},
             "status": status}
     
-    # Chunksize de 8MB para mayor estabilidad en redes inestables
     media = MediaFileUpload(ruta, chunksize=8 * 1024 * 1024, resumable=True, mimetype="video/mp4")
     req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     
@@ -1237,7 +1259,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (SEO EXPERTO + CAPÍTULOS OPTIMIZADOS)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4.1 (CORRECCIÓN TEMA REPETIDO)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
@@ -1255,8 +1277,18 @@ def main():
     for intento in range(4):
         try:
             plan = generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos)
-            if plan.get("palabras_clave") and tema_ya_usado(" ".join(map(str, plan["palabras_clave"]))):
+            
+            # ✅ CORRECCIÓN CRÍTICA: Sanitización de palabras clave para evitar que el LLM pegue las sugerencias
+            palabras_clave = plan.get("palabras_clave", [])
+            if isinstance(palabras_clave, str):
+                palabras_clave = [kw.strip() for kw in palabras_clave.replace(",", " ").split() if kw.strip()][:5]
+            
+            palabras_clave = [kw for kw in palabras_clave if len(kw) < 30]
+            tema_str = " ".join(palabras_clave) if palabras_clave else tema["tema"]
+            
+            if tema_ya_usado(tema_str):
                 raise ValueError("tema repetido")
+                
             titulo = elegir_titulo(plan["titulos"])
             if not titulo:
                 raise ValueError("sin título válido")
@@ -1369,7 +1401,11 @@ def main():
             
     ahora = datetime.now(TZ).isoformat()
     guardar_titulo_largo(titulo)
-    guardar_tema(" ".join(map(str, plan.get("palabras_clave", []))) or tema["tema"])
+    
+    # ✅ CORRECCIÓN: Guardar tema de forma segura
+    tema_a_guardar = " ".join([kw for kw in plan.get("palabras_clave", []) if len(kw) < 30]) if plan.get("palabras_clave") else tema["tema"]
+    guardar_tema(tema_a_guardar)
+    
     estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"], "fecha": ahora})
     estado["videos"] = estado["videos"][-60:]
     estado["temas_recientes"] = (estado["temas_recientes"] + [tema["tema"]])[-6:]
