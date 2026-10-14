@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Cold Hollow.mp3",
     "Sunless Vault.mp3",
     "Black Maw.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
     "Black Maw.mp3",
-    "Ash and Marrow.mp3"
+    "Ash and Marrow.mp3",
+    "Hollow Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-13",
+  "ultima_publicacion_exitosa": "2026-10-14",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-13T10:05:28.445476-06:00",
+  "ultima_publicacion": "2026-10-14T07:42:07.128762-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -130,14 +130,20 @@
       "titulo": "Toqué la puerta del sótano en Durango y algo tocó de vuelta | Relato de Terror",
       "tema": "ritual",
       "fecha": "2026-10-13T10:05:28.445476-06:00"
+    },
+    {
+      "id": "dgOgV7u4QDo",
+      "titulo": "No abras la puerta 404 de tu oficina si estás solo de noche | Relato de Terror",
+      "tema": "backrooms",
+      "fecha": "2026-10-14T07:42:07.128762-06:00"
     }
   ],
   "temas_recientes": [
-    "ritual",
     "leyenda_mexicana",
     "llamada_misteriosa",
     "objeto_maldito",
     "velador",
-    "ritual"
+    "ritual",
+    "backrooms"
   ]
 }
