@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Black Maw.mp3",
     "Sunken Dread.mp3",
     "The Deep Rot.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "The Deep Rot.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-14",
+  "ultima_publicacion_exitosa": "2026-10-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-14T07:42:07.128762-06:00",
+  "ultima_publicacion": "2026-10-15T08:58:02.329597-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -136,14 +136,20 @@
       "titulo": "No abras la puerta 404 de tu oficina si estás solo de noche | Relato de Terror",
       "tema": "backrooms",
       "fecha": "2026-10-14T07:42:07.128762-06:00"
+    },
+    {
+      "id": "7CjHPaiuBRs",
+      "titulo": "Si la IA de Veracruz te habla a las 3:17 AM, NO respondas | Relato de Terror",
+      "tema": "ia_maldita",
+      "fecha": "2026-10-15T08:58:02.329597-06:00"
     }
   ],
   "temas_recientes": [
-    "leyenda_mexicana",
     "llamada_misteriosa",
     "objeto_maldito",
     "velador",
     "ritual",
-    "backrooms"
+    "backrooms",
+    "ia_maldita"
   ]
 }
