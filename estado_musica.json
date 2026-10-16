@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Black Maw.mp3",
     "Sunken Dread.mp3",
     "The Deep Rot.mp3",
     "Hollow Marrow.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
-    "The Deep Rot.mp3"
+    "The Deep Rot.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-15",
+  "ultima_publicacion_exitosa": "2026-10-16",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-15T08:58:02.329597-06:00",
+  "ultima_publicacion": "2026-10-16T08:50:30.343035-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -142,14 +142,20 @@
       "titulo": "Si la IA de Veracruz te habla a las 3:17 AM, NO respondas | Relato de Terror",
       "tema": "ia_maldita",
       "fecha": "2026-10-15T08:58:02.329597-06:00"
+    },
+    {
+      "id": "lMy3YQlchps",
+      "titulo": "No contestes si ves 667 en tu pantalla a las 2:14 AM | Relato de Terror",
+      "tema": "llamada_misteriosa",
+      "fecha": "2026-10-16T08:50:30.343035-06:00"
     }
   ],
   "temas_recientes": [
-    "llamada_misteriosa",
     "objeto_maldito",
     "velador",
     "ritual",
     "backrooms",
-    "ia_maldita"
+    "ia_maldita",
+    "llamada_misteriosa"
   ]
 }
