@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "The Deep Rot.mp3",
     "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
     "Sunken Dread.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Black Maw.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-17",
+  "ultima_publicacion_exitosa": "2026-10-18",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-17T07:44:05.566649-06:00",
+  "ultima_publicacion": "2026-10-18T11:26:29.489475-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -154,14 +154,20 @@
       "titulo": "Encontré el origen de una creepypasta en mi vecindario | Relato de Terror",
       "tema": "creepypasta",
       "fecha": "2026-10-17T07:44:05.566649-06:00"
+    },
+    {
+      "id": "F_qW7PkXMKY",
+      "titulo": "Si ves una luz roja en el túnel a las 3:17, NO frenes | Relato de Terror",
+      "tema": "carretera",
+      "fecha": "2026-10-18T11:26:29.489475-06:00"
     }
   ],
   "temas_recientes": [
-    "velador",
     "ritual",
     "backrooms",
     "ia_maldita",
     "llamada_misteriosa",
-    "creepypasta"
+    "creepypasta",
+    "carretera"
   ]
 }
