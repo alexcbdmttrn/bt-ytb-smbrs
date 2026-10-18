@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v5.0 (COMPILACIONES 30-60 MIN + RELATOS REALES + TÍTULOS VIDIQ PREMIUM)
-Flujo: elegir tema -> plan SEO -> MÚLTIPLES relatos REALES mejorados con IA (formato compilación Vol. X)
--> voz -> escenas -> miniatura MRBEAST (100px) -> subtítulos SRT -> subida programada.
-MEJORAS: Duración 30-60min, títulos alarmistas (NUNCA/NO/PROHIBIDO), temas mexicanos (coyote/llorona/panteones),
-miniaturas épicas, compilaciones automáticas con numeración de volumen.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (DURACIÓN MÁX 15 MIN)
+Flujo: elegir tema -> plan SEO -> relato por capítulos -> voz -> escenas -> miniatura -> subtítulos SRT -> subida.
 """
 import asyncio
 import bisect
@@ -15,8 +12,6 @@ import re
 import sys
 import time
 import traceback
-import ssl
-import socket
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -45,7 +40,7 @@ except ImportError:
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # =================================================================
-# CONFIGURACIÓN ÉLITE
+# CONFIGURACIÓN
 # =================================================================
 TZ = ZoneInfo("America/Mexico_City")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
@@ -61,11 +56,11 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-# ✅ DURACIÓN ÉLITE: 30-60 minutos (basado en videos virales)
-DURACION_MINIMA_SEGUNDOS = 1800  # 30 minutos
-DURACION_OBJETIVO_SEGUNDOS = 3600  # 60 minutos
-MAX_INTENTOS_EXPANSION = 5
-NUM_RELATOS_COMPILACION = 5  # Número de relatos por compilación
+# ✅ DURACIÓN CONTROLADA: Mínimo 8 min, MÁXIMO 15 min (900 segundos)
+DURACION_MINIMA_SEGUNDOS = 480
+DURACION_MAXIMA_SEGUNDOS = 900  # 15 minutos máximo
+MAX_INTENTOS_EXPANSION = 1
+NUM_CAPITULOS = 4  # 4 capítulos de ~350-400 palabras = ~11-12 min de audio
 
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
@@ -77,12 +72,9 @@ PROGRAMAR_PICO = os.getenv("PROGRAMAR_PICO", "true").lower() == "true"
 HORA_PICO = int(os.getenv("HORA_PICO", "19"))
 INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 ACTIVAR_DISCLOSURE_IA = True
-
-# ✅ CAMBIO CRÍTICO: Ahora son RELATOS REALES mejorados con IA
 DISCLOSURE_TEXT = (
-    "\n\n⚠️ Relato basado en experiencias REALES compartidas en foros y redes sociales, "
-    "narrado y mejorado con inteligencia artificial para mayor impacto. Los nombres y lugares "
-    "pueden haber sido modificados para proteger identidades."
+    "\n\n⚠️ Relato de ficción narrado con inteligencia artificial, inspirado en "
+    "leyendas urbanas, creepypastas y folclor. Personajes y sucesos son ficticios."
 )
 
 VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}
@@ -93,19 +85,6 @@ PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "r
 FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
 SUFIJO_TITULO = " | Relato de Terror"
 
-# ✅ OBTENER NÚMERO DE VOLUMEN AUTOMÁTICO
-def obtener_siguiente_volumen():
-    try:
-        data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
-        volumenes = []
-        for t in data["titulos"]:
-            match = re.search(r"Vol\.?\s*(\d+)", t, re.I)
-            if match:
-                volumenes.append(int(match.group(1)))
-        return max(volumenes, default=0) + 1
-    except:
-        return 1
-
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
@@ -115,73 +94,73 @@ ESTADOS_MEXICO = [
     "Colima", "Durango", "Estado de México", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco",
     "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro",
     "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas",
-    "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas", "Ciudad de México",
+    "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas",
 ]
 
 # =================================================================
-# TEMAS ÉLITE (con nuevos temas mexicanos virales)
+# TEMAS
 # =================================================================
 TEMAS = [
-    {"tema": "backrooms", "seed": "backrooms historia real", "angulo": "Un espacio liminal aparece al cruzar una puerta común; reglas extrañas, imposible salir.",
+    {"tema": "backrooms", "seed": "backrooms historia", "angulo": "Un espacio liminal aparece al cruzar una puerta común; reglas extrañas, imposible salir.",
      "keywords": ["backrooms", "espacios liminales", "dimensión paralela", "atrapado"],
      "contextos": ["hotel abandonado", "centro comercial vacío", "túneles", "edificio de oficinas"],
      "visuales": ["empty office corridor", "yellow wallpaper room", "fluorescent light hallway", "empty parking garage", "abandoned mall interior"],
      "hashtags": ["#Backrooms", "#EspaciosLiminales"]},
-    {"tema": "skinwalker", "seed": "skinwalker relatos reales", "angulo": "Algo imita voces y te sigue por un camino solitario durante varias noches.",
+    {"tema": "skinwalker", "seed": "skinwalker relatos", "angulo": "Algo imita voces y te sigue por un camino solitario durante varias noches.",
      "keywords": ["skinwalker", "criatura", "persecución", "bosque"],
      "contextos": ["carretera solitaria", "bosque profundo", "sierra aislada", "desierto de noche"],
      "visuales": ["dark forest fog", "desert road night", "mountain night", "lonely highway night", "eyes in the dark"],
      "hashtags": ["#Skinwalker", "#CriaturasDeLaNoche"]},
-    {"tema": "coyote_mexicano", "seed": "coyote mexicano terror", "angulo": "Un coyote con ojos brillantes te observa en la carretera; no es un animal normal.",
-     "keywords": ["coyote", "carretera", "animal maldito", "nahual"],
-     "contextos": ["carretera federal", "brecha solitaria", "desierto", "sierra"],
-     "visuales": ["coyote night road", "desert highway night", "animal eyes dark", "mexican desert night"],
-     "hashtags": ["#Coyote", "#LeyendasMexicanas"]},
-    {"tema": "llorona", "seed": "la llorona historia real", "angulo": "Escuchas llantos de mujer cerca del río; la leyenda cobra vida.",
-     "keywords": ["la llorona", "llanto", "río", "mujer fantasma"],
-     "contextos": ["río de noche", "pueblo antiguo", "puente", "barranca"],
-     "visuales": ["woman crying night", "river fog night", "old bridge night", "mexican village night"],
-     "hashtags": ["#LaLlorona", "#LeyendasMexicanas"]},
-    {"tema": "panteon", "seed": "panteon embrujado terror", "angulo": "Trabajas en un panteón y las tumbas no están como las dejaste.",
-     "keywords": ["panteón", "cementerio", "tumbas", "muertos"],
-     "contextos": ["panteón antiguo", "cementerio municipal", "cripta", "mausoleo"],
-     "visuales": ["cemetery night fog", "old tombstones", "graveyard darkness", "mausoleum night"],
-     "hashtags": ["#Panteon", "#TerrorMexicano"]},
-    {"tema": "carretera_maldita", "seed": "carretera maldita mexico terror", "angulo": "Una carretera donde desaparecen personas; algo te observa desde la oscuridad.",
-     "keywords": ["carretera maldita", "desapariciones", "autoestopista fantasma", "curva peligrosa"],
-     "contextos": ["carretera federal", "tramo solitario", "túnel oscuro", "puente abandonado"],
-     "visuales": ["haunted highway mexico", "dark road fog", "abandoned bridge night", "desert highway ghost"],
-     "hashtags": ["#CarreteraMaldita", "#TerrorMexicano"]},
-    {"tema": "ritual", "seed": "ritual prohibido historia real", "angulo": "Un ritual hecho por curiosidad abre algo que no se puede cerrar.",
+    {"tema": "ritual", "seed": "ritual prohibido historia de terror", "angulo": "Un ritual hecho por curiosidad abre algo que no se puede cerrar.",
      "keywords": ["ritual", "invocación", "maldición", "ocultismo"],
      "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas"],
      "visuales": ["candles dark room", "old cemetery night", "abandoned church", "cave darkness", "old book candle"],
      "hashtags": ["#Rituales", "#Ocultismo"]},
-    {"tema": "ia_maldita", "seed": "inteligencia artificial terror historia real", "angulo": "Una IA empieza a predecir cosas íntimas y cada predicción se cumple.",
+    {"tema": "ia_maldita", "seed": "inteligencia artificial terror historia", "angulo": "Una IA empieza a predecir cosas íntimas y cada predicción se cumple.",
      "keywords": ["inteligencia artificial", "predicción", "algoritmo", "tecnología"],
      "contextos": ["oficina de noche", "cuarto de servidores", "universidad", "casa con domótica"],
      "visuales": ["computer screen dark", "server room", "laptop night dark", "glitch screen", "dark office night"],
      "hashtags": ["#IA", "#TerrorTecnologico"]},
-    {"tema": "llamada_misteriosa", "seed": "llamada misteriosa terror real", "angulo": "Un número desconocido llama a la misma hora y sabe cosas que nadie debería saber.",
+    {"tema": "llamada_misteriosa", "seed": "llamada misteriosa terror", "angulo": "Un número desconocido llama a la misma hora y sabe cosas que nadie debería saber.",
      "keywords": ["llamada misteriosa", "teléfono", "número desconocido", "voz"],
      "contextos": ["casa sola", "oficina nocturna", "sótano", "cabina telefónica"],
      "visuales": ["old telephone dark", "phone booth night", "ringing phone dark", "dark basement", "empty office night"],
      "hashtags": ["#LlamadaMisteriosa"]},
-    {"tema": "velador", "seed": "trabajé de velador terror real", "angulo": "Turno nocturno de vigilante; las cámaras muestran algo que no está en el pasillo real.",
+    {"tema": "deep_web", "seed": "deep web terror historia", "angulo": "Un archivo encontrado en foros oscuros parece describir la vida del narrador.",
+     "keywords": ["deep web", "archivos", "foro oscuro", "internet"],
+     "contextos": ["cuarto oscuro", "cibercafé viejo", "sótano", "departamento en la madrugada"],
+     "visuales": ["dark room computer", "monitor glow dark", "bunker corridor", "cables dark", "hooded figure dark"],
+     "hashtags": ["#DeepWeb", "#TerrorDigital"]},
+    {"tema": "creepypasta", "seed": "creepypasta relato", "angulo": "Una leyenda de internet resulta tener un punto de origen físico y cercano.",
+     "keywords": ["creepypasta", "leyenda urbana", "internet", "origen"],
+     "contextos": ["parque abandonado", "calle solitaria", "bosque nocturno", "casa del barrio"],
+     "visuales": ["dark forest night", "abandoned playground", "empty street night", "old house night", "foggy park night"],
+     "hashtags": ["#Creepypasta", "#LeyendasUrbanas"]},
+    {"tema": "objeto_maldito", "seed": "objeto maldito historia", "angulo": "Un objeto comprado barato trae reglas silenciosas y consecuencias cada noche.",
+     "keywords": ["objeto maldito", "antigüedad", "espejo", "muñeca"],
+     "contextos": ["tienda de antigüedades", "mercado de pulgas", "casa heredada", "subasta"],
+     "visuales": ["antique shop", "old doll", "old mirror dark", "antique room dark", "pawn shop night"],
+     "hashtags": ["#ObjetoMaldito"]},
+    {"tema": "velador", "seed": "trabajé de velador terror", "angulo": "Turno nocturno de vigilante; las cámaras muestran algo que no está en el pasillo real.",
      "keywords": ["velador", "turno de noche", "cámaras de seguridad", "trabajo nocturno"],
-     "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento", "condominio"],
+     "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento"],
      "visuales": ["security guard night", "empty factory night", "warehouse dark", "cctv camera", "parking lot night"],
      "hashtags": ["#Velador", "#TurnoDeNoche"]},
-    {"tema": "hospital", "seed": "hospital terror historia real", "angulo": "Guardia nocturna en un hospital donde un paciente ya no debería existir.",
+    {"tema": "hospital", "seed": "hospital terror historia", "angulo": "Guardia nocturna en un hospital donde un paciente ya no debería existir.",
      "keywords": ["hospital", "guardia nocturna", "paciente", "enfermera"],
      "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue"],
      "visuales": ["hospital corridor dark", "abandoned hospital", "empty hospital bed", "wheelchair dark", "operating room old"],
      "hashtags": ["#HospitalEmbrujado"]},
-    {"tema": "trailero", "seed": "trailero mexicano terror carretera", "angulo": "Conduces un tráiler por carreteras solitarias; algo sube a la cabina.",
-     "keywords": ["trailero", "carretera", "transporte", "viaje nocturno"],
-     "contextos": ["carretera federal", "caseta de peaje", "paradero", "descanso en ruta"],
-     "visuales": ["truck night highway", "mexican highway fog", "truck driver night", "rest stop night"],
-     "hashtags": ["#Trailero", "#CarreteraMaldita"]},
+    {"tema": "carretera", "seed": "carretera de noche terror historia", "angulo": "Un viaje nocturno por carretera con un pasajero o una señal que no debieron existir.",
+     "keywords": ["carretera", "viaje nocturno", "taxi", "autoestopista"],
+     "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte"],
+     "visuales": ["highway night fog", "taxi night city", "road tunnel dark", "truck night highway", "gas station night"],
+     "hashtags": ["#CarreteraMaldita"]},
+    {"tema": "leyenda_mexicana", "seed": "leyenda mexicana terror", "angulo": "Una leyenda del pueblo cobra vida en versión contemporánea.",
+     "keywords": ["leyendas mexicanas", "nahual", "la llorona", "pueblo"],
+     "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
+     "visuales": ["old village night", "colonial church night", "dirt road night", "river fog night", "candles altar"],
+     "hashtags": ["#LeyendasMexicanas", "#TerrorMexicano"]},
 ]
 
 ESCENAS_FALLBACK = {
@@ -296,19 +275,9 @@ def guardar_titulo_largo(titulo):
 
 def tema_ya_usado(tema, umbral=0.5):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
-    if isinstance(tema, str) and len(tema) > 80:
-        return False
-    nuevas = set(re.findall(r"\w+", str(tema).lower()))
-    if not nuevas:
-        return False
+    nuevas = set(re.findall(r"\w+", tema.lower()))
     for antiguo in data["temas"][-20:]:
-        if isinstance(antiguo, dict):
-            antiguo = antiguo.get("tema", "")
-        if not isinstance(antiguo, str) or len(antiguo) > 80:
-            continue
         viejas = set(re.findall(r"\w+", antiguo.lower()))
-        if not viejas:
-            continue
         union = nuevas | viejas
         if union and len(nuevas & viejas) / len(union) > umbral:
             print(f"⚠️ Tema similar a: '{antiguo}'")
@@ -317,10 +286,8 @@ def tema_ya_usado(tema, umbral=0.5):
 
 def guardar_tema(tema):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
-    data["temas"] = [t for t in data["temas"] if isinstance(t, str) and len(t) < 80]
-    if isinstance(tema, str) and len(tema) < 80 and tema not in data["temas"]:
+    if tema not in data["temas"]:
         data["temas"].append(tema)
-    data["temas"] = data["temas"][-20:]
     guardar_json(TEMAS_SHORTS_FILE, data)
 
 # =================================================================
@@ -396,19 +363,16 @@ def elegir_tema(estado, youtube):
     return elegido
 
 # =================================================================
-# TÍTULOS ÉLITE (NIVEL VIDIQ PREMIUM - ULTRA ALARMISTAS)
+# TÍTULOS: puntuación CTR + honestidad
 # =================================================================
-GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "2:14", "madrugada", "medianoche",
-           "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si ",
-           "prohibido", "peligro", "advertencia", "alerta", "667", "llamada", "pantalla", "número", "casa", "pesadillas"]
-
+GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "madrugada", "medianoche",
+           "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si "]
 PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidencia", "pruebas", "autoridades",
               "filtrado", "es real", "historia real", "hechos reales"]
-
 GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
 
 def limpiar_titulo(t):
-    t = re.sub(r"\s+", " ", t.strip().strip("""'").rstrip("."))
+    t = re.sub(r"\s+", " ", t.strip().strip("“”'").rstrip("."))
     t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", " ", t, flags=re.I)
     palabras = t.split()
     caps = [w for w in palabras if len(re.sub(r"\W", " ", w)) >= 3 and w.isupper()]
@@ -419,17 +383,17 @@ def limpiar_titulo(t):
 
 def puntuar_titulo(t):
     s, n, tl = 0, len(t), t.lower()
-    if 45 <= n <= 100:
+    if 45 <= n <= 68:
         s += 4
-    elif 30 <= n < 45 or 100 < n <= 120:
+    elif 30 <= n < 45 or 68 < n <= 80:
         s += 2
-    elif n > 130 or n < 25:
+    elif n > 95 or n < 25:
         s -= 6
     if re.search(r"\d", t):
         s += 2
     s += min(3, sum(1 for g in GANCHOS if g in tl))
     caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
-    s += 2 if 1 <= len(caps) <= 3 else (-3 if len(caps) > 3 else 0)
+    s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
     if any(p in tl for p in PROHIBIDAS):
         s -= 8
     if any(tl.startswith(g) for g in GENERICAS):
@@ -453,7 +417,7 @@ def elegir_titulo(candidatos):
     for sc, t in puntuados[:3]:
         print(f"   📝 [{sc:>2}] {t}")
     titulo = puntuados[0][1]
-    if "relato" not in titulo.lower() and len(titulo) + len(SUFIJO_TITULO) <= 100:
+    if "relato" not in titulo.lower() and len(titulo) + len(SUFIJO_TITULO) <= 80:
         titulo += SUFIJO_TITULO
     return titulo[:100]
 
@@ -474,92 +438,122 @@ def elegir_texto_portada(opciones, titulo):
     return mejor[1] if mejor else "NO ENTRES"
 
 # =================================================================
-# GENERAR RELATO INDIVIDUAL
+# HISTORIA: plan SEO + relato por capítulos
 # =================================================================
-ESQUEMA_RELATO = """{
- "titulo": "Título alarmista de 50-80 caracteres (usa NUNCA/NO/PROHIBIDO)",
+ESQUEMA_PLAN = """{
+ "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres, SIN el sufijo 'Relato de Terror'"],
  "anio_suceso": 2014,
- "protagonista": "nombre de pila",
- "gancho": "1-2 frases que abran en medio de lo más inquietante",
- "resumen": "sinopsis de 2-3 oraciones",
- "palabras_clave": ["5 keywords SEO"],
- "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS"],
- "miniatura_escena": "4-6 palabras en inglés para miniatura",
- "texto_completo": "Relato de 400-600 palabras",
- "capitulos": [{"titulo": "2-4 palabras", "resumen": "qué ocurre"}]
+ "protagonista": "nombre de pila del narrador",
+ "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
+ "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
+ "palabras_clave": ["5 keywords SEO en español"],
+ "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que provoquen curiosidad"],
+ "miniatura_escena": "4-6 palabras en inglés para buscar la foto de portada en un banco de stock (ej: dark hallway door)",
+ "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
+ "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
+ "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
+ "tags": ["15 tags SEO"],
+ "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
-def generar_relato_individual(tema, contexto, estado_mx, volumen):
-    prompt = f"""Eres experto en relatos de terror mexicanos virales.
+def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
+    prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
+    sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
+    prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
+Diseña el PLAN de un relato de ficción narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
-LUGAR: {contexto}, {estado_mx}, México
-VOLUMEN: {volumen}
+LUGAR: {contexto}, en {estado_mx}, México
+BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
+{sug}
+TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
+{prev}
+REGLAS DE TÍTULO (clave para CTR):
+45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
+Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
+Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
+PROHIBIDO decir que es real, verídico, testimonio, evidencia o que 'las autoridades ocultan' algo: es ficción.
+Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
+El gancho debe ser lo más perturbador del relato, no una presentación.
+Cada capítulo termina en un cliffhanger, excepto el último.
+Responde SOLO con este JSON:
+{ESQUEMA_PLAN}"""
+    txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
+    plan = parsear_json(txt)
+    if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
+            and plan.get("gancho") and plan.get("palabras_portada")):
+        raise ValueError("plan incompleto")
+    return plan
 
-REGLAS:
-- TÍTULO: 50-80 caracteres, usa NUNCA/NO/PROHIBIDO/ADVERTENCIA
-- Ej: "NUNCA salgas si escuchas ruidos en la cocina", "PROHIBIDO entrar al panteón después de las 3 AM"
-- Longitud: 400-600 palabras
-- Primera persona, tono coloquial mexicano
-- Detalles sensoriales, horas exactas
-- Final abierto e inquietante
+def limpiar_texto_narracion(t):
+    t = re.sub(r"[\U00010000-\U0010ffff]", " ", t)
+    t = re.sub(r"(?im)^\s*(cap[ií]tulo|parte)\s*\d+.\s*$", " ", t)
+    t = re.sub(r"\[[^\]]*\]", " ", t)
+    t = re.sub(r"[*_#>`~]+", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
 
-Devuelve SOLO JSON:
-{ESQUEMA_RELATO}"""
-    
-    txt = llm(prompt, temperature=0.85, max_tokens=1500, json_mode=True)
-    relato = parsear_json(txt)
-    
-    if not (relato.get("titulo") and relato.get("texto_completo")):
-        raise ValueError("Relato incompleto")
-    
-    return relato
-
-# =================================================================
-# GENERAR COMPILACIÓN (MÚLTIPLES RELATOS)
-# =================================================================
-def generar_compilacion_completa(tema, contexto, estado_mx):
-    volumen = obtener_siguiente_volumen()
-    relatos = []
-    
-    print(f"\n📚 Generando COMPILACIÓN Vol. {volumen} ({NUM_RELATOS_COMPILACION} relatos)...")
-    
-    for i in range(NUM_RELATOS_COMPILACION):
-        print(f"\n   📖 Relato {i+1}/{NUM_RELATOS_COMPILACION}...")
-        try:
-            relato = generar_relato_individual(tema, contexto, estado_mx, volumen)
-            relatos.append(relato)
-            print(f"      ✅ {relato['titulo']} ({len(relato['texto_completo'].split())} palabras)")
-        except Exception as e:
-            print(f"      ❌ Error: {e}")
-            if len(relatos) >= 3:
+def generar_capitulos(plan, tema, contexto, estado_mx):
+    caps = plan["capitulos"][:NUM_CAPITULOS]
+    indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
+    textos = []
+    for i, cap in enumerate(caps):
+        previo = textos[-1][-700:] if textos else ""
+        extra = ""
+        if i == 0:
+            extra = f"Empieza EXACTAMENTE con esta frase de gancho: \"{plan['gancho']}\" y luego retrocede para dar contexto sin bajar la tensión."
+        elif i == len(caps) - 1:
+            extra = "Cierra con un final abierto e inquietante que deje una duda, sin explicar todo."
+        else:
+            extra = "Termina con un cliffhanger (algo se revela, alguien aparece, un sonido cambia todo)."
+        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror en primera persona.
+Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
+Ángulo: {tema['angulo']}
+Sinopsis: {plan.get('resumen','')}
+ÍNDICE COMPLETO:
+{indice}
+ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
+{extra}
+{('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
+ESTILO (se leerá en voz alta):
+350-400 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
+Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
+Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
+No menciones que es ficción ni que eres una IA.
+Devuelve SOLO el texto del capítulo."""
+        texto = None
+        for intento in range(3):
+            t = llm(prompt, temperature=0.85, max_tokens=1200)
+            t = limpiar_texto_narracion(t) if t else ""
+            if len(t.split()) >= 280:
+                texto = t
                 break
-    
-    if not relatos:
-        raise RuntimeError("No se pudo generar ningún relato")
-    
-    # Crear título de compilación
-    titulo_compilacion = f"{tema['tema'].upper()} Vol. {volumen} | {len(relatos)} Relatos que te helarán la sangre"
-    
-    # Unir todos los textos
-    texto_completo = "\n\n".join([f"RELATO {i+1}: {r['texto_completo']}" for i, r in enumerate(relatos)])
-    
-    # Keywords combinadas
-    todas_keywords = []
-    for r in relatos:
-        todas_keywords.extend(r.get("palabras_clave", []))
-    keywords_unicas = list(dict.fromkeys(todas_keywords))[:10]
-    
-    return {
-        "titulo": titulo_compilacion,
-        "volumen": volumen,
-        "relatos": relatos,
-        "texto_completo": texto_completo,
-        "palabras_clave": keywords_unicas,
-        "tema": tema["tema"],
-        "contexto": contexto,
-        "estado_mx": estado_mx,
-        "duracion_estimada": len(texto_completo.split()) * 0.5  # segundos aproximados
-    }
+            print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
+        if not texto:
+            raise RuntimeError(f"No se pudo generar el capítulo {i+1}")
+        textos.append(texto)
+        print(f"   ✅ Capítulo {i+1}/{len(caps)}: {len(texto.split())} palabras")
+    return textos
+
+def expandir_texto(titulo, texto_actual):
+    prompt = f"""Relato de terror en primera persona: "{titulo}".
+Final actual:
+\"\"\"
+{texto_actual[-500:]}
+\"\"\"
+Añade 200-300 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
+Devuelve SOLO el texto."""
+    for _ in range(2):
+        t = llm(prompt, temperature=0.8, max_tokens=900)
+        t = limpiar_texto_narracion(t) if t else ""
+        if len(t.split()) > 150:
+            return t
+    return ""
+
+OUTROS = [
+    "Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame en los comentarios: ¿tú qué habrías hecho?",
+    "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete para no perderte la próxima. ¿Tú habrías entrado? Te leo en los comentarios.",
+]
 
 # =================================================================
 # SEGMENTOS, ETAPAS Y ESCENAS
@@ -887,7 +881,7 @@ def renderizar(escenas, total, audio, size, salida):
     return salida
 
 # =================================================================
-# MINIATURA ÉLITE (ESTILO MRBEAST - TEXTO 100px)
+# MINIATURA
 # =================================================================
 def obtener_fuente(size):
     os.makedirs("fonts", exist_ok=True)
@@ -964,7 +958,7 @@ def crear_miniatura(img_path, texto, salida):
         lineas = dividir_lineas(texto.upper().split()[:4])
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
-        for size in range(100, 60, -5):  # ✅ TAMAÑO 100px SOLICITADO
+        for size in range(100, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
             alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
@@ -1112,22 +1106,11 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
             st, resp = req.next_chunk()
             if st:
                 print(f"   ⬆️ {int(st.progress() * 100)}% ")
-        except (HttpError, ssl.SSLEOFError, ConnectionError, socket.timeout, OSError) as e:
-            es_reintento = False
-            if isinstance(e, HttpError) and e.resp.status in (429, 500, 502, 503, 504):
-                es_reintento = True
-            elif isinstance(e, (ssl.SSLEOFError, ConnectionError, socket.timeout, OSError)):
-                es_reintento = True
-            
-            if es_reintento and reintentos < 8:
+        except HttpError as e:
+            if e.resp.status in (500, 502, 503, 504) and reintentos < 8:
                 reintentos += 1
-                espera = 2 ** reintentos
-                print(f"⚠️ Error de red/SSL en la subida (intento {reintentos}/8). Reintentando en {espera}s...")
-                print(f"   Detalle: {type(e).__name__}")
-                time.sleep(espera)
+                time.sleep(2 ** reintentos)
                 continue
-            
-            print(f"❌ Error fatal en la subida tras {reintentos} intentos: {type(e).__name__}: {e}")
             raise
             
     print(f"✅ Video subido: https://youtu.be/{resp['id']}" + (f" (programado {publish_at})" if publish_at else ""))
@@ -1247,7 +1230,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v5.0 (COMPILACIONES 30-60 MIN)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (MÁX 15 MIN)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
@@ -1260,96 +1243,128 @@ def main():
     print(f"🔎 Sugerencias YouTube: {sugerencias[:5]}")
     fondo = seleccionar_fondo(estado)
     
-    # ✅ GENERAR COMPILACIÓN COMPLETA
-    compilacion = generar_compilacion_completa(tema, contexto, estado_mx)
-    titulo = compilacion["titulo"]
-    texto_completo = compilacion["texto_completo"]
+    titulos_previos = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})["titulos"][-20:]
+    plan = titulo = None
+    for intento in range(4):
+        try:
+            plan = generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos)
+            if plan.get("palabras_clave") and tema_ya_usado(" ".join(map(str, plan["palabras_clave"]))):
+                raise ValueError("tema repetido")
+            titulo = elegir_titulo(plan["titulos"])
+            if not titulo:
+                raise ValueError("sin título válido")
+            break
+        except Exception as e:
+            print(f"⚠️ Plan intento {intento+1}/4: {e}")
+            plan = None
+            time.sleep(5)
+    if not plan:
+        print("❌ No se pudo generar un plan válido.")
+        sys.exit(1)
+        
+    try:
+        anio = int(plan.get("anio_suceso"))
+    except (TypeError, ValueError):
+        anio = None
+    print(f"🔥 Título: {titulo}")
     
-    print(f"\n🔥 Título: {titulo}")
-    print(f"⏱️ Duración estimada: {compilacion['duracion_estimada']/60:.1f} min")
+    capitulos_txt = generar_capitulos(plan, tema, contexto, estado_mx)
+    n_caps = len(capitulos_txt)
+    segs = crear_segmentos(capitulos_txt)
+    print(f"🧩 {len(segs)} segmentos, {sum(len(c.split()) for c in capitulos_txt)} palabras")
     
-    # Crear segmentos
-    segs = crear_segmentos([texto_completo])
-    print(f"🧩 {len(segs)} segmentos, {len(texto_completo.split())} palabras totales")
-    
-    # Sintetizar audio
     segs = sintetizar(segs)
     total = construir_timeline(segs)
     
-    # Verificar duración
-    if total < DURACION_MINIMA_SEGUNDOS:
-        print(f"⚠️ Duración {total/60:.1f} min < mínimo {DURACION_MINIMA_SEGUNDOS/60:.0f} min")
-        sys.exit(1)
-    
+    intentos = 0
+    while total < DURACION_MINIMA_SEGUNDOS and intentos < MAX_INTENTOS_EXPANSION:
+        print(f"⚠️ {total/60:.1f} min < mínimo. Expandiendo ({intentos+1})...")
+        extra = expandir_texto(titulo, " ".join(s["texto"] for s in segs))
+        intentos += 1
+        if not extra:
+            break
+        nuevos = [{"cap": n_caps - 1, "texto": p, "cap_ini": False, "etapa": "resolucion", "id": f"x{intentos}_{k}"}
+                  for k, p in enumerate(dividir_en_segmentos(extra))]
+        segs += sintetizar(nuevos)
+        total = construir_timeline(segs)
+        
+        # ✅ CORTE DE SEGURIDAD: No permitir que pase de 15 minutos
+        if total > DURACION_MAXIMA_SEGUNDOS:
+            print(f"⚠️ Duración {total/60:.1f} min excede el máximo de 15 min. Deteniendo expansión.")
+            break
+
+    # ✅ TRUNCADO FINAL: Si por las pausas se pasó de 15 min, recortar al final
+    if total > DURACION_MAXIMA_SEGUNDOS:
+        print(f"⚠️ Ajustando duración final a máx 15 min...")
+        segs_truncados = []
+        tiempo_acumulado = 0
+        for s in segs:
+            if tiempo_acumulado + s["dur"] <= DURACION_MAXIMA_SEGUNDOS:
+                segs_truncados.append(s)
+                tiempo_acumulado += s["dur"]
+            else:
+                break
+        segs = segs_truncados
+        total = construir_timeline(segs)
+        print(f"✅ Duración ajustada a {total/60:.1f} min")
+
+    outro = [{"cap": n_caps - 1, "texto": random.choice(OUTROS), "cap_ini": False, "etapa": "resolucion", "id": "outro", "outro": True}]
+    segs += sintetizar(outro)
+    total = construir_timeline(segs)
     print(f"⏱️ Duración final: {total/60:.1f} min")
     
-    # Escenas Pexels
-    consultas = planificar_consultas(segs, tema, None)
+    consultas = planificar_consultas(segs, tema, anio)
     for i, s in enumerate(segs):
         n = max(1, round(s["dur"] / SEG_ESCENA))
         print(f"🖼️ {i+1}/{len(segs)} [{s['etapa']}] '{consultas[i]}' x{n}")
         s["medios"] = obtener_medios(i, s["etapa"], consultas[i], n, tema)
-    
-    # Capítulos con timestamps
-    caps_ts = [("00:00", f"Vol. {compilacion['volumen']} - {len(compilacion['relatos'])} Relatos")]
-    for i, relato in enumerate(compilacion["relatos"]):
-        caps_ts.append((fmt_ts(total * (i+1) / len(compilacion["relatos"])), relato["titulo"][:40]))
+        
+    caps_ts = []
+    for c in range(n_caps):
+        primero = next((s for s in segs if s["cap"] == c), None)
+        nombre = str(plan["capitulos"][c].get("titulo", f"Parte {c+1}"))[:50] if c < len(plan["capitulos"]) else f"Parte {c+1}"
+        if primero:
+            caps_ts.append((fmt_ts(primero["inicio"]), nombre))
+    caps_ts[0] = ("00:00", caps_ts[0][1])
     
     hashtags = construir_hashtags(tema)
-    descripcion = f"""COMPILACIÓN Vol. {compilacion['volumen']} - {len(compilacion['relatos'])} relatos de terror
-
-{compilacion['relatos'][0]['gancho']}
-
-🔔 Suscríbete: {CANAL_LINK}?sub_confirmation=1
-
-⏰ CAPÍTULOS:
-{chr(10).join(f"{ts} {t}" for ts, t in caps_ts)}
-
-📱 Facebook: {FACEBOOK_LINK}
-
-{hashtags}
-
-{DISCLOSURE_TEXT}"""
-    
-    tags = tema["keywords"] + sugerencias + ["terror mexicano", "relatos de terror", "compilacion terror", f"Vol. {compilacion['volumen']}"]
+    descripcion = construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags)
+    tags = construir_tags(plan, tema, sugerencias)
     srt = generar_srt(segs, "subtitulos.srt")
     
-    # Miniatura
-    portada = f"VOL. {compilacion['volumen']}"
-    base = elegir_base_miniatura(compilacion["relatos"][0].get("miniatura_escena", "dark horror night"))
+    portada = elegir_texto_portada(plan.get("palabras_portada"), titulo)
+    base = elegir_base_miniatura(re.sub(r"[^a-zA-Z ]", " ", str(plan.get("miniatura_escena", "dark hallway door"))) or "dark hallway door")
     miniatura = "miniatura.jpg" if crear_miniatura(base, portada, "miniatura.jpg") else None
     
-    # Render
     escenas = construir_escenas(segs)
     audio, _ = mezclar_audio(segs, total, fondo)
-    print("🎬 Renderizando video...")
+    print("🎬 Renderizando video largo...")
     renderizar(escenas, total, audio, (W, H), "video_final.mp4")
     
-    # Subida
     slot = proximo_slot() if PROGRAMAR_PICO else None
     print(f"🕖 Programación: {slot:%Y-%m-%d %H:%M} CDMX" if slot else "🕖 Publicación inmediata")
     
     vid = subir_video(youtube, "video_final.mp4", titulo, descripcion, tags, utc_iso(slot) if slot else None)
-    comentario = f"¿Cuál relato te dio más miedo? ¿Tú qué habrías hecho? Te leo 👇"
+    comentario = str(plan.get("pregunta_comentario") or "¿Tú qué habrías hecho? Te leo 👇")
     extras_post_subida(youtube, vid, miniatura, srt, comentario)
     
-    # Short embudo
     if GENERAR_SHORT:
         try:
             print("📱 Creando Short embudo...")
-            crear_short(segs, compilacion, fondo)
-            t_short = f"Vol. {compilacion['volumen']}: {compilacion['relatos'][0]['titulo'][:60]} #Shorts"
-            d_short = f"Historia completa 👉 https://youtu.be/{vid}\n\nSuscríbete: {CANAL_LINK}\n\n#Shorts {hashtags}"
+            crear_short(segs, plan, fondo)
+            t_short = str(plan.get("titulo_short") or titulo)[:88] + " #Shorts"
+            d_short = (f"Historia completa 👉 https://youtu.be/{vid}\n\nSuscríbete: {CANAL_LINK}?sub_confirmation=1\n\n"
+                       f"#Shorts {hashtags}" + (DISCLOSURE_TEXT if ACTIVAR_DISCLOSURE_IA else ""))
             slot_s = utc_iso(slot + timedelta(minutes=30)) if slot else None
             subir_video(youtube, "short_final.mp4", t_short, d_short, tags[:15] + ["shorts"], slot_s)
         except Exception as e:
-            print(f"⚠️ Short falló: {e}")
-    
-    # Estado
+            print(f"⚠️ Short falló (el video largo ya está subido): {e}")
+            traceback.print_exc()
+            
     ahora = datetime.now(TZ).isoformat()
     guardar_titulo_largo(titulo)
-    guardar_tema(tema["tema"])
-    estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"], "fecha": ahora, "volumen": compilacion["volumen"]})
+    guardar_tema(" ".join(map(str, plan.get("palabras_clave", []))) or tema["tema"])
+    estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"], "fecha": ahora})
     estado["videos"] = estado["videos"][-60:]
     estado["temas_recientes"] = (estado["temas_recientes"] + [tema["tema"]])[-6:]
     estado["ultima_publicacion"] = ahora
@@ -1357,7 +1372,7 @@ def main():
     guardar_json(MUSICA_ESTADO_FILE, estado)
     
     limpiar_temporales()
-    print("🎉 ¡COMPILACIÓN COMPLETADA! 🎉")
+    print("🎉 Proceso completado.")
 
 if __name__ == "__main__":
     try:
