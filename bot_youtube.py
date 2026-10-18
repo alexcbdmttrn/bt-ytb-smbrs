@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (DURACIÓN MÁX 15 MIN)
-Flujo: elegir tema -> plan SEO -> relato por capítulos -> voz -> escenas -> miniatura -> subtítulos SRT -> subida.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (TESTIMONIOS REALES ADAPTADOS + MINIATURA 115px)
+Flujo: elegir tema -> plan SEO -> relato por capítulos (adaptación inmersiva de testimonios) 
+-> voz -> escenas -> miniatura -> subtítulos SRT -> subida programada.
 """
 import asyncio
 import bisect
@@ -14,7 +15,6 @@ import time
 import traceback
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-
 import edge_tts
 import numpy as np
 import requests
@@ -56,12 +56,9 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-# ✅ DURACIÓN CONTROLADA: Mínimo 8 min, MÁXIMO 15 min (900 segundos)
 DURACION_MINIMA_SEGUNDOS = 480
-DURACION_MAXIMA_SEGUNDOS = 900  # 15 minutos máximo
-MAX_INTENTOS_EXPANSION = 1
-NUM_CAPITULOS = 4  # 4 capítulos de ~350-400 palabras = ~11-12 min de audio
-
+MAX_INTENTOS_EXPANSION = 2
+NUM_CAPITULOS = 6
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
 W, H, FPS = 1920, 1080, 24
@@ -72,9 +69,11 @@ PROGRAMAR_PICO = os.getenv("PROGRAMAR_PICO", "true").lower() == "true"
 HORA_PICO = int(os.getenv("HORA_PICO", "19"))
 INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 ACTIVAR_DISCLOSURE_IA = True
+
+# ✅ TEXTO DE DIVULGACIÓN ACTUALIZADO: Enfoque en testimonios reales adaptados
 DISCLOSURE_TEXT = (
-    "\n\n⚠️ Relato de ficción narrado con inteligencia artificial, inspirado en "
-    "leyendas urbanas, creepypastas y folclor. Personajes y sucesos son ficticios."
+    "\n\n⚠️ Este relato está basado en testimonios reales y experiencias paranormales reportadas por personas, "
+    "adaptado y narrado con inteligencia artificial para maximizar la inmersión y el suspenso."
 )
 
 VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}
@@ -363,7 +362,7 @@ def elegir_tema(estado, youtube):
     return elegido
 
 # =================================================================
-# TÍTULOS: puntuación CTR + honestidad
+# TÍTULOS: puntuación CTR
 # =================================================================
 GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "madrugada", "medianoche",
            "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si "]
@@ -373,7 +372,7 @@ GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el 
 
 def limpiar_titulo(t):
     t = re.sub(r"\s+", " ", t.strip().strip("“”'").rstrip("."))
-    t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", " ", t, flags=re.I)
+    t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", "", t, flags=re.I)
     palabras = t.split()
     caps = [w for w in palabras if len(re.sub(r"\W", " ", w)) >= 3 and w.isupper()]
     if len(caps) > 3:
@@ -459,8 +458,11 @@ ESQUEMA_PLAN = """{
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
-    prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato de ficción narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
+    
+    # ✅ PROMPT MEJORADO: Enfoque en adaptar testimonios reales para máxima inmersión
+    prompt = f"""Eres un narrador experto y showrunner de un canal de terror con millones de vistas. 
+Tu especialidad es tomar TESTIMONIOS REALES y experiencias paranormales reportadas por personas, y adaptarlas, envolverlas y mejorarlas para hacerlas extremadamente inmersivas, atrapantes y escalofriantes para el oyente.
+Diseña el PLAN de un relato narrado en primera persona (~13 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
@@ -471,8 +473,6 @@ REGLAS DE TÍTULO (clave para CTR):
 45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
 Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
 Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
-PROHIBIDO decir que es real, verídico, testimonio, evidencia o que 'las autoridades ocultan' algo: es ficción.
-Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
 El gancho debe ser lo más perturbador del relato, no una presentación.
 Cada capítulo termina en un cliffhanger, excepto el último.
 Responde SOLO con este JSON:
@@ -480,7 +480,7 @@ Responde SOLO con este JSON:
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
     plan = parsear_json(txt)
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
-            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= 5
             and plan.get("gancho") and plan.get("palabras_portada")):
         raise ValueError("plan incompleto")
     return plan
@@ -494,7 +494,7 @@ def limpiar_texto_narracion(t):
     return t
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
-    caps = plan["capitulos"][:NUM_CAPITULOS]
+    caps = plan["capitulos"][:NUM_CAPITULOS + 1]
     indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos = []
     for i, cap in enumerate(caps):
@@ -506,7 +506,9 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
             extra = "Cierra con un final abierto e inquietante que deje una duda, sin explicar todo."
         else:
             extra = "Termina con un cliffhanger (algo se revela, alguien aparece, un sonido cambia todo)."
-        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror en primera persona.
+            
+        # ✅ PROMPT MEJORADO: Enfoque en envolver al oyente con detalles sensoriales de un testimonio real
+        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} adaptando un testimonio real o experiencia paranormal reportada.
 Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
 Ángulo: {tema['angulo']}
 Sinopsis: {plan.get('resumen','')}
@@ -515,11 +517,14 @@ Sinopsis: {plan.get('resumen','')}
 ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 {extra}
 {('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
-ESTILO (se leerá en voz alta):
-350-400 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
-Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
+
+ESTILO (se leerá en voz alta y debe ATRAPAR al oyente):
+400-480 palabras. Español mexicano natural y coloquial. 
+Tu objetivo es envolver al oyente: hazle sentir la tensión, el frío, los sonidos extraños y el silencio incómodo. 
+Usa un tono natural, como si alguien te estuviera contando algo escalofriante que le pasó de verdad. 
+Mezcla frases cortas y secas con otras largas para controlar el ritmo. Detalles sensoriales (sonidos, olores, frío), horas exactas.
 Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
-No menciones que es ficción ni que eres una IA.
+PROHIBIDO romper la cuarta pared: NUNCA menciones que es ficción, que es una historia inventada o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
@@ -536,12 +541,12 @@ Devuelve SOLO el texto del capítulo."""
     return textos
 
 def expandir_texto(titulo, texto_actual):
-    prompt = f"""Relato de terror en primera persona: "{titulo}".
+    prompt = f"""Relato basado en testimonio real: "{titulo}".
 Final actual:
 \"\"\"
 {texto_actual[-500:]}
 \"\"\"
-Añade 200-300 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
+Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono inmersivo, sin resolver todo.
 Devuelve SOLO el texto."""
     for _ in range(2):
         t = llm(prompt, temperature=0.8, max_tokens=900)
@@ -958,7 +963,8 @@ def crear_miniatura(img_path, texto, salida):
         lineas = dividir_lineas(texto.upper().split()[:4])
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
-        for size in range(100, 60, -6):
+        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 115px PARA MAYOR IMPACTO
+        for size in range(115, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
             alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
@@ -1230,7 +1236,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (MÁX 15 MIN)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (TESTIMONIOS REALES ADAPTADOS)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
@@ -1288,26 +1294,10 @@ def main():
         segs += sintetizar(nuevos)
         total = construir_timeline(segs)
         
-        # ✅ CORTE DE SEGURIDAD: No permitir que pase de 15 minutos
-        if total > DURACION_MAXIMA_SEGUNDOS:
-            print(f"⚠️ Duración {total/60:.1f} min excede el máximo de 15 min. Deteniendo expansión.")
-            break
-
-    # ✅ TRUNCADO FINAL: Si por las pausas se pasó de 15 min, recortar al final
-    if total > DURACION_MAXIMA_SEGUNDOS:
-        print(f"⚠️ Ajustando duración final a máx 15 min...")
-        segs_truncados = []
-        tiempo_acumulado = 0
-        for s in segs:
-            if tiempo_acumulado + s["dur"] <= DURACION_MAXIMA_SEGUNDOS:
-                segs_truncados.append(s)
-                tiempo_acumulado += s["dur"]
-            else:
-                break
-        segs = segs_truncados
-        total = construir_timeline(segs)
-        print(f"✅ Duración ajustada a {total/60:.1f} min")
-
+    if total < DURACION_MINIMA_SEGUNDOS:
+        print("❌ Duración insuficiente. Abortando.")
+        sys.exit(1)
+        
     outro = [{"cap": n_caps - 1, "texto": random.choice(OUTROS), "cap_ini": False, "etapa": "resolucion", "id": "outro", "outro": True}]
     segs += sintetizar(outro)
     total = construir_timeline(segs)
