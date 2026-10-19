@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "Cold Hollow.mp3",
     "Sunless Vault.mp3",
     "Black Maw.mp3",
@@ -9,13 +8,14 @@
     "The Deep Rot.mp3",
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-18",
+  "ultima_publicacion_exitosa": "2026-10-19",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-18T11:26:29.489475-06:00",
+  "ultima_publicacion": "2026-10-19T09:53:01.434140-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -160,14 +160,20 @@
       "titulo": "Si ves una luz roja en el túnel a las 3:17, NO frenes | Relato de Terror",
       "tema": "carretera",
       "fecha": "2026-10-18T11:26:29.489475-06:00"
+    },
+    {
+      "id": "vVg0bFkOz9M",
+      "titulo": "Si encuentras tu nombre en la deep web, NO lo leas | Relato de Terror",
+      "tema": "deep_web",
+      "fecha": "2026-10-19T09:53:01.434140-06:00"
     }
   ],
   "temas_recientes": [
-    "ritual",
     "backrooms",
     "ia_maldita",
     "llamada_misteriosa",
     "creepypasta",
-    "carretera"
+    "carretera",
+    "deep_web"
   ]
 }
