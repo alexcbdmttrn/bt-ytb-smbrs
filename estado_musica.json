@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Cold Hollow.mp3",
     "Sunless Vault.mp3",
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
     "Black Maw.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Ash and Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-19",
+  "ultima_publicacion_exitosa": "2026-10-20",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-19T09:53:01.434140-06:00",
+  "ultima_publicacion": "2026-10-20T07:55:45.510933-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -166,14 +166,20 @@
       "titulo": "Si encuentras tu nombre en la deep web, NO lo leas | Relato de Terror",
       "tema": "deep_web",
       "fecha": "2026-10-19T09:53:01.434140-06:00"
+    },
+    {
+      "id": "as04u4S3xdw",
+      "titulo": "Si escuchas un silbido a las 3 AM en Veracruz, NO respondas | Relato de Terror",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-10-20T07:55:45.510933-06:00"
     }
   ],
   "temas_recientes": [
-    "backrooms",
     "ia_maldita",
     "llamada_misteriosa",
     "creepypasta",
     "carretera",
-    "deep_web"
+    "deep_web",
+    "leyenda_mexicana"
   ]
 }
