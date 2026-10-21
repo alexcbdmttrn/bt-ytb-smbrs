@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (TESTIMONIOS REALES ADAPTADOS + MINIATURA 115px)
-Flujo: elegir tema -> plan SEO -> relato por capítulos (adaptación inmersiva de testimonios) 
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (DURACIÓN 10-15 MIN + TESTIMONIOS REALES)
+Flujo: elegir tema -> plan SEO -> relato por capítulos (adaptación inmersiva) 
 -> voz -> escenas -> miniatura -> subtítulos SRT -> subida programada.
 """
 import asyncio
@@ -56,9 +56,12 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-DURACION_MINIMA_SEGUNDOS = 480
-MAX_INTENTOS_EXPANSION = 2
-NUM_CAPITULOS = 6
+# ✅ DURACIÓN CONTROLADA: 10 a 15 minutos máximo (ideal 10-12 min)
+DURACION_MINIMA_SEGUNDOS = 600   # 10 minutos
+DURACION_MAXIMA_SEGUNDOS = 900   # 15 minutos máximo absoluto
+MAX_INTENTOS_EXPANSION = 1       # Máximo 1 intento de expansión para no pasarnos
+NUM_CAPITULOS = 4                # 4 capítulos de ~300-350 palabras = ~10-12 min de audio
+
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
 W, H, FPS = 1920, 1080, 24
@@ -70,7 +73,6 @@ HORA_PICO = int(os.getenv("HORA_PICO", "19"))
 INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 ACTIVAR_DISCLOSURE_IA = True
 
-# ✅ TEXTO DE DIVULGACIÓN ACTUALIZADO: Enfoque en testimonios reales adaptados
 DISCLOSURE_TEXT = (
     "\n\n⚠️ Este relato está basado en testimonios reales y experiencias paranormales reportadas por personas, "
     "adaptado y narrado con inteligencia artificial para maximizar la inmersión y el suspenso."
@@ -459,10 +461,9 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     
-    # ✅ PROMPT MEJORADO: Enfoque en adaptar testimonios reales para máxima inmersión
     prompt = f"""Eres un narrador experto y showrunner de un canal de terror con millones de vistas. 
 Tu especialidad es tomar TESTIMONIOS REALES y experiencias paranormales reportadas por personas, y adaptarlas, envolverlas y mejorarlas para hacerlas extremadamente inmersivas, atrapantes y escalofriantes para el oyente.
-Diseña el PLAN de un relato narrado en primera persona (~13 minutos, {NUM_CAPITULOS} capítulos).
+Diseña el PLAN de un relato narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
@@ -494,7 +495,7 @@ def limpiar_texto_narracion(t):
     return t
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
-    caps = plan["capitulos"][:NUM_CAPITULOS + 1]
+    caps = plan["capitulos"][:NUM_CAPITULOS]
     indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos = []
     for i, cap in enumerate(caps):
@@ -507,7 +508,6 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
         else:
             extra = "Termina con un cliffhanger (algo se revela, alguien aparece, un sonido cambia todo)."
             
-        # ✅ PROMPT MEJORADO: Enfoque en envolver al oyente con detalles sensoriales de un testimonio real
         prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} adaptando un testimonio real o experiencia paranormal reportada.
 Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
 Ángulo: {tema['angulo']}
@@ -519,7 +519,7 @@ ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 {('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
 
 ESTILO (se leerá en voz alta y debe ATRAPAR al oyente):
-400-480 palabras. Español mexicano natural y coloquial. 
+300-350 palabras. Español mexicano natural y coloquial. 
 Tu objetivo es envolver al oyente: hazle sentir la tensión, el frío, los sonidos extraños y el silencio incómodo. 
 Usa un tono natural, como si alguien te estuviera contando algo escalofriante que le pasó de verdad. 
 Mezcla frases cortas y secas con otras largas para controlar el ritmo. Detalles sensoriales (sonidos, olores, frío), horas exactas.
@@ -530,7 +530,7 @@ Devuelve SOLO el texto del capítulo."""
         for intento in range(3):
             t = llm(prompt, temperature=0.85, max_tokens=1200)
             t = limpiar_texto_narracion(t) if t else ""
-            if len(t.split()) >= 280:
+            if len(t.split()) >= 250:
                 texto = t
                 break
             print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
@@ -544,9 +544,9 @@ def expandir_texto(titulo, texto_actual):
     prompt = f"""Relato basado en testimonio real: "{titulo}".
 Final actual:
 \"\"\"
-{texto_actual[-500:]}
+{texto_actual[-400:]}
 \"\"\"
-Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono inmersivo, sin resolver todo.
+Añade 200-250 palabras que profundicen el desenlace (un giro perturbador más), mismo tono inmersivo, sin resolver todo.
 Devuelve SOLO el texto."""
     for _ in range(2):
         t = llm(prompt, temperature=0.8, max_tokens=900)
@@ -963,8 +963,8 @@ def crear_miniatura(img_path, texto, salida):
         lineas = dividir_lineas(texto.upper().split()[:4])
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
-        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 115px PARA MAYOR IMPACTO
-        for size in range(150, 60, -6):
+        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px PARA MAYOR IMPACTO (sin desbordarse)
+        for size in range(130, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
             alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
@@ -1236,7 +1236,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (TESTIMONIOS REALES ADAPTADOS)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (DURACIÓN 10-15 MIN)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
