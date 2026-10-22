@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (TESTIMONIOS REALES + 10-12 MIN)
-Flujo: elegir tema -> plan SEO -> relato por capítulos (adaptación inmersiva de testimonios reales) 
--> voz -> escenas -> miniatura -> subtítulos SRT -> subida programada.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (TESTIMONIOS REALES + REINTENTOS SSL + MINIATURA 150px)
+Flujo: elegir tema -> plan SEO -> relato por capítulos -> voz -> escenas -> miniatura -> subtítulos SRT -> subida con reintentos.
 """
 import asyncio
 import bisect
@@ -13,6 +12,8 @@ import re
 import sys
 import time
 import traceback
+import ssl
+import socket
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import edge_tts
@@ -56,12 +57,9 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-# ✅ DURACIÓN CONTROLADA: 4 capítulos de ~300-350 palabras = 10-12 minutos ideales
-DURACION_MINIMA_SEGUNDOS = 600   # 10 minutos
-DURACION_MAXIMA_SEGUNDOS = 900   # 15 minutos máximo absoluto
-MAX_INTENTOS_EXPANSION = 1       # Máximo 1 intento de expansión para no pasarnos
-NUM_CAPITULOS = 4                # 4 capítulos
-
+DURACION_MINIMA_SEGUNDOS = 480
+MAX_INTENTOS_EXPANSION = 2
+NUM_CAPITULOS = 6
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
 W, H, FPS = 1920, 1080, 24
@@ -73,10 +71,8 @@ HORA_PICO = int(os.getenv("HORA_PICO", "19"))
 INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 ACTIVAR_DISCLOSURE_IA = True
 
-# ✅ TEXTO DE DIVULGACIÓN ACTUALIZADO: Enfoque en testimonios reales adaptados
 DISCLOSURE_TEXT = (
-    "\n\n⚠️ Este relato está basado en testimonios reales y experiencias paranormales reportadas por personas, "
-    "adaptado y narrado con inteligencia artificial para maximizar la inmersión y el suspenso."
+    "\n\n⚠️ Relato basado en experiencias REALES compartidas en foros, narrado y mejorado con IA para maximizar la inmersión."
 )
 
 VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}
@@ -86,7 +82,6 @@ PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75,
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
 FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
 SUFIJO_TITULO = " | Relato de Terror"
-
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
@@ -277,8 +272,12 @@ def guardar_titulo_largo(titulo):
 
 def tema_ya_usado(tema, umbral=0.5):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
-    nuevas = set(re.findall(r"\w+", tema.lower()))
+    nuevas = set(re.findall(r"\w+", str(tema).lower()))
     for antiguo in data["temas"][-20:]:
+        if isinstance(antiguo, dict):
+            antiguo = antiguo.get("tema", "")
+        if not isinstance(antiguo, str) or len(antiguo) > 80:
+            continue
         viejas = set(re.findall(r"\w+", antiguo.lower()))
         union = nuevas | viejas
         if union and len(nuevas & viejas) / len(union) > umbral:
@@ -288,8 +287,10 @@ def tema_ya_usado(tema, umbral=0.5):
 
 def guardar_tema(tema):
     data = cargar_json(TEMAS_SHORTS_FILE, {"temas": []})
-    if tema not in data["temas"]:
+    data["temas"] = [t for t in data["temas"] if isinstance(t, str) and len(t) < 80]
+    if isinstance(tema, str) and len(tema) < 80 and tema not in data["temas"]:
         data["temas"].append(tema)
+    data["temas"] = data["temas"][-20:]
     guardar_json(TEMAS_SHORTS_FILE, data)
 
 # =================================================================
@@ -365,7 +366,7 @@ def elegir_tema(estado, youtube):
     return elegido
 
 # =================================================================
-# TÍTULOS: puntuación CTR
+# TÍTULOS: puntuación CTR + honestidad
 # =================================================================
 GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "madrugada", "medianoche",
            "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si "]
@@ -461,11 +462,8 @@ ESQUEMA_PLAN = """{
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
-    
-    # ✅ PROMPT MEJORADO: Enfoque en adaptar testimonios reales para máxima inmersión
-    prompt = f"""Eres un narrador experto y showrunner de un canal de terror con millones de vistas. 
-Tu especialidad es tomar TESTIMONIOS REALES y experiencias paranormales reportadas por personas, y adaptarlas, envolverlas y mejorarlas para hacerlas extremadamente inmersivas, atrapantes y escalofriantes para el oyente.
-Diseña el PLAN de un relato narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
+    prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
+Diseña el PLAN de un relato basado en TESTIMONIOS REALES narrado en primera persona (~13 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
@@ -476,16 +474,16 @@ REGLAS DE TÍTULO (clave para CTR):
 45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
 Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
 Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
+NUNCA menciones que es ficción o inventado. Debe sentirse 100% real y terrenal.
+Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
 El gancho debe ser lo más perturbador del relato, no una presentación.
 Cada capítulo termina en un cliffhanger, excepto el último.
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
     plan = parsear_json(txt)
-    
-    # ✅ VALIDACIÓN CORREGIDA: usa NUM_CAPITULOS dinámicamente
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
-            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= 5
             and plan.get("gancho") and plan.get("palabras_portada")):
         raise ValueError("plan incompleto")
     return plan
@@ -499,7 +497,7 @@ def limpiar_texto_narracion(t):
     return t
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
-    caps = plan["capitulos"][:NUM_CAPITULOS]
+    caps = plan["capitulos"][:NUM_CAPITULOS + 1]
     indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos = []
     for i, cap in enumerate(caps):
@@ -511,10 +509,7 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
             extra = "Cierra con un final abierto e inquietante que deje una duda, sin explicar todo."
         else:
             extra = "Termina con un cliffhanger (algo se revela, alguien aparece, un sonido cambia todo)."
-            
-        # ✅ PROMPT MEJORADO: Enfoque en envolver al oyente con detalles sensoriales de un testimonio real
-        # ✅ TYPO CORREGIDO: {contexto} en lugar de {co ntexto}
-        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} adaptando un testimonio real o experiencia paranormal reportada.
+        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror en primera persona basado en un testimonio real.
 Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
 Ángulo: {tema['angulo']}
 Sinopsis: {plan.get('resumen','')}
@@ -523,20 +518,17 @@ Sinopsis: {plan.get('resumen','')}
 ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 {extra}
 {('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
-
-ESTILO (se leerá en voz alta y debe ATRAPAR al oyente):
-300-350 palabras. Español mexicano natural y coloquial. 
-Tu objetivo es envolver al oyente: hazle sentir la tensión, el frío, los sonidos extraños y el silencio incómodo. 
-Usa un tono natural, como si alguien te estuviera contando algo escalofriante que le pasó de verdad. 
-Mezcla frases cortas y secas con otras largas para controlar el ritmo. Detalles sensoriales (sonidos, olores, frío), horas exactas.
+ESTILO (se leerá en voz alta):
+400-480 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
+Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
 Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
-PROHIBIDO romper la cuarta pared: NUNCA menciones que es ficción, que es una historia inventada o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
+PROHIBIDO mencionar que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
             t = llm(prompt, temperature=0.85, max_tokens=1200)
             t = limpiar_texto_narracion(t) if t else ""
-            if len(t.split()) >= 250:
+            if len(t.split()) >= 280:
                 texto = t
                 break
             print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
@@ -550,9 +542,9 @@ def expandir_texto(titulo, texto_actual):
     prompt = f"""Relato basado en testimonio real: "{titulo}".
 Final actual:
 \"\"\"
-{texto_actual[-400:]}
+{texto_actual[-500:]}
 \"\"\"
-Añade 200-250 palabras que profundicen el desenlace (un giro perturbador más), mismo tono inmersivo, sin resolver todo.
+Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
 Devuelve SOLO el texto."""
     for _ in range(2):
         t = llm(prompt, temperature=0.8, max_tokens=900)
@@ -969,8 +961,8 @@ def crear_miniatura(img_path, texto, salida):
         lineas = dividir_lineas(texto.upper().split()[:4])
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
-        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px PARA MAYOR IMPACTO
-        for size in range(130, 60, -6):
+        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 150 PX COMO MÁXIMO
+        for size in range(150, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
             alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
@@ -1100,6 +1092,7 @@ def proximo_slot():
 def utc_iso(dt):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
+# ✅ FUNCIÓN DE SUBIDA CON REINTENTOS ROBUSTOS PARA SSL
 def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
     status = {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
     if publish_at:
@@ -1118,11 +1111,22 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
             st, resp = req.next_chunk()
             if st:
                 print(f"   ⬆️ {int(st.progress() * 100)}% ")
-        except HttpError as e:
-            if e.resp.status in (500, 502, 503, 504) and reintentos < 8:
+        except (HttpError, ssl.SSLEOFError, ConnectionError, socket.timeout, OSError) as e:
+            es_reintento = False
+            if isinstance(e, HttpError) and e.resp.status in (429, 500, 502, 503, 504):
+                es_reintento = True
+            elif isinstance(e, (ssl.SSLEOFError, ConnectionError, socket.timeout, OSError)):
+                es_reintento = True
+            
+            if es_reintento and reintentos < 8:
                 reintentos += 1
-                time.sleep(2 ** reintentos)
+                espera = 2 ** reintentos
+                print(f"⚠️ Error de red/SSL en la subida (intento {reintentos}/8). Reintentando en {espera}s...")
+                print(f"   Detalle: {type(e).__name__}")
+                time.sleep(espera)
                 continue
+            
+            print(f"❌ Error fatal en la subida tras {reintentos} intentos: {type(e).__name__}: {e}")
             raise
             
     print(f"✅ Video subido: https://youtu.be/{resp['id']}" + (f" (programado {publish_at})" if publish_at else ""))
