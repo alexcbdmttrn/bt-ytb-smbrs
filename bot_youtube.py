@@ -975,7 +975,7 @@ def crear_miniatura(img_path, texto, salida):
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
         # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 150 PX COMO MÁXIMO
-        for size in range(180, 60, -6):
+        for size in range(175, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
             alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
