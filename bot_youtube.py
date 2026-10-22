@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (TESTIMONIOS REALES + REINTENTOS SSL + MINIATURA 150px)
-Flujo: elegir tema -> plan SEO -> relato por capítulos -> voz -> escenas -> miniatura -> subtítulos SRT -> subida con reintentos.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v5 (NIVEL EXPERTO)
+Flujo: elegir tema -> plan SEO -> relato por capítulos (1100-1400 palabras)
+-> voz -> escenas (video/foto Pexels con Ken Burns y grade unificado) -> miniatura (150px)
+-> subtítulos SRT -> subida programada con reintentos robustos ante fallos de red.
 """
 import asyncio
 import bisect
@@ -57,9 +59,12 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
+# Duración óptima para retención: 8 a 11 minutos
 DURACION_MINIMA_SEGUNDOS = 480
-MAX_INTENTOS_EXPANSION = 2
+DURACION_MAXIMA_SEGUNDOS = 660
+MAX_INTENTOS_EXPANSION = 1
 NUM_CAPITULOS = 6
+
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
 W, H, FPS = 1920, 1080, 24
@@ -81,7 +86,7 @@ RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "
 PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
 FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
-SUFIJO_TITULO = " | Relato de Terror"
+SUFIJO_TITULO = "" # ✅ ELIMINADO para no desperdiciar caracteres del título
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
@@ -133,8 +138,8 @@ TEMAS = [
      "contextos": ["parque abandonado", "calle solitaria", "bosque nocturno", "casa del barrio"],
      "visuales": ["dark forest night", "abandoned playground", "empty street night", "old house night", "foggy park night"],
      "hashtags": ["#Creepypasta", "#LeyendasUrbanas"]},
-    {"tema": "objeto_maldito", "seed": "objeto maldito historia", "angulo": "Un objeto comprado barato trae reglas silenciosas y consecuencias cada noche.",
-     "keywords": ["objeto maldito", "antigüedad", "espejo", "muñeca"],
+    {"tema": "objeto_maldito", "seed": "objeto maldito historia", "angulo": "Un objeto comprado barato en el tianguis trae reglas silenciosas y consecuencias cada noche.",
+     "keywords": ["objeto maldito", "antigüedad", "espejo", "muñeca", "tianguis"],
      "contextos": ["tienda de antigüedades", "mercado de pulgas", "casa heredada", "subasta"],
      "visuales": ["antique shop", "old doll", "old mirror dark", "antique room dark", "pawn shop night"],
      "hashtags": ["#ObjetoMaldito"]},
@@ -420,8 +425,6 @@ def elegir_titulo(candidatos):
     for sc, t in puntuados[:3]:
         print(f"   📝 [{sc:>2}] {t}")
     titulo = puntuados[0][1]
-    if "relato" not in titulo.lower() and len(titulo) + len(SUFIJO_TITULO) <= 80:
-        titulo += SUFIJO_TITULO
     return titulo[:100]
 
 def elegir_texto_portada(opciones, titulo):
@@ -444,7 +447,7 @@ def elegir_texto_portada(opciones, titulo):
 # HISTORIA: plan SEO + relato por capítulos
 # =================================================================
 ESQUEMA_PLAN = """{
- "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres, SIN el sufijo 'Relato de Terror'"],
+ "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres. NUNCA termines con '| Relato de Terror'"],
  "anio_suceso": 2014,
  "protagonista": "nombre de pila del narrador",
  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
@@ -463,21 +466,26 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato basado en TESTIMONIOS REALES narrado en primera persona (~13 minutos, {NUM_CAPITULOS} capítulos).
+Diseña el PLAN de un relato basado en TESTIMONIOS REALES narrado en primera persona (~10-11 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
 {sug}
 TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
 {prev}
-REGLAS DE TÍTULO (clave para CTR):
-45-68 caracteres, primera persona o advertencia directa, con un detalle concreto (hora, número, lugar).
-Curiosidad sin revelar el final. Solo 1-2 palabras en MAYÚSCULAS.
-Ejemplos de estructura: "Trabajé 7 noches de velador y la cámara 4 mostraba algo", "Si oyes tu nombre en la carretera, NO respondas".
-NUNCA menciones que es ficción o inventado. Debe sentirse 100% real y terrenal.
-Nunca empieces con 'El misterio', 'La leyenda', 'Relato' ni 'Caso'.
-El gancho debe ser lo más perturbador del relato, no una presentación.
-Cada capítulo termina en un cliffhanger, excepto el último.
+
+REGLAS DE TÍTULO (CLAVE PARA CTR - NIVEL EXPERTO):
+1. NUNCA termines el título con "| Relato de Terror". Desperdicia espacio valioso.
+2. Usa la fórmula: [Acción prohibida] + [Objeto/Lugar específico] + [Hora/Número exacto].
+3. Ejemplo ganador: "Escuché 3 golpes en el SÓTANO a las 3:33 AM y no debí bajar".
+4. Usa mayúsculas solo para 1 o 2 palabras de impacto (ej. NUNCA, SÓTANO, 3:33 AM).
+
+REGLAS DE CONTENIDO:
+1. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
+2. NUNCA menciones que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
+3. El gancho debe ser lo más perturbador del relato, no una presentación.
+4. Cada capítulo termina en un cliffhanger, excepto el último.
+
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
@@ -518,17 +526,22 @@ Sinopsis: {plan.get('resumen','')}
 ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 {extra}
 {('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
+
+REGLAS DE DURACIÓN Y CONTENIDO:
+1. El relato completo debe tener estrictamente entre 1100 y 1400 palabras en total (aprox. 8 a 11 minutos de audio).
+2. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
+3. PROHIBIDO mencionar que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
+
 ESTILO (se leerá en voz alta):
-400-480 palabras. Español mexicano natural y coloquial, sin exagerar modismos.
+200-250 palabras por capítulo. Español mexicano natural y coloquial, sin exagerar modismos.
 Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
 Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
-PROHIBIDO mencionar que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
             t = llm(prompt, temperature=0.85, max_tokens=1200)
             t = limpiar_texto_narracion(t) if t else ""
-            if len(t.split()) >= 280:
+            if len(t.split()) >= 200:
                 texto = t
                 break
             print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
@@ -544,7 +557,7 @@ Final actual:
 \"\"\"
 {texto_actual[-500:]}
 \"\"\"
-Añade 300-400 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
+Añade 200-300 palabras que profundicen el desenlace (un giro perturbador más), mismo tono, sin resolver todo.
 Devuelve SOLO el texto."""
     for _ in range(2):
         t = llm(prompt, temperature=0.8, max_tokens=900)
@@ -1246,7 +1259,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (TESTIMONIOS REALES ADAPTADOS)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v5 (NIVEL EXPERTO)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
