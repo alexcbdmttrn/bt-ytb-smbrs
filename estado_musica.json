@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
@@ -9,13 +8,14 @@
     "Cold Hollow.mp3",
     "Black Maw.mp3",
     "Sunless Vault.mp3",
-    "Ash and Marrow.mp3"
+    "Ash and Marrow.mp3",
+    "Cold Hollow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-20",
+  "ultima_publicacion_exitosa": "2026-10-21",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-20T07:55:45.510933-06:00",
+  "ultima_publicacion": "2026-10-21T23:03:23.048442-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -172,14 +172,20 @@
       "titulo": "Si escuchas un silbido a las 3 AM en Veracruz, NO respondas | Relato de Terror",
       "tema": "leyenda_mexicana",
       "fecha": "2026-10-20T07:55:45.510933-06:00"
+    },
+    {
+      "id": "Ccg-Dc0CbY0",
+      "titulo": "Si compras barato en la subasta de Guerrero, NUNCA lo dejes solo de noche",
+      "tema": "objeto_maldito",
+      "fecha": "2026-10-21T23:03:23.048442-06:00"
     }
   ],
   "temas_recientes": [
-    "ia_maldita",
     "llamada_misteriosa",
     "creepypasta",
     "carretera",
     "deep_web",
-    "leyenda_mexicana"
+    "leyenda_mexicana",
+    "objeto_maldito"
   ]
 }
