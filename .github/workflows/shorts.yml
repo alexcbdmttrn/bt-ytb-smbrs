@@ -1,9 +1,9 @@
-name: Bot YouTube - Shorts (3 al día, horarios aleatorios)
+name: Bot YouTube - Shorts (2 al día, horarios optimizados)
 
 on:
   schedule:
-    # 6 ejecuciones al día (cada 4 horas)
-    - cron: '0 */4 * * *'   # 0, 4, 8, 12, 16, 20 UTC
+    # 2 ejecuciones al día (aprox 12:00 PM y 7:00 PM hora CDMX)
+    - cron: '0 18,01 * * *'
   workflow_dispatch:
 
 permissions:
@@ -50,12 +50,12 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add estado_shorts.json titulos_shorts_publicados.json temas_usados.json estado_musica.json || true
+          git add estado_musica.json titulos_shorts_publicados.json temas_usados.json || true
           if git diff-index --quiet HEAD; then
             echo "✅ No hay cambios"
             exit 0
           fi
-          git commit -m "Actualizar estado shorts [skip ci]"
+          git commit -m "Actualizar estado shorts (2/día) [skip ci]"
           for i in 1 2 3 4 5; do
             if git pull --rebase --autostash origin main && git push; then
               echo "✅ Push exitoso"
