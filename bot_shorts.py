@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.0 (OPTIMIZADO + EFECTOS CINEMATOGRÁFICOS + FALLBACK gTTS)
-Flujo: elegir tema -> plan SEO -> relato REAL mejorado con IA -> voz (fallback gTTS) -> 
-escenas cinematográficas -> miniatura ÉLITE (texto 100px + elementos visuales) -> subida.
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.0 (OPTIMIZADO + TEMAS TERRENALES + 2/DÍA)
+Flujo: elegir tema (terrenal/creíble) -> plan SEO -> relato REAL mejorado con IA -> voz -> 
+escenas cinematográficas -> miniatura ÉLITE (texto 130px + elementos visuales) -> subida.
 """
 import asyncio
 import json
@@ -63,6 +63,7 @@ ACTIVAR_DISCLOSURE_IA = True
 
 DISCLOSURE_TEXT = "\n📖 Relato basado en experiencias REALES compartidas en foros, narrado y mejorado con IA."
 
+# ✅ LÍMITE ESTRICTO: 2 Shorts al día
 MAX_SHORTS_DIA = 2
 INTERVALO_MIN_HORAS = 6
 INTERVALO_MAX_HORAS = 9
@@ -72,96 +73,76 @@ PEXELS_CACHE = {}
 CACHE_MAX_SIZE = 500
 
 # ================================================================
-# TEMAS VIRALES 2024-2025
+# TEMAS 100% TERRENALES Y CREÍBLES (Basado en datos de éxito)
 # ================================================================
 TEMAS_VIRALES_2024 = [
     {
-        "tema": "backrooms",
-        "keywords": ["backrooms", "liminal spaces", "dimensiones", "atrapado", "infinito"],
-        "keywords_larga": ["backrooms nivel 0", "espacios liminales explicados", "como entrar backrooms"],
-        "contextos": ["hotel abandonado", "centro comercial vacío", "estacionamiento subterráneo", "oficina de noche"],
-        "busquedas": 450000, "competencia": "media", "ctr_potencial": 8.5, "retencion_objetivo": 75,
-        "duracion_optima": 45, "tendencia": "creciente", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "18-34", "engagement_rate": 12.5
+        "tema": "velador",
+        "keywords": ["velador", "turno de noche", "cámaras de seguridad", "trabajo nocturno"],
+        "keywords_larga": ["trabajo de velador terror", "historias de veladores reales", "turno nocturno terror"],
+        "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento", "condominio"],
+        "busquedas": 450000, "competencia": "baja", "ctr_potencial": 9.5, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-45", "engagement_rate": 15.5
     },
     {
-        "tema": "skinwalker",
-        "keywords": ["skinwalker", "wendigo", "criatura", "carretera", "bosque"],
-        "keywords_larga": ["skinwalker navajo", "como identificar skinwalker", "skinwalker vs wendigo"],
-        "contextos": ["carretera solitaria", "bosque profundo", "montaña aislada", "desierto nocturno"],
-        "busquedas": 380000, "competencia": "baja", "ctr_potencial": 9.2, "retencion_objetivo": 78,
-        "duracion_optima": 50, "tendencia": "explosiva", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "16-35", "engagement_rate": 14.2
+        "tema": "hospital",
+        "keywords": ["hospital", "guardia nocturna", "paciente", "enfermera", "quirófano"],
+        "keywords_larga": ["historias de terror de hospitales", "enfermeros turno nocturno", "pacientes fantasmas"],
+        "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue", "quirófano"],
+        "busquedas": 380000, "competencia": "media", "ctr_potencial": 8.8, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "20-50", "engagement_rate": 14.0
     },
     {
-        "tema": "ia_prediccion",
-        "keywords": ["IA", "inteligencia artificial", "prediccion", "muerte", "algoritmo"],
-        "keywords_larga": ["chatgpt predijo muerte", "ia predice futuro", "algoritmo maldito"],
-        "contextos": ["computadora antigua", "celular en la noche", "laboratorio", "cuarto oscuro"],
-        "busquedas": 890000, "competencia": "baja", "ctr_potencial": 11.3, "retencion_objetivo": 82,
+        "tema": "carretera",
+        "keywords": ["carretera", "viaje nocturno", "taxi", "autoestopista", "tráiler"],
+        "keywords_larga": ["historias de terror en la carretera", "taxistas terror", "traileros fantasmas"],
+        "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte"],
+        "busquedas": 520000, "competencia": "media", "ctr_potencial": 9.0, "retencion_objetivo": 82,
+        "duracion_optima": 55, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 16.0
+    },
+    {
+        "tema": "leyenda_mexicana",
+        "keywords": ["leyendas mexicanas", "nahual", "la llorona", "pueblo", "charro negro"],
+        "keywords_larga": ["leyendas de terror mexicanas reales", "nahual en el pueblo", "llorona en el río"],
+        "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
+        "busquedas": 680000, "competencia": "alta", "ctr_potencial": 10.5, "retencion_objetivo": 85,
         "duracion_optima": 55, "tendencia": "explosiva", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "18-45", "engagement_rate": 16.8
+        "audiencia_objetivo": "16-60", "engagement_rate": 18.0
     },
     {
-        "tema": "glitch_realidad",
-        "keywords": ["glitch", "matrix", "realidad", "paralelo", "deja vu"],
-        "keywords_larga": ["glitch in the matrix", "realidad paralela", "mandela effect"],
-        "contextos": ["calle familiar", "casa propia", "trabajo", "escuela"],
-        "busquedas": 410000, "competencia": "baja", "ctr_potencial": 10.8, "retencion_objetivo": 80,
-        "duracion_optima": 48, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "tema": "ritual",
+        "keywords": ["ritual", "invocación", "maldición", "ocultismo", "cementerio"],
+        "keywords_larga": ["rituales de terror reales", "invocaciones que salieron mal", "maldiciones reales"],
+        "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas"],
+        "busquedas": 410000, "competencia": "baja", "ctr_potencial": 9.8, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
         "audiencia_objetivo": "16-40", "engagement_rate": 15.3
-    },
-    {
-        "tema": "experiencia_cercana_muerte",
-        "keywords": ["muerte", "tunel", "luz", "experiencia", "casi muero"],
-        "keywords_larga": ["experiencia cercania muerte testimonio", "vi el mas alla", "muerte clinica"],
-        "contextos": ["hospital", "accidente", "quirófano", "emergencia"],
-        "busquedas": 720000, "competencia": "media", "ctr_potencial": 10.2, "retencion_objetivo": 85,
-        "duracion_optima": 60, "tendencia": "estable", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "25-55", "engagement_rate": 18.5
-    },
+    }
 ]
 
 # ================================================================
-# FÓRMULAS DE TÍTULOS ÉLITE (ESTILO VIDIQ PREMIUM)
+# FÓRMULAS DE TÍTULOS GANADORES (Basado en análisis de datos)
 # ================================================================
 FORMULAS_TITULOS_ELITE = {
-    "curiosidad_gap": [
-        "Lo que vi en {lugar} cambió mi vida para siempre",
-        "Nadie cree lo que encontré en {lugar} (pero tengo pruebas)",
-        "El secreto de {lugar} que las autoridades ocultan",
-        "Descubrí algo PROHIBIDO en {lugar} y esto pasó",
+    "el_que_nadie_menciona": [
+        "El {lugar} que nadie menciona en {estado}",
+        "El {objeto} de {lugar} que nadie menciona"
     ],
-    "numero_especifico": [
-        "{numero} veces que vi al mismo fantasma en {lugar}",
-        "{segundos} segundos que cambiaron mi vida en {lugar}",
-        "{hora} exacto: Esto pasó en {lugar}",
-        "Día {numero} en {lugar}: Algo me siguió",
-    ],
-    "pregunta_imposible": [
-        "¿Qué harías si ves ESTO en {lugar}?",
-        "¿Por qué NADIE entra aquí después del atardecer?",
-        "¿Sobrevivirías 1 minuto en {lugar}?",
-        "¿Qué escondía {lugar} que NADIE debía ver?",
-    ],
-    "secreto_revelado": [
-        "El SECRETO que {lugar} esconde (FILTRADO)",
-        "Lo que NADIE te cuenta sobre {lugar}",
-        "Descubrí algo PROHIBIDO en {lugar}",
-        "La VERDAD sobre {lugar} que ocultan",
+    "testimonio_real": [
+        "TESTIMONIO: La noche que {accion} en {lugar} y todo cambió",
+        "TESTIMONIO: 'La noche que {accion} en {lugar} y todo cambió'"
     ],
     "advertencia_peligro": [
-        "NUNCA vayas a {lugar} si ves esto (PELIGRO REAL)",
-        "🚨 ALERTA: Algo acecha en {lugar} de noche",
-        "PELIGRO REAL en {lugar} - Testigo lo confirma",
-        "⚡ Lo que pasó en {lugar} NO fue normal",
+        "ADVERTENCIA: Nunca {accion} en {lugar} después de las 3 AM",
+        "ADVERTENCIA: Nunca {accion} en {lugar} después de las 11 PM"
     ],
-    "experiencia_extrema": [
-        "Sobreviví {numero} noches en {lugar}",
-        "Lo que vi en {lugar} me persigue hasta hoy",
-        "Nunca olvidaré lo que pasó en {lugar}",
-        "Estuve a punto de morir en {lugar}",
-    ],
+    "pregunta_imposible": [
+        "¿Qué {accion} en {lugar} a las 3 AM?",
+        "¿Qué harías si {accion} en {lugar} a las 3 AM?"
+    ]
 }
 
 # ================================================================
@@ -194,37 +175,37 @@ def calcular_puntuacion_viralidad(tema):
 
 def generar_cluster_keywords(tema_principal):
     clusters = {
-        "backrooms": {
-            "primarias": ["backrooms", "liminal spaces", "the backrooms"],
-            "secundarias": ["nivel 0", "como entrar", "explicación", "teoría"],
-            "long_tail": ["backrooms nivel 0 español", "como entrar a los backrooms", "backrooms realidad o ficción"],
-            "relacionadas": ["espacios liminales", "dimensiones paralelas", "realidad alternativa"]
+        "velador": {
+            "primarias": ["velador", "turno nocturno", "vigilante"],
+            "secundarias": ["cámaras", "ronda", "seguridad"],
+            "long_tail": ["historias de veladores reales", "turno de noche terror"],
+            "relacionadas": ["trabajo nocturno", "seguridad privada"]
         },
-        "skinwalker": {
-            "primarias": ["skinwalker", "wendigo", "navajo"],
-            "secundarias": ["criatura", "leyenda", "maldición"],
-            "long_tail": ["skinwalker vs wendigo", "como identificar skinwalker", "skinwalker navajo leyenda"],
-            "relacionadas": ["chupacabras", "hombre lobo", "criptidos"]
+        "hospital": {
+            "primarias": ["hospital", "enfermero", "quirófano"],
+            "secundarias": ["turno nocturno", "paciente", "morgue"],
+            "long_tail": ["historias de terror de hospitales", "enfermeros turno nocturno"],
+            "relacionadas": ["experiencia cercana a la muerte", "paranormal"]
         },
-        "ia_prediccion": {
-            "primarias": ["IA", "inteligencia artificial", "ChatGPT"],
-            "secundarias": ["predicción", "algoritmo", "futuro"],
-            "long_tail": ["chatgpt predijo muerte", "ia predice futuro", "algoritmo maldito"],
-            "relacionadas": ["machine learning", "tecnología", "futurología"]
+        "carretera": {
+            "primarias": ["carretera", "taxi", "tráiler"],
+            "secundarias": ["viaje nocturno", "autoestopista", "ruta"],
+            "long_tail": ["historias de terror en la carretera", "taxistas terror"],
+            "relacionadas": ["viajes nocturnos", "carreteras de mexico"]
         }
     }
     return clusters.get(tema_principal, {})
 
 def analizar_competencia_youtube(tema):
     analisis = {
-        "backrooms": {"videos_top_10_avg_views": 250000, "avg_ctr_competencia": 6.5, "avg_retencion": 65, "gap_oportunidad": "Falta contenido en español de alta calidad", "mejor_horario_publicacion": ["14:00", "18:00", "21:00"], "duracion_optima": "45-60 segundos"},
-        "skinwalker": {"videos_top_10_avg_views": 180000, "avg_ctr_competencia": 7.2, "avg_retencion": 70, "gap_oportunidad": "Poca competencia en español, alta demanda", "mejor_horario_publicacion": ["15:00", "19:00", "22:00"], "duracion_optima": "50-65 segundos"},
-        "ia_prediccion": {"videos_top_10_avg_views": 420000, "avg_ctr_competencia": 8.9, "avg_retencion": 75, "gap_oportunidad": "Tendencia explosiva, poca oferta de calidad", "mejor_horario_publicacion": ["13:00", "17:00", "20:00"], "duracion_optima": "55-70 segundos"}
+        "velador": {"videos_top_10_avg_views": 350000, "avg_ctr_competencia": 8.5, "avg_retencion": 80, "gap_oportunidad": "Alta demanda de testimonios reales de veladores", "mejor_horario_publicacion": ["14:00", "18:00", "21:00"], "duracion_optima": "45-55 segundos"},
+        "hospital": {"videos_top_10_avg_views": 420000, "avg_ctr_competencia": 9.0, "avg_retencion": 82, "gap_oportunidad": "Poca competencia en testimonios reales de enfermeros", "mejor_horario_publicacion": ["15:00", "19:00", "22:00"], "duracion_optima": "50-55 segundos"},
+        "carretera": {"videos_top_10_avg_views": 500000, "avg_ctr_competencia": 9.5, "avg_retencion": 85, "gap_oportunidad": "Alto engagement en historias de traileros y taxistas", "mejor_horario_publicacion": ["13:00", "17:00", "20:00"], "duracion_optima": "50-60 segundos"}
     }
-    return analisis.get(tema, {"videos_top_10_avg_views": 100000, "avg_ctr_competencia": 5.0, "avg_retencion": 60, "gap_oportunidad": "Oportunidad general", "mejor_horario_publicacion": ["14:00", "18:00"], "duracion_optima": "45-60 segundos"})
+    return analisis.get(tema, {"videos_top_10_avg_views": 100000, "avg_ctr_competencia": 5.0, "avg_retencion": 60, "gap_oportunidad": "Oportunidad general", "mejor_horario_publicacion": ["14:00", "18:00"], "duracion_optima": "45-55 segundos"})
 
 # ================================================================
-# 🎨 GENERADOR DE MINIATURAS ÉLITE (ESTILO MRBEAST - TEXTO 100px)
+# 🎨 GENERADOR DE MINIATURAS ÉLITE (ESTILO MRBEAST - TEXTO 130px)
 # ================================================================
 def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
     if any(p in tema_viral for p in ["miedo", "terror", "peligro"]):
@@ -266,7 +247,8 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
                 "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
             ]
             
-            font_size = 100
+            # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px
+            font_size = 130
             font = None
             for path in font_paths:
                 try:
@@ -339,9 +321,9 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
 # ================================================================
 def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=None):
     categorias = list(FORMULAS_TITULOS_ELITE.keys())
-    if tema_viral in ["ia_prediccion", "glitch_realidad"]:
-        categoria_principal = "pregunta_imposible"
-    elif tema_viral in ["backrooms", "skinwalker"]:
+    if tema_viral in ["carretera", "velador"]:
+        categoria_principal = "testimonio_real"
+    elif tema_viral in ["leyenda_mexicana", "ritual"]:
         categoria_principal = "advertencia_peligro"
     else:
         categoria_principal = random.choice(categorias)
@@ -352,11 +334,10 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
     horas = ["3:33 AM", "2:14 AM", "4:44 AM", "medianoche", "3:00 AM", "2:47 AM"]
     numeros = ["3", "7", "13", "47", "9", "666", "404"]
     segundos = ["47", "23", "66", "13", "99"]
+    acciones = ["patrullé", "hice mi ronda", "conduje", "recogí a un pasajero", "entré", "repartí"]
+    lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
     
-    titulo = formula.replace("{hora}", random.choice(horas))
-    titulo = titulo.replace("{lugar}", lugar)
-    titulo = titulo.replace("{numero}", random.choice(numeros))
-    titulo = titulo.replace("{segundos}", random.choice(segundos))
+    titulo = formula.replace("{hora}", random.choice(horas)).replace("{lugar}", random.choice(lugares)).replace("{estado}", lugar).replace("{accion}", random.choice(acciones))
     
     palabras = titulo.split()
     palabras_clave = ["PROHIBIDO", "ILEGAL", "NADIE", "SECRETO", "ALERTA", "PELIGRO", "REAL", "VERDAD", "NUNCA", "ERROR"]
@@ -366,9 +347,7 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
     titulo = " ".join(palabras)
     
     emojis_map = {
-        "backrooms": "🌀", "skinwalker": "👁️", "ia_prediccion": "🤖", "glitch_realidad": "⚡",
-        "experiencia_cercana_muerte": "💀", "ritual_tiktok": "🔮", "numero_maldito": "📞",
-        "deep_web": "💻", "creepypasta": "👻", "objeto_maldito": "🪞"
+        "velador": "👁️", "hospital": "🏥", "carretera": "🚗", "leyenda_mexicana": "👻", "ritual": "🔮"
     }
     emoji_principal = emojis_map.get(tema_viral, "😱")
     
@@ -458,7 +437,7 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# 🧠 DECISIÓN DE PUBLICAR
+# 🧠 DECISIÓN DE PUBLICAR (MÁX 2 AL DÍA)
 # ================================================================
 def deberia_publicar_ahora(estado):
     hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
@@ -557,14 +536,14 @@ def actualizar_epoca(anio):
     print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎙️ VOCES NEURALES PREMIUM
+# 🎙️ VOCES NEURALES PREMIUM (VELOCIDAD OPTIMIZADA PARA 45-55s)
 # ================================================================
 VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-2Hz", "estilo": "narrativo"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+5%", "tono": "-3Hz", "estilo": "dramatico"},
-    {"voz": "es-MX-ManuelNeural", "velocidad": "+10%", "tono": "-1Hz", "estilo": "conversacional"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+7%", "tono": "-2Hz", "estilo": "suspenso"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+6%", "tono": "+1Hz", "estilo": "femenino_misterio"},
+    {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz", "estilo": "narrativo"},
+    {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz", "estilo": "dramatico"},
+    {"voz": "es-MX-ManuelNeural", "velocidad": "+12%", "tono": "-1Hz", "estilo": "conversacional"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz", "estilo": "suspenso"},
+    {"voz": "es-AR-ElenaNeural", "velocidad": "+10%", "tono": "+1Hz", "estilo": "femenino_misterio"},
 ]
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
@@ -648,7 +627,7 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🎨 CREAR MINIATURA VIRAL PROFESIONAL (ESTILO MRBEAST)
+# 🎨 CREAR MINIATURA VIRAL PROFESIONAL (ESTILO MRBEAST - 130px)
 # ================================================================
 def crear_miniatura_viral(img_path, texto, output_path):
     colores_impacto = [
@@ -687,9 +666,10 @@ def crear_miniatura_viral(img_path, texto, output_path):
             else:
                 lineas = [texto_final]
             
-            font_size = 100
+            # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px
+            font_size = 130
             font = None
-            for size in range(120, 80, -5):
+            for size in range(130, 80, -5):
                 try:
                     font = ImageFont.truetype(font_paths[0], size)
                     max_width = 0
@@ -762,9 +742,9 @@ def crear_miniatura_viral(img_path, texto, output_path):
 # 📝 EXPANDIR / TRUNCAR TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
-    prompt = f"""Expande el siguiente relato a 150-170 palabras con detalles sensoriales de {ubicacion}.
+    prompt = f"""Expande el siguiente relato a 110-130 palabras con detalles sensoriales de {ubicacion}.
 IMPORTANTE: Asegúrate de que el relato tenga un OBJETIVO CLARO, una RESTRICCIÓN y que el protagonista ACTÚE.
-Mantén trama y tono. Sin CTA.
+Mantén trama y tono. Sin CTA. Debe sonar como un testimonio real.
 RELATO: {texto_corto}
 Devuelve SOLO el relato."""
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -774,11 +754,11 @@ Devuelve SOLO el relato."""
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         t = r.json()["choices"][0]["message"]["content"].strip()
-        return t if len(t.split()) > 130 else texto_corto
+        return t if len(t.split()) > 110 else texto_corto
     except Exception:
         return texto_corto
 
-def truncar_texto_largo(texto, max_palabras=170):
+def truncar_texto_largo(texto, max_palabras=130):
     palabras = texto.split()
     if len(palabras) <= max_palabras:
         return texto
@@ -791,7 +771,7 @@ def truncar_texto_largo(texto, max_palabras=170):
 # 📖 GENERAR HISTORIA CON TEMAS VIRALES Y SEO AVANZADO
 # ================================================================
 def generar_historia_completa():
-    tema_viral = max(TEMAS_VIRALES_2024, key=lambda x: x.get("ctr_potencial", 0) * random.uniform(0.8, 1.2))
+    tema_viral = random.choice(TEMAS_VIRALES_2024)
     contexto = random.choice(tema_viral["contextos"])
     keywords = tema_viral["keywords"]
     
@@ -813,18 +793,15 @@ def generar_historia_completa():
     outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
     outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
 
-    formulas_titulo = [
-        "SIN RECURSO: 'Sin [recurso], [acción] en [lugar] fue mi mayor error'",
-        "DESAFÍO: '¿Qué [acción] en [lugar] a las [hora]?'",
-        "TESTIMONIO: 'La noche que [acción] en [lugar] y todo cambió'",
-        "DESCUBRIMIENTO: 'Encontré [algo] al [acción] en [lugar]'",
-        "ADVERTENCIA: 'Nunca [acción] en [lugar] después de las [hora]'",
-        "MISTERIO: 'El [objeto] de [lugar] que nadie menciona'",
-        "CONSECUENCIA: '[Acción] en [lugar] sin [recurso] y pasó esto'"
-    ]
-    formula_aleatoria = random.choice(formulas_titulo)
+    categoria = random.choice(list(FORMULAS_TITULOS_ELITE.keys()))
+    formula_aleatoria = random.choice(FORMULAS_TITULOS_ELITE[categoria])
+    
+    acciones = ["patrullé", "hice mi ronda", "conduje", "recogí a un pasajero", "entré", "repartí"]
+    lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
+    titulo_base = formula_aleatoria.replace("{accion}", random.choice(acciones)).replace("{lugar}", random.choice(lugares)).replace("{estado}", ESTADO_HISTORIA_SHORTS)
 
-    prompt = f"""Eres un CURADOR DE RELATOS PARANORMALES REALES de internet, especializado en SEO para YouTube Shorts.
+    prompt = f"""Eres un curador de TESTIMONIOS REALES y experiencias paranormales reportadas por personas en foros de internet.
+Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersivas, atrapantes y escalofriantes, como si el narrador te lo estuviera contando a ti directamente.
 
 🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
@@ -846,29 +823,14 @@ def generar_historia_completa():
 
 Inspírate en la estructura, pero NO copies. Crea tu propia variación.
 
-🚨 REGLA DE ORO:
-La historia DEBE estar basada en un relato REAL que alguien contó en internet.
-Adáptalo en primera persona, tono coloquial, ambientado en {ESTADO_HISTORIA_SHORTS}, México.
+🚨 REGLAS DE ORO:
+1. Debe sonar como un TESTIMONIO REAL de una persona común (velador, enfermero, trailero, policía, etc.).
+2. NUNCA menciones que es ficción, IA, Deep Web o algo inventado. Debe sentirse 100% terrenal y posible.
+3. Longitud: 110-130 palabras EXACTAS (esto es crucial para que dure entre 45 y 55 segundos).
+4. El gancho inicial debe atrapar en los primeros 3 segundos.
+5. Usa detalles sensoriales: sonidos, olores, frío, horas exactas.
 
-🎯 LONGITUD: 150-170 palabras exactas (óptimo para {tema_viral['duracion_optima']}s).
-
-PROTAGONISTA: {ARTICULO_SHORTS} {PERSONAJE_SHORTS}.
-
-📐 ESTRUCTURA CON CONFLICTO ACTIVO:
-1. OBJETIVO CLARO del protagonista.
-2. RESTRICCIÓN o limitación.
-3. ACCIÓN del protagonista.
-4. RESOLUCIÓN.
-
-🎯 TÍTULO CON ESTRATEGIA DE OUTLIER (55-75 caracteres):
-FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
-❌ PROHIBIDO empezar con "Intenté" a menos que la fórmula lo exija explícitamente. Varía al máximo.
-❌ PROHIBIDOS: "La leyenda de...", "El fantasma de...", "El misterio de..."
-
-🎯 PALABRAS DE PORTADA (máx 2-3 palabras)
-🎯 DESCRIPCIÓN SEO
-🎯 TAGS (10-15)
-🎯 AÑO DEL SUCESO
+TÍTULO SUGERIDO: {titulo_base}
 
 🚫 TÍTULOS YA PUBLICADOS:
 {titulos_referencia}
@@ -877,30 +839,18 @@ FÓRMULA OBLIGATORIA PARA ESTE VIDEO: {formula_aleatoria}
 
 Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "Título con estructura de outlier (55-75 caracteres)",
-    "titulo_alternativo": "Segundo título",
-    "anio_suceso": 1998,
-    "palabras_clave": ["{keywords[0]}", "{keywords[1]}", "{keywords[2]}"],
-    "gancho_descripcion": "Gancho máx 90 caracteres",
-    "contexto_descripcion": "1 oración con contexto",
-    "fuente_relato": "Basado en un testimonio real...",
-    "texto_completo": "Micro-relato REAL, 150-170 palabras",
-    "palabras_portada": "TEXTO GANCHO máximo 2-3 palabras",
-    "tags": "10-15 tags separados por coma",
-    "miniatura_prompt": "Escena MÁS impactante del relato para miniatura vertical",
-    "tema": {{
-        "tipo": "{tema_viral['tema']}",
-        "lugar": "{contexto}",
-        "contexto": "{tema_viral['keywords'][0]}"
-    }}
+    "titulo": "{titulo_base}",
+    "texto_completo": "El relato de 110-130 palabras exactas.",
+    "palabras_portada": "2 palabras EN MAYÚSCULAS de alto impacto",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
 }}"""
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.75,
-        "max_tokens": 1100,
+        "temperature": 0.7,
+        "max_tokens": 600,
         "response_format": {"type": "json_object"}
     }
 
@@ -917,110 +867,16 @@ Devuelve ESTRICTAMENTE este JSON:
                 import json5
                 data = json5.loads(json_str)
 
-            if "texto_completo" not in data or len(data["texto_completo"]) < 100:
+            if "texto_completo" not in data or len(data["texto_completo"].split()) < 90:
                 raise ValueError("Texto demasiado corto")
 
-            anio_suceso = data.get("anio_suceso", None)
-            actualizar_epoca(anio_suceso)
-
-            titulo = data.get("titulo", "").strip()
-            titulo = re.sub(r'#\w+', '', titulo).strip()
-            titulo = ' '.join(titulo.split())
-
-            if titulo.lower().startswith("intenté") or titulo.lower().startswith("intente"):
-                if random.random() > 0.2:
-                    keywords = data.get("palabras_clave", [])
-                    lugar = ESTADO_HISTORIA_SHORTS
-                    titulo = generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral["tema"], anio_suceso)
+            # Forzar longitud máxima
+            palabras = data["texto_completo"].split()
+            if len(palabras) > 130:
+                data["texto_completo"] = " ".join(palabras[:130])
             
-            if len(titulo) < 35:
-                keywords = data.get("palabras_clave", [])
-                lugar = ESTADO_HISTORIA_SHORTS
-                titulo = generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral["tema"], anio_suceso)
-
-            data["titulo"] = titulo
-
-            if titulo_ya_publicado(titulo):
-                print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
-                raise ValueError("Título duplicado")
-
-            gancho = data.get("gancho_descripcion", "").strip()
-            if not gancho or len(gancho) > 110:
-                gancho = f"Sin recursos, en {ESTADO_HISTORIA_SHORTS}..."[:100]
-            data["gancho_descripcion"] = gancho
-
-            contexto = data.get("contexto_descripcion", "").strip()
-            if not contexto:
-                contexto = f"Un testimonio real de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."
-            data["contexto_descripcion"] = contexto
-
-            fuente = data.get("fuente_relato", "").strip()
-            if not fuente:
-                fuente = "Basado en un testimonio real compartido en internet."
-            data["fuente_relato"] = fuente
-
-            tags_raw = data.get("tags", "")
-            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:12]
-
-            keywords = data.get("palabras_clave", [])
-            if keywords:
-                for kw in keywords:
-                    if kw.lower() not in [t.lower() for t in tags_list]:
-                        tags_list.append(kw)
-
-            if cluster_keywords.get('long_tail'):
-                for kw in cluster_keywords['long_tail'][:2]:
-                    if kw not in tags_list and len(tags_list) < 15:
-                        tags_list.append(kw)
-
-            extras = [
-                f"terror en {ESTADO_HISTORIA_SHORTS.lower()}",
-                "testimonios paranormales reales", "historias reales en primera persona",
-                "leyendas urbanas mexicanas reales", "casos paranormales reales mexico",
-                "desafio paranormal", "restriccion terror", "viral 2024"
-            ]
-            for ext in extras:
-                if ext not in tags_list and len(tags_list) < 15:
-                    tags_list.append(ext)
-
-            tags_final = []
-            total_chars = 0
-            for t in tags_list:
-                costo = len(t) + 2
-                if total_chars + costo > 480:
-                    break
-                tags_final.append(t)
-                total_chars += costo
-            data["tags"] = ", ".join(tags_final)
-
-            hashtag_base = "#Shorts"
-            hashtag_lugar = f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}"
-            hashtag_tema = f"#{tema_viral['tema'].capitalize()}"
-            hashtag_keywords = []
-            if keywords:
-                for kw in keywords[:2]:
-                    kw_clean = re.sub(r'[áéíóú]', lambda m: {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}.get(m.group(), m.group()), kw)
-                    kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
-                    if kw_clean and len(kw_clean) > 2:
-                        hashtag_keywords.append(f"#{kw_clean.capitalize()}")
-            hashtag_extra = random.choice(["#Viral2024", "#TerrorViral", "#MiedoReal", "#LeyendasUrbanas", "#CasosReales", "#TerrorMexicano"])
-            if "intenté" in titulo.lower() or "sin" in titulo.lower():
-                hashtag_estrategia = "#RestriccionTerror"
-            elif "?" in titulo or "¿" in titulo:
-                hashtag_estrategia = "#DesafioParanormal"
-            else:
-                hashtag_estrategia = "#Outlier"
-
-            hashtag_final = f"{hashtag_base} {hashtag_lugar} {hashtag_tema} {' '.join(hashtag_keywords[:2])} {hashtag_extra} {hashtag_estrategia}"
-            data["hashtags_descripcion"] = hashtag_final
-
-            print(f"   🔥 Título VIRAL: {data['titulo']} ({len(data['titulo'])} chars)")
-            print(f"   📅 Año del suceso: {data.get('anio_suceso', 'actualidad')}")
-            print(f"   🔑 Keywords: {keywords}")
-            print(f"   🎯 Tema viral: {tema_viral['tema']}")
-            print(f"   📊 Score viralidad: {score_viralidad['score']:.1f}/100")
-            if "tema" in data:
-                print(f"   🧩 Tema: {data['tema']}")
+            data["tema"] = tema_viral["tema"]
+            data["estado"] = ESTADO_HISTORIA_SHORTS
             return data
 
         except Exception as e:
@@ -1102,16 +958,11 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
         prompts = [f"wide shot of person leaving {ubicacion_escena} at dawn, silhouette, atmospheric fog, emotional aftermath, cinematic", f"medium shot from behind, walking away from {ubicacion_escena}, sunrise, wide angle, contemplative mood", f"establishing shot of {ubicacion_escena} in morning light, aftermath, quiet atmosphere, cinematic photography", f"aerial shot of {ubicacion_escena} at dawn, drone view, peaceful but eerie, wide landscape", f"wide angle of {ubicacion_escena} at sunrise, aftermath scene, atmospheric lighting, cinematic"]
     
     tema_keywords = {
-        "backrooms": "liminal space, endless corridors, yellow wallpaper, fluorescent lights buzzing",
-        "skinwalker": "creature silhouette in distance, forest shadows, glowing eyes, antlers visible",
-        "ritual_tiktok": "candles arranged in circle, ancient symbols on floor, mystical atmosphere, ritual objects",
-        "ia_prediccion": "computer screen with code, digital glitch effects, blue light on face, server room",
-        "numero_maldito": "old rotary phone ringing, vintage telephone, dark room, phone cord tangled",
-        "deep_web": "computer monitor in dark room, terminal code, hacker aesthetic, multiple screens",
-        "creepypasta": "slender figure in background, tall shadow, distorted face, internet horror aesthetic",
-        "objeto_maldito": "antique doll on shelf, old mirror reflecting, cursed painting, vintage object",
-        "glitch_realidad": "glitch effect, reality distortion, digital artifacts, matrix effect",
-        "experiencia_cercana_muerte": "hospital room, medical equipment, bright light, tunnel vision",
+        "velador": "security camera, night shift, dark warehouse, flashlight",
+        "hospital": "hospital corridor dark, empty hospital bed, wheelchair dark, operating room old",
+        "carretera": "highway night fog, truck night highway, car headlights fog",
+        "leyenda_mexicana": "old village night, colonial church night, dirt road night, river fog night",
+        "ritual": "candles dark room, old cemetery night, abandoned church, cave darkness"
     }
     prompt_base = random.choice(prompts)
     if tema_viral in tema_keywords:
@@ -1646,9 +1497,9 @@ def main():
 
     texto_completo = historia_raw.get("texto_completo", "")
     palabras = len(texto_completo.split())
-    if palabras < 130:
+    if palabras < 110:
         texto_completo = expandir_texto_corto(texto_completo, ESTADO_HISTORIA_SHORTS, PERSONAJE_SHORTS)
-    elif palabras > 190:
+    elif palabras > 130:
         texto_completo = truncar_texto_largo(texto_completo)
 
     perfil = PERFIL_PERSONAJE_SHORTS
