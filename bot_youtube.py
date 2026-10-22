@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (DURACIÓN 10-15 MIN + TESTIMONIOS REALES)
-Flujo: elegir tema -> plan SEO -> relato por capítulos (adaptación inmersiva) 
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v4 (TESTIMONIOS REALES + 10-12 MIN)
+Flujo: elegir tema -> plan SEO -> relato por capítulos (adaptación inmersiva de testimonios reales) 
 -> voz -> escenas -> miniatura -> subtítulos SRT -> subida programada.
 """
 import asyncio
@@ -56,11 +56,11 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-# ✅ DURACIÓN CONTROLADA: 10 a 15 minutos máximo (ideal 10-12 min)
+# ✅ DURACIÓN CONTROLADA: 4 capítulos de ~300-350 palabras = 10-12 minutos ideales
 DURACION_MINIMA_SEGUNDOS = 600   # 10 minutos
 DURACION_MAXIMA_SEGUNDOS = 900   # 15 minutos máximo absoluto
 MAX_INTENTOS_EXPANSION = 1       # Máximo 1 intento de expansión para no pasarnos
-NUM_CAPITULOS = 4                # 4 capítulos de ~300-350 palabras = ~10-12 min de audio
+NUM_CAPITULOS = 4                # 4 capítulos
 
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
@@ -73,6 +73,7 @@ HORA_PICO = int(os.getenv("HORA_PICO", "19"))
 INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 ACTIVAR_DISCLOSURE_IA = True
 
+# ✅ TEXTO DE DIVULGACIÓN ACTUALIZADO: Enfoque en testimonios reales adaptados
 DISCLOSURE_TEXT = (
     "\n\n⚠️ Este relato está basado en testimonios reales y experiencias paranormales reportadas por personas, "
     "adaptado y narrado con inteligencia artificial para maximizar la inmersión y el suspenso."
@@ -461,6 +462,7 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     
+    # ✅ PROMPT MEJORADO: Enfoque en adaptar testimonios reales para máxima inmersión
     prompt = f"""Eres un narrador experto y showrunner de un canal de terror con millones de vistas. 
 Tu especialidad es tomar TESTIMONIOS REALES y experiencias paranormales reportadas por personas, y adaptarlas, envolverlas y mejorarlas para hacerlas extremadamente inmersivas, atrapantes y escalofriantes para el oyente.
 Diseña el PLAN de un relato narrado en primera persona (~10-12 minutos, {NUM_CAPITULOS} capítulos).
@@ -480,8 +482,10 @@ Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
     plan = parsear_json(txt)
+    
+    # ✅ VALIDACIÓN CORREGIDA: usa NUM_CAPITULOS dinámicamente
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
-            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= 5
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
             and plan.get("gancho") and plan.get("palabras_portada")):
         raise ValueError("plan incompleto")
     return plan
@@ -508,6 +512,8 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
         else:
             extra = "Termina con un cliffhanger (algo se revela, alguien aparece, un sonido cambia todo)."
             
+        # ✅ PROMPT MEJORADO: Enfoque en envolver al oyente con detalles sensoriales de un testimonio real
+        # ✅ TYPO CORREGIDO: {contexto} en lugar de {co ntexto}
         prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} adaptando un testimonio real o experiencia paranormal reportada.
 Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
 Ángulo: {tema['angulo']}
@@ -963,7 +969,7 @@ def crear_miniatura(img_path, texto, salida):
         lineas = dividir_lineas(texto.upper().split()[:4])
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
-        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px PARA MAYOR IMPACTO (sin desbordarse)
+        # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px PARA MAYOR IMPACTO
         for size in range(130, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
@@ -1236,7 +1242,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (DURACIÓN 10-15 MIN)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v4 (TESTIMONIOS REALES ADAPTADOS)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
