@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Black Maw.mp3",
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "Sunless Vault.mp3",
     "Ash and Marrow.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-21",
+  "ultima_publicacion_exitosa": "2026-10-22",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-21T23:03:23.048442-06:00",
+  "ultima_publicacion": "2026-10-22T23:11:42.374602-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -178,14 +178,20 @@
       "titulo": "Si compras barato en la subasta de Guerrero, NUNCA lo dejes solo de noche",
       "tema": "objeto_maldito",
       "fecha": "2026-10-21T23:03:23.048442-06:00"
+    },
+    {
+      "id": "r63wmqe4g2s",
+      "titulo": "Vi al paciente de la 3 caminar a las 3:33 AM y no debí seguirlo",
+      "tema": "hospital",
+      "fecha": "2026-10-22T23:11:42.374602-06:00"
     }
   ],
   "temas_recientes": [
-    "llamada_misteriosa",
     "creepypasta",
     "carretera",
     "deep_web",
     "leyenda_mexicana",
-    "objeto_maldito"
+    "objeto_maldito",
+    "hospital"
   ]
 }
