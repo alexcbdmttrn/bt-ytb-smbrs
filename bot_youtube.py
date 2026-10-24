@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v5 (NIVEL EXPERTO)
-Flujo: elegir tema -> plan SEO -> relato por capítulos (1100-1400 palabras)
--> voz -> escenas (video/foto Pexels con Ken Burns y grade unificado) -> miniatura (150px)
--> subtítulos SRT -> subida programada con reintentos robustos ante fallos de red.
+SOMBRAS DE MEDIANOCHE - Bot de relatos de terror v5.1 (NIVEL EXPERTO + DURACIÓN 8-12 MIN)
+Flujo: elegir tema -> plan SEO -> relato por capítulos (1100-1400 palabras = 8-12 min)
+-> voz -> escenas -> miniatura (150px) -> subtítulos SRT -> subida con reintentos.
 """
 import asyncio
 import bisect
@@ -59,11 +58,11 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-# Duración óptima para retención: 8 a 11 minutos
-DURACION_MINIMA_SEGUNDOS = 480
-DURACION_MAXIMA_SEGUNDOS = 660
+# ✅ DURACIÓN OPTIMIZADA: 8-12 minutos (máximo 15 min estricto)
+DURACION_MINIMA_SEGUNDOS = 480  # 8 minutos
+DURACION_MAXIMA_SEGUNDOS = 900  # 15 minutos máximo absoluto
 MAX_INTENTOS_EXPANSION = 1
-NUM_CAPITULOS = 6
+NUM_CAPITULOS = 4  # 4 capítulos = 8-12 minutos ideal
 
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 9.0
@@ -77,7 +76,7 @@ INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
 ACTIVAR_DISCLOSURE_IA = True
 
 DISCLOSURE_TEXT = (
-    "\n\n⚠️ Relato basado en experiencias REALES compartidas en foros, narrado y mejorado con IA para maximizar la inmersión."
+    "\n\n️ Relato basado en experiencias REALES compartidas en foros, narrado y mejorado con IA para maximizar la inmersión."
 )
 
 VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}
@@ -86,7 +85,7 @@ RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "
 PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
 FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
-SUFIJO_TITULO = "" # ✅ ELIMINADO para no desperdiciar caracteres del título
+SUFIJO_TITULO = ""
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
@@ -226,7 +225,7 @@ def llm(prompt, temperature=0.8, max_tokens=1500, json_mode=False, system=None, 
             r.raise_for_status()
             return r.json()["choices"][0]["message"]["content"].strip()
         except Exception as e:
-            print(f"⚠️ LLM intento {i+1}/{intentos}: {e}")
+            print(f"️ LLM intento {i+1}/{intentos}: {e}")
             time.sleep(5 * (i + 1))
     return None
 
@@ -380,7 +379,7 @@ PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidenc
 GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
 
 def limpiar_titulo(t):
-    t = re.sub(r"\s+", " ", t.strip().strip("“”'").rstrip("."))
+    t = re.sub(r"\s+", " ", t.strip().strip("""'").rstrip("."))
     t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", "", t, flags=re.I)
     palabras = t.split()
     caps = [w for w in palabras if len(re.sub(r"\W", " ", w)) >= 3 and w.isupper()]
@@ -466,7 +465,7 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato basado en TESTIMONIOS REALES narrado en primera persona (~10-11 minutos, {NUM_CAPITULOS} capítulos).
+Diseña el PLAN de un relato basado en TESTIMONIOS REALES narrado en primera persona (~8-12 minutos, {NUM_CAPITULOS} capítulos).
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
 BÚSQUEDAS REALES EN YOUTUBE (úsalas de forma natural si encajan en título/descripción/tags):
@@ -479,19 +478,21 @@ REGLAS DE TÍTULO (CLAVE PARA CTR - NIVEL EXPERTO):
 2. Usa la fórmula: [Acción prohibida] + [Objeto/Lugar específico] + [Hora/Número exacto].
 3. Ejemplo ganador: "Escuché 3 golpes en el SÓTANO a las 3:33 AM y no debí bajar".
 4. Usa mayúsculas solo para 1 o 2 palabras de impacto (ej. NUNCA, SÓTANO, 3:33 AM).
+5. Evita errores ortográficos. Revisa bien la ortografía antes de devolver.
 
 REGLAS DE CONTENIDO:
 1. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
 2. NUNCA menciones que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
 3. El gancho debe ser lo más perturbador del relato, no una presentación.
 4. Cada capítulo termina en un cliffhanger, excepto el último.
+5. El relato completo debe tener estrictamente entre 1100 y 1400 palabras en total (aprox. 8 a 12 minutos de audio).
 
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
     txt = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
     plan = parsear_json(txt)
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
-            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= 5
+            and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
             and plan.get("gancho") and plan.get("palabras_portada")):
         raise ValueError("plan incompleto")
     return plan
@@ -505,7 +506,7 @@ def limpiar_texto_narracion(t):
     return t
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
-    caps = plan["capitulos"][:NUM_CAPITULOS + 1]
+    caps = plan["capitulos"][:NUM_CAPITULOS]
     indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos = []
     for i, cap in enumerate(caps):
@@ -528,18 +529,19 @@ ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 {('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
 
 REGLAS DE DURACIÓN Y CONTENIDO:
-1. El relato completo debe tener estrictamente entre 1100 y 1400 palabras en total (aprox. 8 a 11 minutos de audio).
-2. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
-3. PROHIBIDO mencionar que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
+1. El relato completo debe tener estrictamente entre 1100 y 1400 palabras en total (aprox. 8 a 12 minutos de audio).
+2. Este capítulo debe tener 250-350 palabras máximo.
+3. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
+4. PROHIBIDO mencionar que es ficción o que eres una IA. El oyente debe sentir que está escuchando un testimonio real.
 
 ESTILO (se leerá en voz alta):
-200-250 palabras por capítulo. Español mexicano natural y coloquial, sin exagerar modismos.
+Español mexicano natural y coloquial, sin exagerar modismos.
 Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
 Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
-            t = llm(prompt, temperature=0.85, max_tokens=1200)
+            t = llm(prompt, temperature=0.85, max_tokens=800)
             t = limpiar_texto_narracion(t) if t else ""
             if len(t.split()) >= 200:
                 texto = t
@@ -975,7 +977,7 @@ def crear_miniatura(img_path, texto, salida):
         max_w, max_h = int(TW * 0.58), int(TH * 0.78)
         
         # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 150 PX COMO MÁXIMO
-        for size in range(175, 60, -6):
+        for size in range(150, 60, -6):
             font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
             alto = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
@@ -1018,8 +1020,10 @@ def crear_miniatura(img_path, texto, salida):
 # SEO: descripción, tags, subtítulos
 # =================================================================
 def construir_tags(plan, tema, sugerencias):
+    # ✅ PALABRAS CLAVE AGREGADAS: "historias reales", "historias de vida"
     base = ["relato de terror", "relatos de terror", "historias de terror", "terror", "paranormal", "miedo",
-            "creepypasta", "leyendas urbanas", "terror mexicano", "relatos paranormales", "sombras de medianoche"]
+            "creepypasta", "leyendas urbanas", "terror mexicano", "relatos paranormales", "sombras de medianoche",
+            "historias reales", "historias de vida", "testimonios reales", "casos reales"]
     extra = plan.get("tags", [])
     if isinstance(extra, str):
         extra = [x.strip() for x in extra.split(",")]
@@ -1166,7 +1170,7 @@ def extras_post_subida(youtube, vid, miniatura, srt, comentario):
                                          "resourceId": {"kind": "youtube#video", "videoId": vid}}}).execute()
             print("✅ Añadido a playlist")
         except Exception as e:
-            print(f"⚠️ Playlist: {e}")
+            print(f"️ Playlist: {e}")
     if comentario:
         try:
             youtube.commentThreads().insert(part="snippet", body={"snippet": {"videoId": vid, "topLevelComment": {
@@ -1259,7 +1263,7 @@ def main():
         sys.exit(0)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v5 (NIVEL EXPERTO)")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v5.1 (NIVEL EXPERTO + 8-12 MIN)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
     print("=" * 70)
     
@@ -1284,7 +1288,7 @@ def main():
                 raise ValueError("sin título válido")
             break
         except Exception as e:
-            print(f"⚠️ Plan intento {intento+1}/4: {e}")
+            print(f"️ Plan intento {intento+1}/4: {e}")
             plan = None
             time.sleep(5)
     if not plan:
@@ -1295,7 +1299,7 @@ def main():
         anio = int(plan.get("anio_suceso"))
     except (TypeError, ValueError):
         anio = None
-    print(f"🔥 Título: {titulo}")
+    print(f" Título: {titulo}")
     
     capitulos_txt = generar_capitulos(plan, tema, contexto, estado_mx)
     n_caps = len(capitulos_txt)
@@ -1317,6 +1321,14 @@ def main():
         segs += sintetizar(nuevos)
         total = construir_timeline(segs)
         
+    # ✅ VALIDACIÓN DE DURACIÓN MÁXIMA
+    if total > DURACION_MAXIMA_SEGUNDOS:
+        print(f"⚠️ Duración {total/60:.1f} min excede el máximo de {DURACION_MAXIMA_SEGUNDOS/60:.0f} min. Ajustando...")
+        # Recortar segmentos si es necesario
+        while total > DURACION_MAXIMA_SEGUNDOS and len(segs) > 10:
+            segs.pop()
+            total = construir_timeline(segs)
+    
     if total < DURACION_MINIMA_SEGUNDOS:
         print("❌ Duración insuficiente. Abortando.")
         sys.exit(1)
@@ -1355,7 +1367,7 @@ def main():
     renderizar(escenas, total, audio, (W, H), "video_final.mp4")
     
     slot = proximo_slot() if PROGRAMAR_PICO else None
-    print(f"🕖 Programación: {slot:%Y-%m-%d %H:%M} CDMX" if slot else "🕖 Publicación inmediata")
+    print(f"🕖 Programación: {slot:%Y-%m-%d %H:%M} CDMX" if slot else " Publicación inmediata")
     
     vid = subir_video(youtube, "video_final.mp4", titulo, descripcion, tags, utc_iso(slot) if slot else None)
     comentario = str(plan.get("pregunta_comentario") or "¿Tú qué habrías hecho? Te leo 👇")
@@ -1363,7 +1375,7 @@ def main():
     
     if GENERAR_SHORT:
         try:
-            print("📱 Creando Short embudo...")
+            print(" Creando Short embudo...")
             crear_short(segs, plan, fondo)
             t_short = str(plan.get("titulo_short") or titulo)[:88] + " #Shorts"
             d_short = (f"Historia completa 👉 https://youtu.be/{vid}\n\nSuscríbete: {CANAL_LINK}?sub_confirmation=1\n\n"
