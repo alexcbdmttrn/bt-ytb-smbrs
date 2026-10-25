@@ -11,6 +11,18 @@
         "retencion_predicha": 77.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "¿Qué conduje en el estacionamiento a las 3 AM?",
+      "tema": "velador",
+      "fecha": "2026-10-25T20:40:42.872143",
+      "video_id": "WpHzIabX-OM",
+      "prediccion": {
+        "vistas_predichas": 722000,
+        "ctr_predicho": 7.22,
+        "retencion_predicha": 77.6,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
