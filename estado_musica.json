@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "Ash and Marrow.mp3",
     "Cold Hollow.mp3",
-    "Sunken Dread.mp3"
+    "Sunken Dread.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-22",
+  "ultima_publicacion_exitosa": "2026-10-25",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-22T23:11:42.374602-06:00",
+  "ultima_publicacion": "2026-10-25T01:00:52.587864-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -184,14 +184,20 @@
       "titulo": "Vi al paciente de la 3 caminar a las 3:33 AM y no debí seguirlo",
       "tema": "hospital",
       "fecha": "2026-10-22T23:11:42.374602-06:00"
+    },
+    {
+      "id": "XtPOnJWDgyA",
+      "titulo": "No pares en la gasolinera de la 15 a las 3:17 AM, NUNCA",
+      "tema": "carretera",
+      "fecha": "2026-10-25T01:00:52.587864-06:00"
     }
   ],
   "temas_recientes": [
-    "creepypasta",
     "carretera",
     "deep_web",
     "leyenda_mexicana",
     "objeto_maldito",
-    "hospital"
+    "hospital",
+    "carretera"
   ]
 }
