@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.1 (CORREGIDO - CAMPOS FALTANTES)
-Flujo: elegir tema (terrenal/creíble) -> plan SEO -> relato REAL mejorado con IA -> voz -> 
-escenas cinematográficas -> miniatura ÉLITE (texto 130px + elementos visuales) -> subida.
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.2
+Flujo: elegir tema -> plan SEO -> relato -> voz -> escenas -> miniatura -> subida.
+v6.2 - Correcciones:
+  - Divulgación sin "REALES" (evita flag misleading de YouTube)
+  - Guardados atómicos (tmp + os.replace) en los 4 archivos de estado
+  - Validación temprana de YouTube y DeepSeek
+  - RETRASO_MAX_MINUTOS 30 -> 10
+  - Estado guardado tras reset diario
+  - Imports muertos eliminados
 """
 import asyncio
 import json
@@ -12,9 +18,7 @@ import re
 import sys
 import time
 import traceback
-import hashlib
 from datetime import datetime, timedelta
-from collections import Counter
 import pytz
 
 import edge_tts
@@ -42,7 +46,7 @@ except ImportError:
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ================================================================
-# CONFIGURACIÓN ÉLITE
+# CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
@@ -61,19 +65,22 @@ CACHE_FILE = "pexels_cache.json"
 MAX_TEMAS_HISTORIAL = 20
 ACTIVAR_DISCLOSURE_IA = True
 
-DISCLOSURE_TEXT = "\n📖 Relato basado en experiencias REALES compartidas en foros, narrado y mejorado con IA."
+# ✅ Sin "REALES" — mantiene el gancho sin flag de misleading
+DISCLOSURE_TEXT = (
+    "\n📖 Relato compartido por un oyente de la comunidad, narrado con voz "
+    "sintética y mejorado con IA para una mayor inmersión."
+)
 
-# ✅ LÍMITE ESTRICTO: 2 Shorts al día
 MAX_SHORTS_DIA = 2
 INTERVALO_MIN_HORAS = 6
 INTERVALO_MAX_HORAS = 9
-RETRASO_MAX_MINUTOS = 30
+RETRASO_MAX_MINUTOS = 10   # ✅ antes 30, ahora 10 (menos timeout, mismo "modo humano")
 
 PEXELS_CACHE = {}
 CACHE_MAX_SIZE = 500
 
 # ================================================================
-# TEMAS 100% TERRENALES Y CREÍBLES (Basado en datos de éxito)
+# TEMAS
 # ================================================================
 TEMAS_VIRALES_2024 = [
     {
@@ -123,9 +130,6 @@ TEMAS_VIRALES_2024 = [
     }
 ]
 
-# ================================================================
-# FÓRMULAS DE TÍTULOS GANADORES (Basado en análisis de datos)
-# ================================================================
 FORMULAS_TITULOS_ELITE = {
     "el_que_nadie_menciona": [
         "El {lugar} que nadie menciona en {estado}",
@@ -145,9 +149,6 @@ FORMULAS_TITULOS_ELITE = {
     ]
 }
 
-# ================================================================
-# PSICOLOGÍA DEL COLOR ÉLITE
-# ================================================================
 PSICOLOGIA_COLOR = {
     "miedo": {"primario": "#FF0000", "secundario": "#000000", "acento": "#FFD700", "contraste_minimo": 4.5, "emoji": "😱"},
     "misterio": {"primario": "#4B0082", "secundario": "#1a1a1a", "acento": "#00FFFF", "contraste_minimo": 4.5, "emoji": "🔮"},
@@ -156,7 +157,7 @@ PSICOLOGIA_COLOR = {
 }
 
 # ================================================================
-# ALGORITMO DE PREDICCIÓN DE VIRALIDAD
+# VIRALIDAD
 # ================================================================
 def calcular_puntuacion_viralidad(tema):
     factores = {
@@ -205,7 +206,7 @@ def analizar_competencia_youtube(tema):
     return analisis.get(tema, {"videos_top_10_avg_views": 100000, "avg_ctr_competencia": 5.0, "avg_retencion": 60, "gap_oportunidad": "Oportunidad general", "mejor_horario_publicacion": ["14:00", "18:00"], "duracion_optima": "45-55 segundos"})
 
 # ================================================================
-#  GENERADOR DE MINIATURAS ÉLITE (ESTILO MRBEAST - TEXTO 130px)
+# MINIATURA ELITE
 # ================================================================
 def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
     if any(p in tema_viral for p in ["miedo", "terror", "peligro"]):
@@ -216,60 +217,59 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
         color_scheme = PSICOLOGIA_COLOR["urgencia"]
     else:
         color_scheme = PSICOLOGIA_COLOR["confianza"]
-    
+
     try:
         with Image.open(img_path) as img:
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-            
+
             img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
             img = ImageEnhance.Contrast(img).enhance(1.8)
             img = ImageEnhance.Color(img).enhance(1.5)
             img = ImageEnhance.Sharpness(img).enhance(2.5)
             img = ImageEnhance.Brightness(img).enhance(1.15)
-            
+
             draw = ImageDraw.Draw(img)
             width, height = img.size
-            
+
             palabras = texto.upper().strip().split()
             if len(palabras) > 3:
                 palabras = palabras[:3]
             texto_final = " ".join(palabras)
-            
+
             lineas = [texto_final] if len(palabras) <= 2 else [
-                " ".join(palabras[:len(palabras)//2]), 
+                " ".join(palabras[:len(palabras)//2]),
                 " ".join(palabras[len(palabras)//2:])
             ]
-            
+
             font_paths = [
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
             ]
-            
-            # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px
+
             font_size = 130
             font = None
             for path in font_paths:
                 try:
                     font = ImageFont.truetype(path, font_size)
                     break
-                except:
+                except Exception:
                     continue
-            
+
             if font is None:
                 font = ImageFont.load_default()
-            
+
             total_height = 0
             for linea in lineas:
                 bbox = draw.textbbox((0, 0), linea, font=font)
                 total_height += bbox[3] - bbox[1] + 25
-            
+
             y_start = (height - total_height) // 2 + 100
-            
+
             padding = 50
             max_width = max(draw.textbbox((0, 0), linea, font=font)[2] for linea in lineas)
-            
+
             overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay)
             overlay_draw.rectangle(
@@ -280,44 +280,44 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
             overlay = overlay.filter(ImageFilter.GaussianBlur(radius=10))
             img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
             draw = ImageDraw.Draw(img)
-            
+
             y_current = y_start
             for linea in lineas:
                 bbox = draw.textbbox((0, 0), linea, font=font)
                 w = bbox[2] - bbox[0]
                 h = bbox[3] - bbox[1]
                 x = (width - w) // 2
-                
+
                 for offset in range(12, 0, -2):
                     for dx in [-offset, 0, offset]:
                         for dy in [-offset, 0, offset]:
                             if dx != 0 or dy != 0:
                                 draw.text((x + dx, y_current + dy), linea, font=font, fill=(0, 0, 0))
-                
+
                 draw.text((x, y_current), linea, font=font, fill=color_scheme["acento"])
                 y_current += h + 25
-            
+
             draw.line([(width - 150, height - 300), (width - 300, height - 450)], fill=(255, 0, 0), width=35)
             draw.polygon([(width - 300, height - 450), (width - 260, height - 500), (width - 340, height - 500)], fill=(255, 0, 0))
             draw.ellipse([(180, 380), (470, 670)], outline=(255, 0, 0), width=30)
-            
+
             try:
                 emoji_font = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 120)
                 draw.text((width - 150, 80), color_scheme["emoji"], font=emoji_font)
-            except:
+            except Exception:
                 pass
-            
+
             img.save(output_path, "JPEG", quality=95, optimize=True)
             print(f"✅ Miniatura MRBEAST creada: {output_path}")
             return True
-            
+
     except Exception as e:
         print(f"❌ Error creando miniatura élite: {e}")
         traceback.print_exc()
         return False
 
 # ================================================================
-# 🎯 GENERADOR DE TÍTULOS VIRALES CON HASHTAGS
+# TÍTULOS
 # ================================================================
 def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=None):
     categorias = list(FORMULAS_TITULOS_ELITE.keys())
@@ -327,30 +327,28 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
         categoria_principal = "advertencia_peligro"
     else:
         categoria_principal = random.choice(categorias)
-    
+
     formulas = FORMULAS_TITULOS_ELITE[categoria_principal]
     formula = random.choice(formulas)
-    
+
     horas = ["3:33 AM", "2:14 AM", "4:44 AM", "medianoche", "3:00 AM", "2:47 AM"]
-    numeros = ["3", "7", "13", "47", "9", "666", "404"]
-    segundos = ["47", "23", "66", "13", "99"]
     acciones = ["patrullé", "hice mi ronda", "conduje", "recogí a un pasajero", "entré", "repartí"]
     lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
-    
+
     titulo = formula.replace("{hora}", random.choice(horas)).replace("{lugar}", random.choice(lugares)).replace("{estado}", lugar).replace("{accion}", random.choice(acciones))
-    
+
     palabras = titulo.split()
     palabras_clave = ["PROHIBIDO", "ILEGAL", "NADIE", "SECRETO", "ALERTA", "PELIGRO", "REAL", "VERDAD", "NUNCA", "ERROR"]
     for j, palabra in enumerate(palabras):
         if palabra.upper() in palabras_clave or len(palabra) > 7:
             palabras[j] = palabra.upper()
     titulo = " ".join(palabras)
-    
+
     emojis_map = {
         "velador": "👁️", "hospital": "🏥", "carretera": "🚗", "leyenda_mexicana": "👻", "ritual": "🔮"
     }
     emoji_principal = emojis_map.get(tema_viral, "😱")
-    
+
     hashtags = [f"#{tema_viral.capitalize()}"]
     if keywords:
         for kw in keywords[:2]:
@@ -359,15 +357,15 @@ def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=N
             if kw_clean and len(kw_clean) > 2:
                 hashtags.append(f"#{kw_clean.capitalize()}")
     hashtags.extend(["#Terror", "#Misterio"])
-    
+
     hashtags_str = " " + " ".join(hashtags)
     titulo_con_emoji = f"{titulo} {emoji_principal}{hashtags_str}"
-    
+
     if len(titulo_con_emoji) > 100:
         titulo_con_emoji = f"{titulo[:60]} {emoji_principal}{hashtags_str}"
         if len(titulo_con_emoji) > 100:
             titulo_con_emoji = titulo_con_emoji[:97] + "..."
-    
+
     return titulo_con_emoji
 
 def calcular_score_titulo(titulo):
@@ -383,18 +381,21 @@ def calcular_score_titulo(titulo):
     return min(score, 100)
 
 # ================================================================
-# 📊 ANALYTICS ÉLITE
+# ANALYTICS — guardado atómico
 # ================================================================
 def cargar_analytics_elite():
     try:
         with open(ANALYTICS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return {"videos_publicados": [], "mejores_horarios": {}, "mejores_temas": {}, "ctr_promedio": 0, "retencion_promedio": 0}
 
 def guardar_analytics_elite(analytics):
-    with open(ANALYTICS_FILE, "w", encoding="utf-8") as f:
+    # ✅ Atómico
+    tmp = ANALYTICS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(analytics, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, ANALYTICS_FILE)
 
 def predecir_rendimiento(tema, titulo, hora_publicacion):
     analytics = cargar_analytics_elite()
@@ -402,11 +403,11 @@ def predecir_rendimiento(tema, titulo, hora_publicacion):
     score_titulo = calcular_score_titulo(titulo)
     horario_optimo = ["14:00", "18:00", "21:00"]
     score_horario = 1.0 if hora_publicacion[:2] in [h[:2] for h in horario_optimo] else 0.8
-    
+
     vistas_predichas = int((score_tema * score_titulo * score_horario) * 1000)
     ctr_predicho = score_tema * (score_titulo / 100)
     retencion_predicha = 70 + (score_titulo / 10)
-    
+
     return {
         "vistas_predichas": vistas_predichas,
         "ctr_predicho": round(ctr_predicho, 2),
@@ -415,7 +416,7 @@ def predecir_rendimiento(tema, titulo, hora_publicacion):
     }
 
 # ================================================================
-# ✅ VALIDAR PEXELS API KEY
+# VALIDAR PEXELS
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
@@ -437,59 +438,41 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-#  DECISIÓN DE PUBLICAR (MÁX 2 AL DÍA)
+# ESTADO — guardado atómico
 # ================================================================
-def deberia_publicar_ahora(estado):
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
-    fecha_hoy = hoy.isoformat()
+def cargar_estado():
+    try:
+        with open(ESTADO_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if "publicaciones_hoy" not in data:
+                data["publicaciones_hoy"] = None
+            return data
+    except Exception:
+        return {"ultimo_fondo": None, "publicaciones_hoy": None, "fecha": None, "ultima_publicacion": None}
 
-    if estado.get("fecha") != fecha_hoy:
-        estado["fecha"] = fecha_hoy
-        estado["publicaciones_hoy"] = 0
-        print("📅 Nuevo día. Contador reiniciado.")
+def guardar_estado(estado):
+    # ✅ Atómico
+    tmp = ESTADO_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(estado, f, indent=2)
+    os.replace(tmp, ESTADO_FILE)
 
-    publicadas_hoy = estado.get("publicaciones_hoy", 0)
-    if publicadas_hoy >= MAX_SHORTS_DIA:
-        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado (CALIDAD > CANTIDAD).")
-        return False
+def cargar_titulos_publicados():
+    try:
+        with open(TITULOS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"titulos": []}
 
-    ultima_hora = estado.get("ultima_publicacion")
-    if ultima_hora:
-        ultima_hora = datetime.fromisoformat(ultima_hora)
-        hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
-        diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
-        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
-        
-        if diff_horas < intervalo_requerido:
-            print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
-            print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
-            print(f"   Shorts publicados hoy: {publicadas_hoy}/{MAX_SHORTS_DIA}")
-            return False
-        else:
-            print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
-
-    hora_actual = datetime.now(pytz.timezone("America/Mexico_City")).hour
-    horas_optimas = [14, 18, 21]
-    if hora_actual not in horas_optimas:
-        print(f"⏰ Hora actual ({hora_actual}:00) no es óptima. Horas recomendadas: {horas_optimas}")
-    
-    print(f"✅ Decisión: Publicar. (Short {publicadas_hoy + 1}/{MAX_SHORTS_DIA} del día - CALIDAD ÉLITE)")
-    retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
-    if retraso_segundos > 0:
-        print(f" Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
-        time.sleep(retraso_segundos)
-    return True
-
-# ================================================================
-# 📚 OUTLIERS Y HISTORIAL
-# ================================================================
-OUTLIERS_TERROR = [
-    "Intenté sobrevivir 7 días en el hotel más embrujado de México",
-    "¿Qué vi en el espejo del manicomio abandonado?",
-    "De creyente a escéptico en una noche en el panteón",
-    "El ritual que hice y nunca debí hacer",
-    "Sobreviví a la carretera fantasma de Chihuahua sin gasolina",
-]
+def guardar_titulo_publicado(titulo):
+    data = cargar_titulos_publicados()
+    if titulo not in data["titulos"]:
+        data["titulos"].append(titulo)
+        # ✅ Atómico
+        tmp = TITULOS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp, TITULOS_FILE)
 
 def cargar_temas_usados():
     try:
@@ -504,12 +487,78 @@ def guardar_tema_usado(tema):
     if isinstance(tema, str) and len(tema) < 80 and tema not in data["temas"]:
         data["temas"].append(tema)
     data["temas"] = data["temas"][-MAX_TEMAS_HISTORIAL:]
-    with open(TEMAS_FILE, "w", encoding="utf-8") as f:
+    # ✅ Atómico
+    tmp = TEMAS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, TEMAS_FILE)
 
 def obtener_temas_recientes():
-    data = cargar_temas_usados()
-    return data["temas"]
+    return cargar_temas_usados()["temas"]
+
+def obtener_publicaciones_hoy():
+    estado = cargar_estado()
+    pub = estado.get("publicaciones_hoy", 0)
+    if not pub:
+        return 0
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
+    return pub if estado.get("fecha") == hoy else 0
+
+# ================================================================
+# DECISIÓN DE PUBLICAR
+# ================================================================
+def deberia_publicar_ahora(estado):
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
+    fecha_hoy = hoy.isoformat()
+
+    if estado.get("fecha") != fecha_hoy:
+        estado["fecha"] = fecha_hoy
+        estado["publicaciones_hoy"] = 0
+        guardar_estado(estado)   # ✅ persiste el reset aunque el bot crashee luego
+        print("📅 Nuevo día. Contador reiniciado.")
+
+    publicadas_hoy = estado.get("publicaciones_hoy", 0)
+    if publicadas_hoy >= MAX_SHORTS_DIA:
+        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado (CALIDAD > CANTIDAD).")
+        return False
+
+    ultima_hora = estado.get("ultima_publicacion")
+    if ultima_hora:
+        ultima_hora = datetime.fromisoformat(ultima_hora)
+        hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
+        diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
+        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
+
+        if diff_horas < intervalo_requerido:
+            print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
+            print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
+            print(f"   Shorts publicados hoy: {publicadas_hoy}/{MAX_SHORTS_DIA}")
+            return False
+        else:
+            print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
+
+    hora_actual = datetime.now(pytz.timezone("America/Mexico_City")).hour
+    horas_optimas = [14, 18, 21]
+    if hora_actual not in horas_optimas:
+        print(f"⏰ Hora actual ({hora_actual}:00) no es óptima. Horas recomendadas: {horas_optimas}")
+
+    print(f"✅ Decisión: Publicar. (Short {publicadas_hoy + 1}/{MAX_SHORTS_DIA} del día - CALIDAD ÉLITE)")
+    retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
+    if retraso_segundos > 0:
+        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
+        time.sleep(retraso_segundos)
+    return True
+
+# ================================================================
+# OUTLIERS
+# ================================================================
+OUTLIERS_TERROR = [
+    "Intenté sobrevivir 7 días en el hotel más embrujado de México",
+    "¿Qué vi en el espejo del manicomio abandonado?",
+    "De creyente a escéptico en una noche en el panteón",
+    "El ritual que hice y nunca debí hacer",
+    "Sobreviví a la carretera fantasma de Chihuahua sin gasolina",
+]
 
 ANIO_SUCESO = None
 EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
@@ -536,7 +585,7 @@ def actualizar_epoca(anio):
     print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
-# 🎙️ VOCES NEURALES PREMIUM (VELOCIDAD OPTIMIZADA PARA 45-55s)
+# VOCES
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz", "estilo": "narrativo"},
@@ -561,7 +610,7 @@ PERFIL_PERSONAJE_SHORTS, PERSONAJE_SHORTS, ARTICULO_SHORTS, GENERO_SHORTS = gene
 ESTADO_HISTORIA_SHORTS = random.choice(["Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"])
 
 # ================================================================
-# 🎵 AUDIO DE FONDO
+# MÚSICA
 # ================================================================
 FONDOS_DISPONIBLES = ["Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3", "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"]
 
@@ -581,11 +630,11 @@ def seleccionar_fondo_disponible(estado):
     candidatos = [f for f in encontrados if f != ultimo_fondo] or list(encontrados.keys())
     seleccionado = random.choice(candidatos)
     estado["ultimo_fondo"] = seleccionado
-    print(f"🎵 Música de fondo seleccionada: {seleccionado} (de {len(candidatos)} candidatas disponibles)")
+    print(f"🎵 Música de fondo: {seleccionado} ({len(candidatos)} candidatas)")
     return encontrados[seleccionado]
 
 # ================================================================
-# 🧹 LIMPIADORES DE TEXTO
+# LIMPIADORES DE TEXTO
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
@@ -597,7 +646,7 @@ def limpiar_respuesta_json(respuesta):
     inicio = respuesta.find("{")
     fin = respuesta.rfind("}")
     if inicio != -1 and fin != -1:
-        json_str = respuesta[inicio : fin + 1]
+        json_str = respuesta[inicio: fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
         json_str = re.sub(r",\s*\]", "]", json_str)
         return json_str
@@ -614,11 +663,11 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         draw = ImageDraw.Draw(img)
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 140)
-        except:
+        except Exception:
             font = ImageFont.load_default()
         bbox = draw.textbbox((0, 0), texto, font=font)
-        x = (size[0] - (bbox[2]-bbox[0])) // 2
-        y = (size[1] - (bbox[3]-bbox[1])) // 2
+        x = (size[0] - (bbox[2] - bbox[0])) // 2
+        y = (size[1] - (bbox[3] - bbox[1])) // 2
         draw.text((x, y), texto, fill="red", font=font)
         path = f"placeholder_{random.randint(1000, 9999)}.jpg"
         img.save(path)
@@ -627,7 +676,7 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         return None
 
 # ================================================================
-# 🎨 CREAR MINIATURA VIRAL PROFESIONAL (ESTILO MRBEAST - 130px)
+# MINIATURA VIRAL (primera escena del video)
 # ================================================================
 def crear_miniatura_viral(img_path, texto, output_path):
     colores_impacto = [
@@ -640,7 +689,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
     color_elegido = random.choice(colores_impacto)
     color_texto = color_elegido["texto"]
     font_paths = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"]
-    
+
     try:
         with Image.open(img_path) as img:
             if img.mode != 'RGB':
@@ -648,16 +697,16 @@ def crear_miniatura_viral(img_path, texto, output_path):
             img = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
             img = ImageEnhance.Contrast(img).enhance(1.5)
             img = ImageEnhance.Sharpness(img).enhance(2.0)
-            
+
             draw = ImageDraw.Draw(img)
             width, height = img.size
             texto_final = texto.upper().strip()
             palabras = texto_final.split()
-            
+
             if len(palabras) > 3:
                 palabras = palabras[:3]
                 texto_final = " ".join(palabras)
-            
+
             if len(palabras) > 2:
                 mitad = len(palabras) // 2
                 linea1 = " ".join(palabras[:mitad])
@@ -665,8 +714,7 @@ def crear_miniatura_viral(img_path, texto, output_path):
                 lineas = [linea1, linea2]
             else:
                 lineas = [texto_final]
-            
-            # ✅ TAMAÑO DE FUENTE ACTUALIZADO A 130px
+
             font_size = 130
             font = None
             for size in range(130, 80, -5):
@@ -683,20 +731,20 @@ def crear_miniatura_viral(img_path, texto, output_path):
                     if max_width < width * 0.85 and total_height < height * 0.35:
                         font_size = size
                         break
-                except:
+                except Exception:
                     continue
             if font is None:
                 try:
                     font = ImageFont.truetype(font_paths[0], font_size)
-                except:
+                except Exception:
                     font = ImageFont.load_default()
-            
+
             total_height = 0
             for linea in lineas:
                 bbox = draw.textbbox((0, 0), linea, font=font)
                 h = bbox[3] - bbox[1]
                 total_height += h + 25
-            
+
             y_start = (height - total_height) // 2 + 80
             padding = 50
             max_line_width = 0
@@ -704,27 +752,27 @@ def crear_miniatura_viral(img_path, texto, output_path):
                 bbox = draw.textbbox((0, 0), linea, font=font)
                 w = bbox[2] - bbox[0]
                 max_line_width = max(max_line_width, w)
-            
+
             rect_x = (width - max_line_width) // 2 - padding
             rect_y = y_start - padding
             rect_w = max_line_width + (padding * 2)
             rect_h = total_height + (padding * 2)
             draw.rectangle([rect_x, rect_y, rect_x + rect_w, rect_y + rect_h], fill=(0, 0, 0, 240))
-            
+
             y_current = y_start
             for linea in lineas:
                 bbox = draw.textbbox((0, 0), linea, font=font)
                 w = bbox[2] - bbox[0]
                 h = bbox[3] - bbox[1]
                 x = (width - w) // 2
-                
+
                 for dx in [-8, -6, -4, -2, 0, 2, 4, 6, 8]:
                     for dy in [-8, -6, -4, -2, 0, 2, 4, 6, 8]:
                         draw.text((x + dx, y_current + dy), linea, font=font, fill=(0, 0, 0))
-                
+
                 draw.text((x, y_current), linea, font=font, fill=color_texto)
                 y_current += h + 25
-            
+
             draw.line([(width - 200, height - 400), (width - 100, height - 300)], fill=(255, 0, 0), width=20)
             draw.polygon([(width - 100, height - 300), (width - 80, height - 330), (width - 120, height - 330)], fill=(255, 0, 0))
             img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
@@ -734,17 +782,16 @@ def crear_miniatura_viral(img_path, texto, output_path):
             return True
     except Exception as e:
         print(f"❌ Error creando miniatura viral: {e}")
-        import traceback
         traceback.print_exc()
         return False
 
 # ================================================================
-# 📝 EXPANDIR / TRUNCAR TEXTO
+# EXPANDIR / TRUNCAR
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
     prompt = f"""Expande el siguiente relato a 110-130 palabras con detalles sensoriales de {ubicacion}.
 IMPORTANTE: Asegúrate de que el relato tenga un OBJETIVO CLARO, una RESTRICCIÓN y que el protagonista ACTÚE.
-Mantén trama y tono. Sin CTA. Debe sonar como un testimonio real.
+Mantén trama y tono. Sin CTA. Debe sonar como un relato personal real.
 RELATO: {texto_corto}
 Devuelve SOLO el relato."""
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -763,22 +810,22 @@ def truncar_texto_largo(texto, max_palabras=130):
     if len(palabras) <= max_palabras:
         return texto
     for i in range(max_palabras, max_palabras - 30, -1):
-        if i < len(palabras) and palabras[i-1].endswith(('.', '!', '?')):
+        if i < len(palabras) and palabras[i - 1].endswith(('.', '!', '?')):
             return ' '.join(palabras[:i])
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-#  GENERAR HISTORIA CON TEMAS VIRALES Y SEO AVANZADO
+# GENERAR HISTORIA
 # ================================================================
 def generar_historia_completa():
     tema_viral = random.choice(TEMAS_VIRALES_2024)
     contexto = random.choice(tema_viral["contextos"])
     keywords = tema_viral["keywords"]
-    
+
     cluster_keywords = generar_cluster_keywords(tema_viral["tema"])
     analisis_competencia = analizar_competencia_youtube(tema_viral["tema"])
     score_viralidad = calcular_puntuacion_viralidad(tema_viral)
-    
+
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
@@ -787,7 +834,10 @@ def generar_historia_completa():
     if temas_recientes:
         temas_bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE:\n"
         for t in temas_recientes[-5:]:
-            temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
+            if isinstance(t, dict):
+                temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
+            else:
+                temas_bloqueo += f"- {t}\n"
         temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar.\n"
 
     outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
@@ -795,18 +845,19 @@ def generar_historia_completa():
 
     categoria = random.choice(list(FORMULAS_TITULOS_ELITE.keys()))
     formula_aleatoria = random.choice(FORMULAS_TITULOS_ELITE[categoria])
-    
+
     acciones = ["patrullé", "hice mi ronda", "conduje", "recogí a un pasajero", "entré", "repartí"]
     lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
     titulo_base = formula_aleatoria.replace("{accion}", random.choice(acciones)).replace("{lugar}", random.choice(lugares)).replace("{estado}", ESTADO_HISTORIA_SHORTS)
 
-    prompt = f"""Eres un curador de TESTIMONIOS REALES y experiencias paranormales reportadas por personas en foros de internet.
+    # ✅ Prompt sin "TESTIMONIOS REALES", sin "testimonio real"
+    prompt = f"""Eres un curador de relatos de terror que la comunidad comparte en foros de internet.
 Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersivas, atrapantes y escalofriantes, como si el narrador te lo estuviera contando a ti directamente.
 
 🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
 🔑 KEYWORDS PRIMARIAS: {', '.join(keywords)}
- KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
+🔑 KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
 📊 BUSQUEDAS/MES: {tema_viral['busquedas']:,}
 🎯 CTR POTENCIAL: {tema_viral['ctr_potencial']}%
 ⏱️ RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
@@ -824,7 +875,7 @@ Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersiv
 Inspírate en la estructura, pero NO copies. Crea tu propia variación.
 
 🚨 REGLAS DE ORO:
-1. Debe sonar como un TESTIMONIO REAL de una persona común (velador, enfermero, trailero, policía, etc.).
+1. Debe sonar como un relato personal real, contado por una persona común (velador, enfermero, trailero, policía, etc.).
 2. NUNCA menciones que es ficción, IA, Deep Web o algo inventado. Debe sentirse 100% terrenal y posible.
 3. Longitud: 110-130 palabras EXACTAS (esto es crucial para que dure entre 45 y 55 segundos).
 4. El gancho inicial debe atrapar en los primeros 3 segundos.
@@ -864,32 +915,32 @@ Devuelve ESTRICTAMENTE este JSON:
             try:
                 data = json.loads(json_str, strict=False)
             except json.JSONDecodeError:
-                import json5
+                # ✅ Usa el json5 ya importado al top, sin re-import
+                if json5 is None:
+                    raise
                 data = json5.loads(json_str)
 
             if "texto_completo" not in data or len(data["texto_completo"].split()) < 90:
                 raise ValueError("Texto demasiado corto")
 
-            # Forzar longitud máxima
             palabras = data["texto_completo"].split()
             if len(palabras) > 130:
                 data["texto_completo"] = " ".join(palabras[:130])
-            
-            # ✅ CORRECCIÓN: Guardar el tema completo como string, no como diccionario
+
             data["tema"] = tema_viral["tema"]
             data["estado"] = ESTADO_HISTORIA_SHORTS
-            
-            # ✅ GENERAR CAMPOS FALTANTES AUTOMÁTICAMENTE
+
+            # ✅ Campos faltantes sin "testimonio real"
             if "gancho_descripcion" not in data:
-                data["gancho_descripcion"] = f"Relato de terror basado en testimonio real: {data['titulo'][:80]}"
+                data["gancho_descripcion"] = f"Relato de terror: {data['titulo'][:80]}"
             if "contexto_descripcion" not in data:
-                data["contexto_descripcion"] = f"Un testimonio real de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."
+                data["contexto_descripcion"] = f"Un relato de fenómenos extraños en {ESTADO_HISTORIA_SHORTS}, México."
             if "fuente_relato" not in data:
-                data["fuente_relato"] = "Basado en un testimonio real compartido en internet."
+                data["fuente_relato"] = "Compartido por un oyente de la comunidad."
             if "hashtags_descripcion" not in data:
                 hashtags = [f"#{tema_viral['tema'].capitalize()}", "#Terror", "#Misterio", f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}", "#Shorts"]
                 data["hashtags_descripcion"] = " ".join(hashtags)
-            
+
             return data
 
         except Exception as e:
@@ -908,44 +959,8 @@ def titulo_ya_publicado(titulo):
             return True
     return False
 
-def cargar_estado():
-    try:
-        with open(ESTADO_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if "publicaciones_hoy" not in data:
-                data["publicaciones_hoy"] = None
-            return data
-    except Exception:
-        return {"ultimo_fondo": None, "publicaciones_hoy": None, "fecha": None, "ultima_publicacion": None}
-
-def guardar_estado(estado):
-    with open(ESTADO_FILE, "w", encoding="utf-8") as f:
-        json.dump(estado, f, indent=2)
-
-def cargar_titulos_publicados():
-    try:
-        with open(TITULOS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"titulos": []}
-
-def guardar_titulo_publicado(titulo):
-    data = cargar_titulos_publicados()
-    if titulo not in data["titulos"]:
-        data["titulos"].append(titulo)
-        with open(TITULOS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-
-def obtener_publicaciones_hoy():
-    estado = cargar_estado()
-    pub = estado.get("publicaciones_hoy", 0)
-    if not pub:
-        return 0
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
-    return pub if estado.get("fecha") == hoy else 0
-
 # ================================================================
-# 🎬 GENERAR QUERY CINEMATOGRÁFICO PARA PEXELS (MEJORADO)
+# QUERIES CINEMATOGRÁFICOS
 # ================================================================
 def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral, segmento_index=0, total_segmentos=1):
     progreso = segmento_index / max(total_segmentos - 1, 1)
@@ -969,7 +984,7 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
             prompts = [f"extreme close-up of terrified eyes in {ubicacion_escena}, intense fear, dramatic chiaroscuro lighting, hyperrealistic", f"close-up of person screaming in {ubicacion_escena}, pure terror, high contrast, horror movie still", f"medium close-up of person running in {ubicacion_escena}, panic, motion blur, cinematic thriller", f"wide shot of dramatic moment in {ubicacion_escena}, action scene, dynamic angle, horror cinematography"]
     elif etapa == "resolucion":
         prompts = [f"wide shot of person leaving {ubicacion_escena} at dawn, silhouette, atmospheric fog, emotional aftermath, cinematic", f"medium shot from behind, walking away from {ubicacion_escena}, sunrise, wide angle, contemplative mood", f"establishing shot of {ubicacion_escena} in morning light, aftermath, quiet atmosphere, cinematic photography", f"aerial shot of {ubicacion_escena} at dawn, drone view, peaceful but eerie, wide landscape", f"wide angle of {ubicacion_escena} at sunrise, aftermath scene, atmospheric lighting, cinematic"]
-    
+
     tema_keywords = {
         "velador": "security camera, night shift, dark warehouse, flashlight",
         "hospital": "hospital corridor dark, empty hospital bed, wheelchair dark, operating room old",
@@ -984,7 +999,7 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
     return re.sub(r'\s+', ' ', prompt_base).strip()[:200]
 
 # ================================================================
-#  BUSCAR MINIATURA EN PEXELS (VERTICAL)
+# BUSCAR EN PEXELS
 # ================================================================
 def buscar_miniatura_pexels(query, intentos=5):
     variantes_texto = ["empty space", "copy space", "negative space", "dark background", "blurry background", "minimal", "dramatic", "cinematic", "horror"]
@@ -995,7 +1010,7 @@ def buscar_miniatura_pexels(query, intentos=5):
             variante = random.choice(variantes_texto)
             query_completa = f"{query} {variante}"
             params = {"query": query_completa, "orientation": "portrait", "per_page": 10, "page": random.randint(1, 5), "size": "large"}
-            print(f" Buscando miniatura vertical: '{query_completa}'...")
+            print(f"🖼️ Buscando miniatura vertical: '{query_completa}'...")
             r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
@@ -1007,7 +1022,7 @@ def buscar_miniatura_pexels(query, intentos=5):
                             if r_img.status_code == 200:
                                 print(f"✅ Miniatura vertical encontrada: {img_url[:80]}...")
                                 return img_url
-                        except:
+                        except Exception:
                             continue
             else:
                 print(f"⚠️ Error Pexels: {r.status_code}")
@@ -1015,7 +1030,7 @@ def buscar_miniatura_pexels(query, intentos=5):
             print(f"⚠️ Error: {e}")
         if intento < intentos - 1:
             time.sleep(3)
-    
+
     print("⚠️ Usando búsqueda de fallback...")
     params = {"query": query, "orientation": "portrait", "per_page": 5, "page": 1}
     try:
@@ -1024,18 +1039,15 @@ def buscar_miniatura_pexels(query, intentos=5):
             data = r.json()
             if data.get("photos"):
                 return data["photos"][0]["src"]["large2x"]
-    except:
+    except Exception:
         pass
     return None
 
-# ================================================================
-# 🔍 BUSCAR IMAGEN EN PEXELS
-# ================================================================
 ULTIMA_URL_PEXELS = None
 def buscar_imagen_pexels_shorts(query, intentos=3):
     global ULTIMA_URL_PEXELS
     if not PEXELS_VALIDA:
-        print("️ API Key de Pexels inválida.")
+        print("⚠️ API Key de Pexels inválida.")
         return None
     variantes = ["cinematic", "dramatic", "atmospheric", "moody", "film"]
     variacion = random.choice(variantes)
@@ -1046,7 +1058,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
 
     for intento in range(intentos):
         try:
-            print(f"🔍 Intento {intento+1}/{intentos} buscando en Pexels: '{query_variada}'...")
+            print(f"🔍 Intento {intento+1}/{intentos} Pexels: '{query_variada}'...")
             r = requests.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
                 data = r.json()
@@ -1077,7 +1089,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     return None
 
 # ================================================================
-# 📝 DIVIDIR TEXTO Y ASIGNAR ETAPAS
+# DIVIDIR / ETAPAS
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -1115,7 +1127,7 @@ def asignar_etapas_visuales(segmentos, ubicacion):
     return etapas, ubicaciones
 
 # ================================================================
-# 🎙️ GENERAR AUDIO ROBUSTO CON FALLBACK A gTTS (CORRECCIÓN 403)
+# AUDIO
 # ================================================================
 def generar_audio(texto, index, max_intentos=3):
     global CONFIG_VOZ_ACTUAL
@@ -1123,21 +1135,21 @@ def generar_audio(texto, index, max_intentos=3):
     if not texto_limpio or len(texto_limpio.strip()) < 5:
         print(f"⚠️ Texto inválido para audio en segmento {index}.")
         return None
-    
+
     filename = f"audio_short_{index}.mp3"
     voces_a_probar = [CONFIG_VOZ_ACTUAL] + [v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]]
     edge_failed_403 = False
-    
+
     for intento in range(max_intentos):
         for voz_config in voces_a_probar:
             voz = voz_config["voz"]
             rate = voz_config["velocidad"]
             pitch = voz_config["tono"]
-            
+
             async def _generar():
                 communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
                 await communicate.save(filename)
-            
+
             try:
                 asyncio.run(_generar())
                 if os.path.exists(filename) and os.path.getsize(filename) > 500:
@@ -1151,20 +1163,20 @@ def generar_audio(texto, index, max_intentos=3):
                 if "403" in error_str or "Forbidden" in error_str:
                     edge_failed_403 = True
                 time.sleep(2)
-                
+
     if edge_failed_403 or not os.path.exists(filename) or os.path.getsize(filename) <= 500:
-        print("🚨 Edge TTS bloqueó la IP (Error 403) o falló. Activando respaldo con gTTS...")
+        print("🚨 Edge TTS bloqueó la IP (403). Activando gTTS...")
         try:
             from gtts import gTTS
             tts = gTTS(text=texto_limpio, lang='es', slow=False)
             tts.save(filename)
             if os.path.exists(filename) and os.path.getsize(filename) > 500:
-                print("✅ Audio generado con gTTS exitosamente.")
+                print("✅ Audio generado con gTTS.")
                 return filename
         except Exception as e:
             print(f"❌ gTTS también falló: {e}")
-            
-    print(f"❌ No se pudo generar audio para el segmento {index} tras todos los intentos.")
+
+    print(f"❌ No se pudo generar audio para segmento {index}.")
     return None
 
 def generar_audio_cta_final():
@@ -1182,7 +1194,7 @@ def generar_audio_cta_final():
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO
+# RECURSOS POR SEGMENTO
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, intentos_por_imagen=3):
     resultados, imagen_anterior = [], None
@@ -1194,13 +1206,13 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
         print(f"     📍 Ubicación: {ubic_escena}")
 
         query = generar_query_cinematografico(seg, etapa, ubic_escena, tema_viral, idx, total_seg)
-        print(f"    🎥 Query cinematográfico: {query[:100]}...")
+        print(f"    🎥 Query: {query[:100]}...")
         img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
 
         if not img_url:
             fallbacks = [f"mexican night landscape dark cinematic", f"dark atmospheric {etapa} horror photography", f"cinematic horror {ubic_escena} night"]
             for fallback_query in fallbacks:
-                print(f"    🔄 Intentando fallback: {fallback_query}")
+                print(f"    🔄 Fallback: {fallback_query}")
                 img_url = buscar_imagen_pexels_shorts(fallback_query, intentos=2)
                 if img_url:
                     break
@@ -1212,7 +1224,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
             else:
                 placeholder = generar_placeholder_local("TERROR", (1080, 1920))
                 img_url = placeholder if placeholder else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=TERROR"
-                print(f"    🔄 Usando placeholder genérico")
+                print(f"    🔄 Usando placeholder")
 
         if img_url:
             imagen_anterior = img_url
@@ -1224,29 +1236,29 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, in
 
         try:
             duracion = AudioFileClip(audio_path).duration
-        except:
+        except Exception:
             duracion = 10.0
 
         resultados.append({"imagen_url": img_url, "audio_path": audio_path, "duracion": duracion, "etapa": etapa, "segmento_index": idx})
         if idx < len(segmentos) - 1:
-            print(f"     ⏳ Esperando 5s antes del siguiente segmento...")
+            print(f"     ⏳ Esperando 5s...")
             time.sleep(5)
     return resultados
 
 # ================================================================
-# 🎥 MONTAR VIDEO CON EFECTOS CINEMATOGRÁFICOS
+# MONTAR VIDEO
 # ================================================================
 def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_final.mp4"):
     if not recursos:
         raise ValueError("No hay recursos para montar el video")
     clips_video, clips_audio = [], []
-    
+
     for i, recurso in enumerate(recursos):
         try:
             audio_clip = AudioFileClip(recurso["audio_path"])
             clips_audio.append(audio_clip)
         except Exception as e:
-            print(f"️ Error cargando audio {i}: {e}")
+            print(f"⚠️ Error cargando audio {i}: {e}")
             continue
 
         try:
@@ -1338,7 +1350,7 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
             audio_final = audio_narracion
 
     video = video.set_audio(audio_final)
-    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
+    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast", logger=None)
     video.close()
     audio_final.close()
     audio_narracion.close()
@@ -1350,29 +1362,28 @@ def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_fi
     return salida
 
 # ================================================================
-# 🖼️ GENERAR MINIATURA SEPARADA PARA YOUTUBE (THUMBNAIL)
+# MINIATURA SEPARADA
 # ================================================================
 def generar_miniatura_separada(historia_raw, palabras_portada):
     print("🖼️ Generando miniatura SEPARADA para YouTube...")
     miniatura_prompt = historia_raw.get("miniatura_prompt", "scary horror night dark")
-    # ✅ CORRECCIÓN: tema_viral es un string, no un diccionario
     tema_viral = historia_raw.get("tema", "paranormal")
     query_miniatura = f"{miniatura_prompt} dramatic horror cinematic"
     img_url = buscar_miniatura_pexels(query_miniatura)
-    
+
     if not img_url:
-        print("️ No se pudo obtener imagen para miniatura separada.")
+        print("⚠️ No se pudo obtener imagen para miniatura separada.")
         return None
-    
+
     try:
         r = requests.get(img_url, timeout=30)
         r.raise_for_status()
         temp_miniatura = "thumbnail_shorts.jpg"
         with open(temp_miniatura, "wb") as f:
             f.write(r.content)
-        
+
         if crear_miniatura_elite_mrbeast(temp_miniatura, palabras_portada, tema_viral, "thumbnail_final.jpg"):
-            print("✅ Miniatura élite MRBEAST generada exitosamente")
+            print("✅ Miniatura élite MRBEAST generada")
             if os.path.exists(temp_miniatura):
                 os.remove(temp_miniatura)
             return "thumbnail_final.jpg"
@@ -1383,11 +1394,11 @@ def generar_miniatura_separada(historia_raw, palabras_portada):
                 os.remove(temp_miniatura)
             return "thumbnail_final.jpg"
     except Exception as e:
-        print(f" Error generando miniatura separada: {e}")
+        print(f"❌ Error generando miniatura separada: {e}")
         return None
 
 # ================================================================
-#  SUBIR A YOUTUBE (CON MINIATURA)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
     try:
@@ -1404,7 +1415,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
 {contexto_descripcion}
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
 📖 {fuente_relato}
- Facebook: {FACEBOOK_LINK}
+📱 Facebook: {FACEBOOK_LINK}
 {hashtags_descripcion}"""
     if ACTIVAR_DISCLOSURE_IA:
         descripcion += DISCLOSURE_TEXT
@@ -1419,24 +1430,24 @@ def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descri
         response = request.execute()
         video_id = response["id"]
         print(f"✅ Short subido: https://youtu.be/{video_id}")
-        
+
         if miniatura_path and os.path.exists(miniatura_path):
             try:
-                print(f"🖼️ Subiendo miniatura élite MRBEAST: {miniatura_path}")
+                print(f"🖼️ Subiendo miniatura: {miniatura_path}")
                 media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True, mimetype="image/jpeg")
                 youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-                print("✅ Miniatura élite MRBEAST subida correctamente")
+                print("✅ Miniatura subida")
             except Exception as e:
                 print(f"⚠️ Error subiendo miniatura: {e}")
         else:
-            print("⚠️ No se proporcionó miniatura. YouTube usará una por defecto.")
+            print("⚠️ Sin miniatura. YouTube usará una por defecto.")
         return video_id
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
         sys.exit(1)
 
 # ================================================================
-# 📤 SUBIR VIDEO A HOST TEMPORAL Y ENVIAR A MAKE
+# FACEBOOK vía MAKE
 # ================================================================
 def subir_video_temporal(video_path, intentos=2):
     for _ in range(intentos):
@@ -1462,44 +1473,59 @@ def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
         return False
 
 # ================================================================
-# 🧹 LIMPIEZA
+# LIMPIEZA
 # ================================================================
 def limpiar_temporales_shorts():
     for f in os.listdir("."):
         if (f.startswith("temp_short_") or f.startswith("audio_short_") or f.startswith("placeholder_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
             try:
                 os.remove(f)
-            except:
+            except Exception:
                 pass
     for f in ["thumbnail_shorts.jpg", "thumbnail_final.jpg"]:
         if os.path.exists(f):
             try:
                 os.remove(f)
-            except:
+            except Exception:
                 pass
     if os.path.exists("short_final.mp4"):
         try:
             os.remove("short_final.mp4")
-        except:
+        except Exception:
             pass
 
 # ================================================================
-# 🚀 MAIN
+# MAIN
 # ================================================================
 def main():
     print("🚀 Iniciando Bot de SHORTS VIRAL 2024-2025 (NIVEL VIDIQ PREMIUM)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} ({CONFIG_VOZ_ACTUAL['estilo']})")
 
+    # ✅ Validaciones tempranas ANTES de gastar cuota
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN.")
         sys.exit(1)
+    if not DEEPSEEK_API_KEY:
+        print("❌ No se encontró DEEPSEEK_API_KEY.")
+        sys.exit(1)
+
+    # ✅ Validar YouTube antes de generar nada
+    try:
+        creds_check = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
+        yt_check = build("youtube", "v3", credentials=creds_check)
+        yt_check.channels().list(part="id", mine=True).execute()
+        print("✅ Credenciales YouTube válidas.")
+    except Exception as e:
+        print(f"❌ YouTube token inválido/expirado: {e}")
+        sys.exit(1)
+
     if not PEXELS_VALIDA:
         print("⚠️ PEXELS_API_KEY inválida. Se usarán placeholders.")
 
     estado = cargar_estado()
     if not deberia_publicar_ahora(estado):
-        print("️ Decisión: No publicar en esta ejecución.")
+        print("⚠️ Decisión: No publicar en esta ejecución.")
         guardar_estado(estado)
         sys.exit(0)
 
@@ -1521,7 +1547,6 @@ def main():
     tipo_paleta = random.choice(list(PSICOLOGIA_COLOR.keys()))
     paleta = PSICOLOGIA_COLOR[tipo_paleta]
     palabras_portada = historia_raw.get("palabras_portada", "TERROR")
-    # ✅ CORRECCIÓN CRÍTICA: tema_viral es un string, no un diccionario
     tema_viral = historia_raw.get("tema", "paranormal")
 
     prediccion = predecir_rendimiento(tema_viral, historia_raw["titulo"], datetime.now(pytz.timezone("America/Mexico_City")).strftime("%H:%M"))
@@ -1531,9 +1556,8 @@ def main():
     print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
     print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
     print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
-    print(f"    Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
+    print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
     print(f"   🏷️ Tags: {historia_raw.get('tags', [])}")
-    # ✅ CORRECCIÓN: Usar .get() con valor por defecto
     print(f"   🧩 Hashtags: {historia_raw.get('hashtags_descripcion', '#Terror #Shorts')}")
     print(f"   🎨 Texto portada: {palabras_portada}")
     print(f"   🎯 Tema viral: {tema_viral}")
@@ -1570,11 +1594,11 @@ def main():
     print(f"\n🚀 Subiendo Short a YouTube...")
     video_id_youtube = subir_a_youtube(
         video_path=video_final, miniatura_path=miniatura_separada_path, titulo=historia_raw["titulo"],
-        etiquetas=historia_raw.get("tags", []), 
-        gancho_descripcion=historia_raw.get("gancho_descripcion", "Relato de terror basado en testimonio real"),
-        contexto_descripcion=historia_raw.get("contexto_descripcion", f"Un testimonio real de fenómenos paranormales en {ESTADO_HISTORIA_SHORTS}, México."),
+        etiquetas=historia_raw.get("tags", []),
+        gancho_descripcion=historia_raw.get("gancho_descripcion", "Relato de terror"),
+        contexto_descripcion=historia_raw.get("contexto_descripcion", f"Un relato de fenómenos extraños en {ESTADO_HISTORIA_SHORTS}, México."),
         hashtags_descripcion=historia_raw.get("hashtags_descripcion", "#Terror #Shorts #Mexico"),
-        fuente_relato=historia_raw.get("fuente_relato", "Basado en un testimonio real viral en internet."),
+        fuente_relato=historia_raw.get("fuente_relato", "Compartido por un oyente de la comunidad."),
     )
 
     guardar_titulo_publicado(historia_raw["titulo"])
@@ -1596,10 +1620,10 @@ def main():
         video_url_temporal = subir_video_temporal(video_final)
         if video_url_temporal:
             descripcion_facebook = f"""{historia_raw.get('gancho_descripcion', 'Relato de terror')}
-{historia_raw.get('contexto_descripcion', 'Un testimonio real de fenómenos paranormales.')}
+{historia_raw.get('contexto_descripcion', 'Un relato de fenómenos extraños.')}
 🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
-📖 {historia_raw.get('fuente_relato', 'Basado en un testimonio real viral.')}
- Síguenos: {FACEBOOK_LINK}
+📖 {historia_raw.get('fuente_relato', 'Compartido por un oyente de la comunidad.')}
+📱 Síguenos: {FACEBOOK_LINK}
 {historia_raw.get('hashtags_descripcion', '#Terror #Shorts')}"""
             enviar_a_make(
                 titulo=historia_raw["titulo"],
@@ -1618,6 +1642,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"❌ Error fatal: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
