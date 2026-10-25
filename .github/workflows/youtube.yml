@@ -2,30 +2,46 @@ name: Bot YouTube - Publicación (Modo humano)
 
 on:
   schedule:
-    # Ejecución cada 2 horas para dar oportunidad a horarios aleatorios
     - cron: '0 */2 * * *'
   workflow_dispatch:
+    inputs:
+      force_publish:
+        description: 'Ignorar la ventana de 20h y publicar ahora'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
+concurrency:
+  group: sombras-bot
+  cancel-in-progress: false   # si ya hay uno corriendo, el segundo ESPERA (no lo mata)
+
 jobs:
   publicar:
     runs-on: ubuntu-latest
+    timeout-minutes: 45        # si algo cuelga, no se queda 6h
 
     steps:
       - name: Checkout repositorio
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
 
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Limpiar caché de pip
-        run: |
-          pip cache purge
-          echo "✅ Caché de pip limpiada"
+      - name: Cache de pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-v1
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Instalar dependencias del sistema (ffmpeg)
         run: |
@@ -35,12 +51,9 @@ jobs:
       - name: Instalar dependencias de Python
         run: |
           pip install --upgrade pip
-          pip install 'Pillow<10.0.0'
-          pip install moviepy==1.0.3
-          pip install requests google-auth google-api-python-client google-auth-oauthlib
-          pip install edge-tts
-          pip install json5
-          pip install urllib3
+          pip install 'Pillow<10.0.0' moviepy==1.0.3 \
+                      requests google-auth google-api-python-client google-auth-oauthlib \
+                      edge-tts json5 urllib3
 
       - name: Verificar instalación
         run: |
@@ -49,23 +62,33 @@ jobs:
           python -c "import PIL; print('Pillow OK')"
           python -c "import edge_tts; print('edge-tts OK')"
           python -c "import json5; print('json5 OK')"
+          python -c "import googleapiclient; print('googleapiclient OK')"
 
-      - name: Ejecutar bot de YouTube (videos largos - modo humano)
+      - name: Ejecutar bot
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           YOUTUBE_USER_TOKEN: ${{ secrets.YOUTUBE_USER_TOKEN }}
-          FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          YOUTUBE_PLAYLIST_ID: ${{ secrets.YOUTUBE_PLAYLIST_ID }}
+          # Solo se activa si disparas MANUALMENTE y marcas el checkbox
+          FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.force_publish == true && 'true' || 'false' }}
+          USAR_VIDEOS: 'true'
+          GENERAR_SHORT: 'true'
+          PROGRAMAR_PICO: 'true'
+          HORA_PICO: '19'
+          INTERVALO_MIN_HORAS: '20'
+          PYTHONUNBUFFERED: '1'
         run: python bot_youtube.py
 
       - name: Commit y push del estado
+        if: always()
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
           git add estado_musica.json titulos_largos_publicados.json temas_shorts.json || true
 
-          if git diff-index --quiet HEAD; then
+          # ✅ Solo staged (no working tree). Evita commits fantasma por temporales.
+          if git diff --cached --quiet; then
             echo "✅ No hay cambios en los archivos de estado."
             exit 0
           fi
@@ -73,12 +96,23 @@ jobs:
           git commit -m "Actualizar estado [skip ci]"
 
           for i in 1 2 3 4 5; do
-            if git pull --rebase --autostash origin main && git push; then
-              echo "✅ Push exitoso"
-              break
+            if git pull --rebase --autostash origin main && git push origin main; then
+              echo "✅ Push exitoso (intento $i)"
+              exit 0
             fi
             echo "⚠️ Intento $i/5 falló, reintentando en 10s..."
             sleep 10
           done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "❌ No se pudo hacer push del estado tras 5 intentos"
+          exit 1
+
+      - name: Subir logs en caso de fallo
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ github.run_id }}
+          path: |
+            *.log
+            *.txt
+          retention-days: 7
+          if-no-files-found: ignore
