@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.2
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.3
 Flujo: elegir tema -> plan SEO -> relato -> voz -> escenas -> miniatura -> subida.
-v6.2 - Correcciones:
-  - Divulgación sin "REALES" (evita flag misleading de YouTube)
-  - Guardados atómicos (tmp + os.replace) en los 4 archivos de estado
-  - Validación temprana de YouTube y DeepSeek
+v6.3 - Fix validación de token:
+  - Tolera tokens sin scope youtube.readonly (insufficientPermissions)
+  - Distingue 401 (expirado real) de 403 (válido pero sin lectura)
+  - HttpError importado al top
+v6.2 - Correcciones anteriores:
+  - Divulgación sin "REALES"
+  - Guardados atómicos (tmp + os.replace)
   - RETRASO_MAX_MINUTOS 30 -> 10
   - Estado guardado tras reset diario
-  - Imports muertos eliminados
 """
 import asyncio
 import json
@@ -27,6 +29,7 @@ import requests
 import urllib3
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from moviepy.editor import (
     AudioFileClip,
@@ -65,7 +68,6 @@ CACHE_FILE = "pexels_cache.json"
 MAX_TEMAS_HISTORIAL = 20
 ACTIVAR_DISCLOSURE_IA = True
 
-# ✅ Sin "REALES" — mantiene el gancho sin flag de misleading
 DISCLOSURE_TEXT = (
     "\n📖 Relato compartido por un oyente de la comunidad, narrado con voz "
     "sintética y mejorado con IA para una mayor inmersión."
@@ -74,7 +76,7 @@ DISCLOSURE_TEXT = (
 MAX_SHORTS_DIA = 2
 INTERVALO_MIN_HORAS = 6
 INTERVALO_MAX_HORAS = 9
-RETRASO_MAX_MINUTOS = 10   # ✅ antes 30, ahora 10 (menos timeout, mismo "modo humano")
+RETRASO_MAX_MINUTOS = 10
 
 PEXELS_CACHE = {}
 CACHE_MAX_SIZE = 500
@@ -381,7 +383,7 @@ def calcular_score_titulo(titulo):
     return min(score, 100)
 
 # ================================================================
-# ANALYTICS — guardado atómico
+# ANALYTICS
 # ================================================================
 def cargar_analytics_elite():
     try:
@@ -391,7 +393,6 @@ def cargar_analytics_elite():
         return {"videos_publicados": [], "mejores_horarios": {}, "mejores_temas": {}, "ctr_promedio": 0, "retencion_promedio": 0}
 
 def guardar_analytics_elite(analytics):
-    # ✅ Atómico
     tmp = ANALYTICS_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(analytics, f, indent=2, ensure_ascii=False)
@@ -416,7 +417,7 @@ def predecir_rendimiento(tema, titulo, hora_publicacion):
     }
 
 # ================================================================
-# VALIDAR PEXELS
+# PEXELS
 # ================================================================
 def validar_pexels_api_key():
     if not PEXELS_API_KEY:
@@ -438,7 +439,7 @@ def validar_pexels_api_key():
 PEXELS_VALIDA = validar_pexels_api_key()
 
 # ================================================================
-# ESTADO — guardado atómico
+# ESTADO
 # ================================================================
 def cargar_estado():
     try:
@@ -451,7 +452,6 @@ def cargar_estado():
         return {"ultimo_fondo": None, "publicaciones_hoy": None, "fecha": None, "ultima_publicacion": None}
 
 def guardar_estado(estado):
-    # ✅ Atómico
     tmp = ESTADO_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(estado, f, indent=2)
@@ -468,7 +468,6 @@ def guardar_titulo_publicado(titulo):
     data = cargar_titulos_publicados()
     if titulo not in data["titulos"]:
         data["titulos"].append(titulo)
-        # ✅ Atómico
         tmp = TITULOS_FILE + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
@@ -487,7 +486,6 @@ def guardar_tema_usado(tema):
     if isinstance(tema, str) and len(tema) < 80 and tema not in data["temas"]:
         data["temas"].append(tema)
     data["temas"] = data["temas"][-MAX_TEMAS_HISTORIAL:]
-    # ✅ Atómico
     tmp = TEMAS_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -514,7 +512,7 @@ def deberia_publicar_ahora(estado):
     if estado.get("fecha") != fecha_hoy:
         estado["fecha"] = fecha_hoy
         estado["publicaciones_hoy"] = 0
-        guardar_estado(estado)   # ✅ persiste el reset aunque el bot crashee luego
+        guardar_estado(estado)
         print("📅 Nuevo día. Contador reiniciado.")
 
     publicadas_hoy = estado.get("publicaciones_hoy", 0)
@@ -550,7 +548,7 @@ def deberia_publicar_ahora(estado):
     return True
 
 # ================================================================
-# OUTLIERS
+# OUTLIERS / ÉPOCA
 # ================================================================
 OUTLIERS_TERROR = [
     "Intenté sobrevivir 7 días en el hotel más embrujado de México",
@@ -624,7 +622,7 @@ def seleccionar_fondo_disponible(estado):
                 if file.lower() == fondo.lower():
                     encontrados[fondo] = os.path.join(root, file)
     if not encontrados:
-        print("⚠️ No se encontraron archivos de música de fondo en el repositorio.")
+        print("⚠️ No se encontraron archivos de música de fondo.")
         return None
     ultimo_fondo = estado.get("ultimo_fondo")
     candidatos = [f for f in encontrados if f != ultimo_fondo] or list(encontrados.keys())
@@ -634,7 +632,7 @@ def seleccionar_fondo_disponible(estado):
     return encontrados[seleccionado]
 
 # ================================================================
-# LIMPIADORES DE TEXTO
+# LIMPIADORES
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
     texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
@@ -676,7 +674,7 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         return None
 
 # ================================================================
-# MINIATURA VIRAL (primera escena del video)
+# MINIATURA VIRAL
 # ================================================================
 def crear_miniatura_viral(img_path, texto, output_path):
     colores_impacto = [
@@ -850,7 +848,6 @@ def generar_historia_completa():
     lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
     titulo_base = formula_aleatoria.replace("{accion}", random.choice(acciones)).replace("{lugar}", random.choice(lugares)).replace("{estado}", ESTADO_HISTORIA_SHORTS)
 
-    # ✅ Prompt sin "TESTIMONIOS REALES", sin "testimonio real"
     prompt = f"""Eres un curador de relatos de terror que la comunidad comparte en foros de internet.
 Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersivas, atrapantes y escalofriantes, como si el narrador te lo estuviera contando a ti directamente.
 
@@ -915,7 +912,6 @@ Devuelve ESTRICTAMENTE este JSON:
             try:
                 data = json.loads(json_str, strict=False)
             except json.JSONDecodeError:
-                # ✅ Usa el json5 ya importado al top, sin re-import
                 if json5 is None:
                     raise
                 data = json5.loads(json_str)
@@ -930,7 +926,6 @@ Devuelve ESTRICTAMENTE este JSON:
             data["tema"] = tema_viral["tema"]
             data["estado"] = ESTADO_HISTORIA_SHORTS
 
-            # ✅ Campos faltantes sin "testimonio real"
             if "gancho_descripcion" not in data:
                 data["gancho_descripcion"] = f"Relato de terror: {data['titulo'][:80]}"
             if "contexto_descripcion" not in data:
@@ -999,7 +994,7 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
     return re.sub(r'\s+', ' ', prompt_base).strip()[:200]
 
 # ================================================================
-# BUSCAR EN PEXELS
+# PEXELS SEARCH
 # ================================================================
 def buscar_miniatura_pexels(query, intentos=5):
     variantes_texto = ["empty space", "copy space", "negative space", "dark background", "blurry background", "minimal", "dramatic", "cinematic", "horror"]
@@ -1194,7 +1189,7 @@ def generar_audio_cta_final():
     return None
 
 # ================================================================
-# RECURSOS POR SEGMENTO
+# RECURSOS
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, intentos_por_imagen=3):
     resultados, imagen_anterior = [], None
@@ -1502,7 +1497,7 @@ def main():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} ({CONFIG_VOZ_ACTUAL['estilo']})")
 
-    # ✅ Validaciones tempranas ANTES de gastar cuota
+    # ✅ Validaciones tempranas básicas
     if not YOUTUBE_USER_TOKEN:
         print("❌ No se encontró YOUTUBE_USER_TOKEN.")
         sys.exit(1)
@@ -1510,12 +1505,26 @@ def main():
         print("❌ No se encontró DEEPSEEK_API_KEY.")
         sys.exit(1)
 
-    # ✅ Validar YouTube antes de generar nada
+    # ✅ Validación TOLERANTE de YouTube (soporta tokens sin youtube.readonly)
     try:
         creds_check = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         yt_check = build("youtube", "v3", credentials=creds_check)
         yt_check.channels().list(part="id", mine=True).execute()
-        print("✅ Credenciales YouTube válidas.")
+        print("✅ Credenciales YouTube válidas (con scope de lectura).")
+    except HttpError as e:
+        err_str = str(e)
+        if "insufficientPermissions" in err_str or "insufficient authentication scopes" in err_str:
+            print("⚠️ El token no tiene permiso de LECTURA del canal (youtube.readonly).")
+            print("   Esto es normal si solo generaste el token con youtube.upload.")
+            print("   Continuando... (la subida de video y miniatura funcionarán).")
+            print("   ℹ️ Si quieres analytics y moderación de comentarios, regenera el token")
+            print("      con scope: youtube.readonly + youtube.force-ssl")
+        elif "401" in err_str or "invalid_grant" in err_str or "invalid_token" in err_str:
+            print(f"❌ YouTube token expirado o revocado: {e}")
+            sys.exit(1)
+        else:
+            print(f"❌ Error inesperado autenticando YouTube: {e}")
+            sys.exit(1)
     except Exception as e:
         print(f"❌ YouTube token inválido/expirado: {e}")
         sys.exit(1)
