@@ -1,0 +1,20 @@
+{
+  "videos_publicados": [
+    {
+      "titulo": "TESTIMONIO: La noche que recogí a un pasajero en el panteón y todo cambió",
+      "tema": "hospital",
+      "fecha": "2026-10-25T05:50:24.963103",
+      "video_id": "daXbD3TyLAM",
+      "prediccion": {
+        "vistas_predichas": 492800,
+        "ctr_predicho": 6.16,
+        "retencion_predicha": 77.0,
+        "confianza": "Alta"
+      }
+    }
+  ],
+  "mejores_horarios": {},
+  "mejores_temas": {},
+  "ctr_promedio": 0,
+  "retencion_promedio": 0
+}
