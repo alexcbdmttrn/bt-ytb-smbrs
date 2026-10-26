@@ -23,6 +23,18 @@
         "retencion_predicha": 77.6,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "ADVERTENCIA: Nunca conduje en el panteón después de las 3 AM",
+      "tema": "carretera",
+      "fecha": "2026-10-26T06:01:49.815710",
+      "video_id": "hHwHXfySbQY",
+      "prediccion": {
+        "vistas_predichas": 648000,
+        "ctr_predicho": 8.1,
+        "retencion_predicha": 79.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
