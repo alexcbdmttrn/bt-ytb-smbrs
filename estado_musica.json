@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "The Deep Rot.mp3",
     "Sunken Dread.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "Ash and Marrow.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Hollow Marrow.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-10-25",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-25T01:00:52.587864-06:00",
+  "ultima_publicacion": "2026-10-25T22:47:59.856483-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -190,14 +190,20 @@
       "titulo": "No pares en la gasolinera de la 15 a las 3:17 AM, NUNCA",
       "tema": "carretera",
       "fecha": "2026-10-25T01:00:52.587864-06:00"
+    },
+    {
+      "id": "ssTiLhNOJIk",
+      "titulo": "Si eres velador y la cámara 4 se activa sola a las 3:33 AM, NUNCA mires",
+      "tema": "velador",
+      "fecha": "2026-10-25T22:47:59.856483-06:00"
     }
   ],
   "temas_recientes": [
-    "carretera",
     "deep_web",
     "leyenda_mexicana",
     "objeto_maldito",
     "hospital",
-    "carretera"
+    "carretera",
+    "velador"
   ]
 }
