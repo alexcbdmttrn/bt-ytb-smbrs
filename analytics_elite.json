@@ -35,6 +35,18 @@
         "retencion_predicha": 79.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "TESTIMONIO: La noche que patrullé en el estacionamiento y todo cambió",
+      "tema": "velador",
+      "fecha": "2026-10-26T23:08:24.437538",
+      "video_id": "2v8D1Q84xCE",
+      "prediccion": {
+        "vistas_predichas": 532000,
+        "ctr_predicho": 6.65,
+        "retencion_predicha": 77.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
