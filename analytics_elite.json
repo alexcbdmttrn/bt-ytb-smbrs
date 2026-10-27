@@ -59,6 +59,18 @@
         "retencion_predicha": 79.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "TESTIMONIO: 'La noche que entré en el estacionamiento y todo cambió'",
+      "tema": "carretera",
+      "fecha": "2026-10-27T22:04:55.014709",
+      "video_id": "dV3BZPC3_wA",
+      "prediccion": {
+        "vistas_predichas": 504000,
+        "ctr_predicho": 6.3,
+        "retencion_predicha": 77.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
