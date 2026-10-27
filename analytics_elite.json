@@ -47,6 +47,18 @@
         "retencion_predicha": 77.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "ADVERTENCIA: Nunca patrullé en el panteón después de las 3 AM",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-10-27T06:08:00.076440",
+      "video_id": "i-vDhXOQOAQ",
+      "prediccion": {
+        "vistas_predichas": 756000,
+        "ctr_predicho": 9.45,
+        "retencion_predicha": 79.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
