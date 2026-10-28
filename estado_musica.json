@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Cold Hollow.mp3",
     "Black Maw.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
-    "Ash and Marrow.mp3"
+    "Ash and Marrow.mp3",
+    "Black Maw.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-26",
+  "ultima_publicacion_exitosa": "2026-10-27",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-26T22:43:31.008145-06:00",
+  "ultima_publicacion": "2026-10-27T19:28:24.195934-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -202,14 +202,20 @@
       "titulo": "Encontré mi vida escrita en un archivo de la DEEP WEB a las 3:33 AM",
       "tema": "deep_web",
       "fecha": "2026-10-26T22:43:31.008145-06:00"
+    },
+    {
+      "id": "6XDemYm4OTo",
+      "titulo": "Si ves un columpio moverse solo a las 3:33 AM, NUNCA lo mires",
+      "tema": "creepypasta",
+      "fecha": "2026-10-27T19:28:24.195934-06:00"
     }
   ],
   "temas_recientes": [
-    "leyenda_mexicana",
     "objeto_maldito",
     "hospital",
     "carretera",
     "velador",
-    "deep_web"
+    "deep_web",
+    "creepypasta"
   ]
 }
