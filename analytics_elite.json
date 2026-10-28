@@ -71,6 +71,18 @@
         "retencion_predicha": 77.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "TESTIMONIO: 'La noche que entré en la carretera y todo cambió'",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-10-28T06:53:51.591853",
+      "video_id": "vMNX9lnkpb4",
+      "prediccion": {
+        "vistas_predichas": 588000,
+        "ctr_predicho": 7.35,
+        "retencion_predicha": 77.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
