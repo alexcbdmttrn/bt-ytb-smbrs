@@ -83,6 +83,18 @@
         "retencion_predicha": 77.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "ADVERTENCIA: Nunca conduje en la casa abandonada después de las 3 AM",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-10-28T22:30:00.730411",
+      "video_id": "lIgX3D-ybTo",
+      "prediccion": {
+        "vistas_predichas": 756000,
+        "ctr_predicho": 9.45,
+        "retencion_predicha": 79.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
