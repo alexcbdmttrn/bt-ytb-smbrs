@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Black Maw.mp3",
     "Sunless Vault.mp3",
     "Ash and Marrow.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
-    "The Deep Rot.mp3"
+    "The Deep Rot.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-28",
+  "ultima_publicacion_exitosa": "2026-10-29",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-28T16:42:25.467298-06:00",
+  "ultima_publicacion": "2026-10-29T13:45:32.529529-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -214,14 +214,20 @@
       "titulo": "Si la morgue huele a azufre a las 3:33 AM, NUNCA abras la puerta",
       "tema": "hospital",
       "fecha": "2026-10-28T16:42:25.467298-06:00"
+    },
+    {
+      "id": "Sec9Kne2kPU",
+      "titulo": "No contestes si te llaman a las 3:33 AM desde tu PROPIO sótano",
+      "tema": "llamada_misteriosa",
+      "fecha": "2026-10-29T13:45:32.529529-06:00"
     }
   ],
   "temas_recientes": [
-    "hospital",
     "carretera",
     "velador",
     "deep_web",
     "creepypasta",
-    "hospital"
+    "hospital",
+    "llamada_misteriosa"
   ]
 }
