@@ -95,6 +95,18 @@
         "retencion_predicha": 79.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "ADVERTENCIA: Nunca entré en el hospital después de las 3 AM",
+      "tema": "hospital",
+      "fecha": "2026-10-29T07:00:54.510906",
+      "video_id": "oAe7BcF2yQk",
+      "prediccion": {
+        "vistas_predichas": 633600,
+        "ctr_predicho": 7.92,
+        "retencion_predicha": 79.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
