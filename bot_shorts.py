@@ -1346,21 +1346,39 @@ def seleccionar_fondo_disponible(estado):
 # ================================================================
 # GENERACIÓN DE AUDIO
 # ================================================================
-async def generar_audio_edge_tts(texto, output_path, voz_config=None):
-    if voz_config is None:
-        voz_config = CONFIG_VOZ_ACTUAL
-    texto_limpio = limpiar_texto_para_audio(texto)
+async def _intentar_voz(texto_limpio, output_path, voz):
+    """Intenta generar audio con una voz específica. Devuelve True si el archivo tiene contenido."""
     communicate = edge_tts.Communicate(
         text=texto_limpio,
-        voice=voz_config["voz"],
-        rate=voz_config["velocidad"],
-        pitch=voz_config["tono"],
+        voice=voz["voz"],
+        rate=voz["velocidad"],
+        pitch=voz["tono"],
     )
     await communicate.save(output_path)
-    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-        print(f"✅ Audio Edge TTS: {output_path}")
-        return True
-    return False
+    return os.path.exists(output_path) and os.path.getsize(output_path) > 2000
+
+async def generar_audio_edge_tts_con_retry(texto, output_path):
+    """Prueba las 5 voces de Edge TTS en orden antes de rendirse."""
+    texto_limpio = limpiar_texto_para_audio(texto)
+    # La voz actual va primero; el resto en orden aleatorio como fallbacks
+    voces_orden = [CONFIG_VOZ_ACTUAL] + [
+        v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]
+    ]
+    for voz in voces_orden:
+        for intento in range(2):
+            try:
+                print(f"🎤 Voz: {voz['voz']} — intento {intento+1}/2...")
+                if await _intentar_voz(texto_limpio, output_path, voz):
+                    print(f"✅ Audio Edge TTS con {voz['voz']}")
+                    return True, voz["voz"]
+                print(f"⚠️ {voz['voz']}: archivo vacío o muy pequeño.")
+            except Exception as e:
+                print(f"⚠️ {voz['voz']} intento {intento+1}: {e}")
+            await asyncio.sleep(2)
+        # Limpiar archivo fallido antes de intentar la siguiente voz
+        if os.path.exists(output_path):
+            os.remove(output_path)
+    return False, None
 
 def generar_audio_gtts_fallback(texto, output_path):
     try:
@@ -1378,11 +1396,14 @@ def generar_audio_con_fallback(texto, output_path):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        ok = loop.run_until_complete(generar_audio_edge_tts(texto, output_path))
+        ok, voz_usada = loop.run_until_complete(
+            generar_audio_edge_tts_con_retry(texto, output_path)
+        )
         if ok:
             return True
+        print("⚠️ Todas las voces Edge TTS fallaron. Usando gTTS...")
     except Exception as e:
-        print(f"⚠️ Edge TTS falló: {e}. Usando gTTS...")
+        print(f"⚠️ Edge TTS error crítico: {e}. Usando gTTS...")
     finally:
         loop.close()
     return generar_audio_gtts_fallback(texto, output_path)
@@ -1461,6 +1482,76 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
         return False
 
 # ================================================================
+# SEO — TAGS Y DESCRIPCIÓN
+# ================================================================
+def generar_tags_seo(tema_obj, estado_mx):
+    """Genera hasta 20 tags optimizados para YouTube SEO."""
+    nombre_tema = tema_obj["tema"].replace("_", " ")
+
+    tags_generales = [
+        "terror", "misterio", "miedo", "horror", "paranormal",
+        "historias de terror", "relatos de terror", "terror mexicano",
+        "horror shorts", "historias reales", "fenomenos paranormales",
+        "terror para no dormir", "miedo real", "lo inexplicable",
+    ]
+    tags_tema = [t.lstrip("#").lower() for t in tema_obj["hashtags"]]
+    tags_tema += [k.lower() for k in tema_obj["keywords"]]
+    tags_estado = [
+        estado_mx.lower(),
+        f"terror {estado_mx.lower()}",
+        f"misterio {estado_mx.lower()}",
+    ]
+    tags_longtail = [
+        f"historia de {nombre_tema}",
+        f"relato de {nombre_tema}",
+        f"terror {nombre_tema}",
+        "experiencia paranormal",
+        "escalofriante",
+    ]
+
+    todos = list(dict.fromkeys(
+        tags_generales + tags_tema + tags_estado + tags_longtail
+    ))
+    todos = [t for t in todos if t and len(t) > 2]
+    return todos[:20]
+
+
+def generar_descripcion_seo(gancho, contexto_desc, tema_obj, estado_mx,
+                             hashtags_desc, fuente_relato):
+    """Descripción estructurada y optimizada para SEO."""
+    nombre_tema = tema_obj["tema"].replace("_", " ").capitalize()
+
+    hashtags_completos = " ".join([
+        "#Terror", "#Misterio", "#Paranormal", "#Shorts",
+        "#TerrorMexicano", "#HistoriasDeTerror", "#Miedo",
+        "#HorrorShorts", "#Escalofriante", "#Inexplicable",
+        f"#{nombre_tema.replace(' ', '')}",
+        f"#{estado_mx.replace(' ', '')}",
+    ] + [h for h in tema_obj["hashtags"] if h not in ("#Terror", "#Misterio")])
+
+    partes = [
+        gancho,
+        "",
+        contexto_desc,
+        "",
+        f"📍 {estado_mx}, México  |  🎭 {nombre_tema}",
+        "",
+        "━" * 34,
+        "👻 Suscríbete — nuevos relatos cada semana:",
+        f"🎙️ {CANAL_LINK}",
+        "📌 Síguenos en Facebook:",
+        f"   {FACEBOOK_LINK}",
+        "━" * 34,
+        "",
+        DISCLOSURE_TEXT.strip(),
+        f"📖 {fuente_relato}",
+        "",
+        hashtags_completos,
+    ]
+    return "\n".join(partes)[:5000]
+
+
+# ================================================================
 # YOUTUBE
 # ================================================================
 def validar_token_youtube():
@@ -1484,39 +1575,27 @@ def validar_token_youtube():
         print(f"❌ Error token YouTube: {e}")
         return None
 
-def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas,
-                    gancho_descripcion, contexto_descripcion,
-                    hashtags_descripcion, fuente_relato=""):
+def subir_a_youtube(video_path, miniatura_path, titulo, tags_seo, descripcion_seo):
+    """Sube el short a YouTube con AI disclosure, tags SEO y descripción optimizada."""
     youtube = validar_token_youtube()
     if not youtube:
         return None
 
-    partes_desc = [gancho_descripcion, "", contexto_descripcion, ""]
-    if ACTIVAR_DISCLOSURE_IA:
-        partes_desc.extend([DISCLOSURE_TEXT, ""])
-    partes_desc.extend([
-        f"📌 Síguenos en Facebook: {FACEBOOK_LINK}",
-        f"🎙️ Canal: {CANAL_LINK}",
-        "",
-        hashtags_descripcion,
-        "",
-        "#Shorts",
-    ])
-    descripcion = "\n".join(partes_desc)[:5000]
     titulo_limpio = titulo[:100]
 
     body = {
         "snippet": {
             "title":           titulo_limpio,
-            "description":     descripcion,
-            "tags":            (etiquetas[:10] if isinstance(etiquetas, list) else [str(etiquetas)]),
+            "description":     descripcion_seo,
+            "tags":            tags_seo,
             "categoryId":      "22",
             "defaultLanguage": "es",
         },
         "status": {
-            "privacyStatus":          "public",
+            "privacyStatus":           "public",
             "selfDeclaredMadeForKids": False,
-            "madeForKids":            False,
+            "madeForKids":             False,
+            "containsSyntheticMedia":  True,   # ✅ Declara contenido generado con IA
         },
     }
 
@@ -1689,10 +1768,11 @@ def main():
 
         # 7. YOUTUBE ───────────────────────────────────────────────
         print("\n📺 SUBIENDO A YOUTUBE...")
-        video_id = subir_a_youtube(
-            video_path, miniatura_path, titulo,
-            tags, gancho, ctx_desc, hashtags_desc, fuente,
-        )
+        tags_seo   = generar_tags_seo(tema_obj, estado_mx)
+        desc_seo   = generar_descripcion_seo(gancho, ctx_desc, tema_obj, estado_mx,
+                                              hashtags_desc, fuente)
+        print(f"🏷️  Tags SEO ({len(tags_seo)}): {', '.join(tags_seo[:8])}...")
+        video_id = subir_a_youtube(video_path, miniatura_path, titulo, tags_seo, desc_seo)
         if not video_id:
             print("❌ Error subiendo a YouTube.")
             sys.exit(1)
