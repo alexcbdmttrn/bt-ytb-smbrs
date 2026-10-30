@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v6.3
-Flujo: elegir tema -> plan SEO -> relato -> voz -> escenas -> miniatura -> subida.
-v6.3 - Fix validación de token:
-  - Tolera tokens sin scope youtube.readonly (insufficientPermissions)
-  - Distingue 401 (expirado real) de 403 (válido pero sin lectura)
-  - HttpError importado al top
-v6.2 - Correcciones anteriores:
-  - Divulgación sin "REALES"
-  - Guardados atómicos (tmp + os.replace)
-  - RETRASO_MAX_MINUTOS 30 -> 10
-  - Estado guardado tras reset diario
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v7.2
+Cambios v7.2:
+  - acciones limpiadas a verbos simples en pasado (sin frases como "entré a su casa")
+  - fórmulas divididas en FORMULAS_NARRATIVAS (usan {pasado}) y FORMULAS_NEUTRAS (solo {lugar})
+  - Facebook vía MAKE REINTEGRADO (se había perdido en v7.1)
+  - calcular_score_titulo penaliza TESTIMONIO/ADVERTENCIA/3:33 con -12
+v7.1 - 35 temas, sin prefijos rígidos
+v6.3 - Validación tolerante de token
 """
 import asyncio
 import json
@@ -32,12 +29,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from moviepy.editor import (
-    AudioFileClip,
-    CompositeAudioClip,
-    ImageClip,
-    concatenate_audioclips,
+    AudioFileClip, CompositeAudioClip, ImageClip,
     concatenate_videoclips,
-    AudioClip,
 )
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter, ImageEnhance
 
@@ -64,7 +57,6 @@ ESTADO_FILE = "estado_shorts.json"
 TITULOS_FILE = "titulos_shorts_publicados.json"
 TEMAS_FILE = "temas_usados.json"
 ANALYTICS_FILE = "analytics_elite.json"
-CACHE_FILE = "pexels_cache.json"
 MAX_TEMAS_HISTORIAL = 20
 ACTIVAR_DISCLOSURE_IA = True
 
@@ -78,309 +70,583 @@ INTERVALO_MIN_HORAS = 6
 INTERVALO_MAX_HORAS = 9
 RETRASO_MAX_MINUTOS = 10
 
-PEXELS_CACHE = {}
-CACHE_MAX_SIZE = 500
-
 # ================================================================
-# TEMAS
+# 35 TEMAS PARANORMALES
+# acciones = verbos simples en pasado 1ª persona (sin frases).
+# lugares_t = lugares con artículo (el/la/los/las...).
 # ================================================================
 TEMAS_VIRALES_2024 = [
+    # === CRIATURAS Y SERES (9) ===
     {
-        "tema": "velador",
-        "keywords": ["velador", "turno de noche", "cámaras de seguridad", "trabajo nocturno"],
-        "keywords_larga": ["trabajo de velador terror", "historias de veladores reales", "turno nocturno terror"],
-        "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento", "condominio"],
-        "busquedas": 450000, "competencia": "baja", "ctr_potencial": 9.5, "retencion_objetivo": 80,
+        "tema": "brujas", "keywords": ["bruja", "hechicería", "pueblo"],
+        "contextos": ["casa al final del pueblo", "cerro de noche", "camino al panteón", "mercado viejo"],
+        "acciones": ["consulté", "busqué", "entré", "toqué"],
+        "lugares_t": ["la casa de la bruja", "el cerro", "el camino al panteón", "el mercado viejo"],
+        "criaturas": ["old woman dark", "candles ritual night", "herbs hanging dark"],
+        "emoji": "🧙", "hashtags": ["#Brujas", "#Hechicería"],
+        "busquedas": 480000, "competencia": "media", "ctr_potencial": 9.8, "retencion_objetivo": 82,
         "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "18-45", "engagement_rate": 15.5
+        "audiencia_objetivo": "18-55", "engagement_rate": 16.0,
     },
     {
-        "tema": "hospital",
-        "keywords": ["hospital", "guardia nocturna", "paciente", "enfermera", "quirófano"],
-        "keywords_larga": ["historias de terror de hospitales", "enfermeros turno nocturno", "pacientes fantasmas"],
-        "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue", "quirófano"],
-        "busquedas": 380000, "competencia": "media", "ctr_potencial": 8.8, "retencion_objetivo": 78,
+        "tema": "duendes", "keywords": ["duende", "casa", "travesuras"],
+        "contextos": ["casa del pueblo", "rancho familiar", "milpa", "casa antigua"],
+        "acciones": ["escuché", "encontré", "vi", "sentí"],
+        "lugares_t": ["la casa del pueblo", "el rancho", "la milpa", "el cuarto de los niños"],
+        "criaturas": ["old mexican house night", "small footprints dust", "rustic ranch night"],
+        "emoji": "👺", "hashtags": ["#Duendes", "#DuendesReales"],
+        "busquedas": 420000, "competencia": "baja", "ctr_potencial": 9.5, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "16-50", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "aluxes", "keywords": ["alux", "mayas", "milpa"],
+        "contextos": ["milpa yucateca", "ruinas mayas", "cenote", "selva"],
+        "acciones": ["entré", "toqué", "corté", "crucé"],
+        "lugares_t": ["la milpa", "las ruinas mayas", "el cenote", "la selva"],
+        "criaturas": ["mayan ruins night", "jungle fog night", "cenote dark water"],
+        "emoji": "🗿", "hashtags": ["#Aluxes", "#LeyendasMayas"],
+        "busquedas": 320000, "competencia": "baja", "ctr_potencial": 9.2, "retencion_objetivo": 78,
         "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "20-50", "engagement_rate": 14.0
+        "audiencia_objetivo": "18-55", "engagement_rate": 14.5,
     },
     {
-        "tema": "carretera",
-        "keywords": ["carretera", "viaje nocturno", "taxi", "autoestopista", "tráiler"],
-        "keywords_larga": ["historias de terror en la carretera", "taxistas terror", "traileros fantasmas"],
-        "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte"],
-        "busquedas": 520000, "competencia": "media", "ctr_potencial": 9.0, "retencion_objetivo": 82,
-        "duracion_optima": 55, "tendencia": "creciente", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "18-55", "engagement_rate": 16.0
+        "tema": "chupacabras", "keywords": ["chupacabras", "ganado", "rancho"],
+        "contextos": ["rancho ganadero", "monte", "sierra", "desierto"],
+        "acciones": ["vi", "escuché", "encontré", "perseguí"],
+        "lugares_t": ["el rancho", "el monte", "la sierra", "el corral"],
+        "criaturas": ["mexican ranch night", "dead livestock field night", "desert ranch night"],
+        "emoji": "🐐", "hashtags": ["#Chupacabras", "#CriaturasReales"],
+        "busquedas": 550000, "competencia": "media", "ctr_potencial": 9.7, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 16.0,
     },
     {
-        "tema": "leyenda_mexicana",
-        "keywords": ["leyendas mexicanas", "nahual", "la llorona", "pueblo", "charro negro"],
-        "keywords_larga": ["leyendas de terror mexicanas reales", "nahual en el pueblo", "llorona en el río"],
-        "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
-        "busquedas": 680000, "competencia": "alta", "ctr_potencial": 10.5, "retencion_objetivo": 85,
-        "duracion_optima": 55, "tendencia": "explosiva", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "16-60", "engagement_rate": 18.0
-    },
-    {
-        "tema": "ritual",
-        "keywords": ["ritual", "invocación", "maldición", "ocultismo", "cementerio"],
-        "keywords_larga": ["rituales de terror reales", "invocaciones que salieron mal", "maldiciones reales"],
-        "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas"],
-        "busquedas": 410000, "competencia": "baja", "ctr_potencial": 9.8, "retencion_objetivo": 80,
+        "tema": "nahual", "keywords": ["nahual", "brujo", "animal"],
+        "contextos": ["pueblo viejo", "cerro", "camino de tierra", "casa del brujo"],
+        "acciones": ["vi", "seguí", "enfrenté", "descubrí"],
+        "lugares_t": ["el cerro", "el camino de tierra", "la casa del vecino", "el pueblo"],
+        "criaturas": ["mexican village night", "dirt road night fog", "coyote eyes dark"],
+        "emoji": "🐺", "hashtags": ["#Nahual", "#LeyendasMexicanas"],
+        "busquedas": 390000, "competencia": "media", "ctr_potencial": 9.4, "retencion_objetivo": 80,
         "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
-        "audiencia_objetivo": "16-40", "engagement_rate": 15.3
-    }
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "llorona", "keywords": ["llorona", "río", "llanto"],
+        "contextos": ["río del pueblo", "panteón", "puente viejo", "camino a la iglesia"],
+        "acciones": ["escuché", "seguí", "vi", "crucé"],
+        "lugares_t": ["el río", "el panteón", "el puente viejo", "el camino a la iglesia"],
+        "criaturas": ["mexican river night fog", "old bridge night", "woman silhouette river"],
+        "emoji": "💧", "hashtags": ["#LaLlorona", "#LeyendasMexicanas"],
+        "busquedas": 720000, "competencia": "alta", "ctr_potencial": 10.2, "retencion_objetivo": 84,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "16-60", "engagement_rate": 17.5,
+    },
+    {
+        "tema": "charro_negro", "keywords": ["charro", "jinete", "diablo"],
+        "contextos": ["camino de terracería", "carretera solitaria", "encrucijada", "puente viejo"],
+        "acciones": ["encontré", "vi", "esquivé", "rechacé"],
+        "lugares_t": ["el camino de terracería", "la encrucijada", "el puente viejo", "la carretera"],
+        "criaturas": ["dark horseman silhouette", "black horse night fog", "crossroads night mexico"],
+        "emoji": "🐎", "hashtags": ["#CharroNegro", "#LeyendasMexicanas"],
+        "busquedas": 480000, "competencia": "media", "ctr_potencial": 9.6, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "skinwalker", "keywords": ["skinwalker", "criatura", "bosque"],
+        "contextos": ["carretera solitaria", "bosque profundo", "sierra aislada", "desierto"],
+        "acciones": ["vi", "seguí", "escapé", "enfrenté"],
+        "lugares_t": ["el bosque", "la carretera", "la sierra", "el desierto"],
+        "criaturas": ["dark forest fog", "desert road night", "eyes in the dark"],
+        "emoji": "👁️", "hashtags": ["#Skinwalker", "#CriaturasDeLaNoche"],
+        "busquedas": 410000, "competencia": "media", "ctr_potencial": 9.0, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-45", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "aliens", "keywords": ["ovni", "extraterrestre", "luces"],
+        "contextos": ["campo abierto", "carretera solitaria", "sierra", "rancho"],
+        "acciones": ["vi", "seguí", "grabé", "escapé"],
+        "lugares_t": ["el campo", "la carretera", "la sierra", "el rancho"],
+        "criaturas": ["ufo lights sky night", "strange light rural night", "desert night sky object"],
+        "emoji": "🛸", "hashtags": ["#Ovnis", "#Extraterrestres"],
+        "busquedas": 580000, "competencia": "alta", "ctr_potencial": 9.5, "retencion_objetivo": 82,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 16.0,
+    },
+    # === ENTIDADES PARANORMALES (7) ===
+    {
+        "tema": "fantasmas", "keywords": ["fantasma", "aparición", "casa"],
+        "contextos": ["casa antigua", "departamento", "habitación de hotel", "edificio viejo"],
+        "acciones": ["escuché", "vi", "sentí", "entré"],
+        "lugares_t": ["la casa antigua", "el departamento", "la habitación", "el edificio viejo"],
+        "criaturas": ["dark hallway ghost shadow", "old house interior night", "door half open dark"],
+        "emoji": "👻", "hashtags": ["#Fantasmas", "#Aparecidos"],
+        "busquedas": 620000, "competencia": "alta", "ctr_potencial": 9.0, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-60", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "demonios", "keywords": ["demonio", "posesión", "invocación"],
+        "contextos": ["casa abandonada", "sótano", "iglesia abandonada", "cementerio"],
+        "acciones": ["consulté", "entré", "recé", "toqué"],
+        "lugares_t": ["el sótano", "la iglesia abandonada", "la casa abandonada", "el cementerio"],
+        "criaturas": ["dark basement horror", "abandoned church night", "candles dark room"],
+        "emoji": "😈", "hashtags": ["#Demonios", "#TerrorOculto"],
+        "busquedas": 490000, "competencia": "media", "ctr_potencial": 9.8, "retencion_objetivo": 82,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-50", "engagement_rate": 16.0,
+    },
+    {
+        "tema": "posesion", "keywords": ["posesión", "familia", "cambio"],
+        "contextos": ["casa familiar", "habitación", "iglesia", "convento"],
+        "acciones": ["vi", "ayudé", "recé", "enfrenté"],
+        "lugares_t": ["la casa familiar", "la habitación", "la iglesia", "el convento"],
+        "criaturas": ["dark bedroom horror", "candlelit church interior", "priest silhouette dark"],
+        "emoji": "🕯️", "hashtags": ["#Posesión", "#Exorcismo"],
+        "busquedas": 440000, "competencia": "media", "ctr_potencial": 9.6, "retencion_objetivo": 82,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "exorcismo", "keywords": ["exorcismo", "sacerdote", "demonio"],
+        "contextos": ["iglesia vieja", "casa del pueblo", "convento abandonado", "capilla"],
+        "acciones": ["presencié", "ayudé", "recé", "grabé"],
+        "lugares_t": ["la iglesia vieja", "la capilla", "el convento", "la casa del pueblo"],
+        "criaturas": ["candlelit church dark", "priest silhouette", "rosary candle dark"],
+        "emoji": "✝️", "hashtags": ["#Exorcismo", "#TerrorReligioso"],
+        "busquedas": 420000, "competencia": "media", "ctr_potencial": 9.5, "retencion_objetivo": 82,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "poltergeist", "keywords": ["poltergeist", "objetos", "casa"],
+        "contextos": ["casa familiar", "departamento", "ático", "habitación"],
+        "acciones": ["escuché", "vi", "sentí", "viví"],
+        "lugares_t": ["la casa", "el departamento", "el ático", "la habitación"],
+        "criaturas": ["objects flying room dark", "slammed door dark", "scattered objects floor dark"],
+        "emoji": "🌀", "hashtags": ["#Poltergeist", "#CasaEmbrujada"],
+        "busquedas": 380000, "competencia": "media", "ctr_potencial": 9.0, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 14.5,
+    },
+    {
+        "tema": "muneca_poseida", "keywords": ["muñeca", "poseída", "maldita"],
+        "contextos": ["casa antigua", "cuarto de niña", "ático", "tienda de antigüedades"],
+        "acciones": ["compré", "encontré", "heredé", "guardé"],
+        "lugares_t": ["la tienda de antigüedades", "el cuarto", "el ático", "la casa heredada"],
+        "criaturas": ["creepy doll dark room", "old doll chair night", "doll face closeup dark"],
+        "emoji": "🎎", "hashtags": ["#MuñecaMaldita", "#ObjetoMaldito"],
+        "busquedas": 460000, "competencia": "media", "ctr_potencial": 9.7, "retencion_objetivo": 82,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 16.0,
+    },
+    {
+        "tema": "payaso_maldito", "keywords": ["payaso", "circo", "aparición"],
+        "contextos": ["circo abandonado", "parque", "calle solitaria", "feria"],
+        "acciones": ["vi", "entré", "crucé", "encontré"],
+        "lugares_t": ["el circo abandonado", "el parque", "la calle", "la feria"],
+        "criaturas": ["creepy clown dark", "abandoned circus night", "empty carnival night"],
+        "emoji": "🤡", "hashtags": ["#PayasoMaldito", "#TerrorPsicológico"],
+        "busquedas": 400000, "competencia": "media", "ctr_potencial": 9.4, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "16-45", "engagement_rate": 15.0,
+    },
+    # === LUGARES EMBRUJADOS (9) ===
+    {
+        "tema": "casa_embrujada", "keywords": ["casa", "embrujada", "familia"],
+        "contextos": ["casa nueva", "casa de campo", "casa heredada", "casa en venta"],
+        "acciones": ["compré", "heredé", "renté", "entré"],
+        "lugares_t": ["la casa nueva", "la casa del campo", "la casa heredada", "la casa en venta"],
+        "criaturas": ["abandoned mexican house night", "haunted house fog", "dark house interior hallway"],
+        "emoji": "🏚️", "hashtags": ["#CasaEmbrujada", "#Fantasmas"],
+        "busquedas": 520000, "competencia": "media", "ctr_potencial": 9.3, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "hospital", "keywords": ["hospital", "turno", "paciente"],
+        "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue"],
+        "acciones": ["trabajé", "entré", "recorrí", "vi"],
+        "lugares_t": ["el hospital viejo", "la clínica", "el ala clausurada", "la morgue"],
+        "criaturas": ["hospital corridor dark", "abandoned hospital", "morgue dark"],
+        "emoji": "🏥", "hashtags": ["#HospitalEmbrujado", "#TerrorNocturno"],
+        "busquedas": 410000, "competencia": "media", "ctr_potencial": 8.9, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "20-50", "engagement_rate": 14.5,
+    },
+    {
+        "tema": "velador", "keywords": ["velador", "turno", "cámaras"],
+        "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento"],
+        "acciones": ["trabajé", "entré", "patrullé", "recorrí"],
+        "lugares_t": ["la fábrica", "la bodega", "la escuela vacía", "el estacionamiento"],
+        "criaturas": ["security guard night", "empty factory night", "warehouse dark"],
+        "emoji": "👮", "hashtags": ["#Velador", "#TurnoDeNoche"],
+        "busquedas": 460000, "competencia": "baja", "ctr_potencial": 9.5, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-45", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "carretera", "keywords": ["carretera", "viaje", "taxi"],
+        "contextos": ["carretera federal", "gasolinera", "túnel", "desvío"],
+        "acciones": ["conduje", "viajé", "crucé", "manejé"],
+        "lugares_t": ["la carretera", "la gasolinera", "el túnel", "el desvío"],
+        "criaturas": ["highway night fog", "taxi night city", "road tunnel dark"],
+        "emoji": "🚗", "hashtags": ["#CarreteraMaldita", "#TerrorNocturno"],
+        "busquedas": 540000, "competencia": "media", "ctr_potencial": 9.0, "retencion_objetivo": 82,
+        "duracion_optima": 55, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 16.0,
+    },
+    {
+        "tema": "hotel_embrujado", "keywords": ["hotel", "habitación", "huésped"],
+        "contextos": ["hotel viejo", "motel de carretera", "hostal", "hotel de pueblo"],
+        "acciones": ["entré", "renté", "dormí", "vi"],
+        "lugares_t": ["el hotel viejo", "el motel", "el hostal", "la habitación"],
+        "criaturas": ["hotel corridor dark", "old hotel room night", "motel neon night"],
+        "emoji": "🏨", "hashtags": ["#HotelEmbrujado", "#Fantasmas"],
+        "busquedas": 480000, "competencia": "media", "ctr_potencial": 9.2, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "cementerio", "keywords": ["panteón", "tumba", "noche"],
+        "contextos": ["panteón del pueblo", "cementerio antiguo", "cripta", "mausoleo"],
+        "acciones": ["entré", "crucé", "visité", "escuché"],
+        "lugares_t": ["el panteón", "el cementerio", "la cripta", "el mausoleo"],
+        "criaturas": ["cemetery night fog", "old mexican pantheon", "grave candles night"],
+        "emoji": "⚰️", "hashtags": ["#Cementerio", "#TerrorNocturno"],
+        "busquedas": 440000, "competencia": "media", "ctr_potencial": 9.3, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "bosque_maldito", "keywords": ["bosque", "sierra", "perdido"],
+        "contextos": ["bosque profundo", "sierra", "cabaña", "camino de tierra"],
+        "acciones": ["entré", "caminé", "escapé", "acampé"],
+        "lugares_t": ["el bosque", "la sierra", "la cabaña", "el camino de tierra"],
+        "criaturas": ["dark forest fog night", "cabin in woods night", "tall trees silhouette night"],
+        "emoji": "🌲", "hashtags": ["#BosqueMaldito", "#Criaturas"],
+        "busquedas": 430000, "competencia": "media", "ctr_potencial": 9.1, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "mina", "keywords": ["mina", "túnel", "accidente"],
+        "contextos": ["mina abandonada", "túnel", "cerro", "pueblo minero"],
+        "acciones": ["entré", "bajé", "exploré", "escuché"],
+        "lugares_t": ["la mina", "el túnel", "el cerro", "el pueblo minero"],
+        "criaturas": ["abandoned mine entrance", "mine tunnel dark", "old mining town night"],
+        "emoji": "⛏️", "hashtags": ["#MinaAbandonada", "#Fantasmas"],
+        "busquedas": 360000, "competencia": "baja", "ctr_potencial": 9.0, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 14.5,
+    },
+    {
+        "tema": "hacienda", "keywords": ["hacienda", "heredada", "antigua"],
+        "contextos": ["hacienda vieja", "ex-hacienda", "rancho heredado", "casona"],
+        "acciones": ["heredé", "compré", "visité", "dormí"],
+        "lugares_t": ["la hacienda", "la casona", "el rancho heredado", "la ex-hacienda"],
+        "criaturas": ["old hacienda night", "colonial house dark", "mexican hacienda night fog"],
+        "emoji": "🏛️", "hashtags": ["#HaciendaEmbrujada", "#Fantasmas"],
+        "busquedas": 340000, "competencia": "baja", "ctr_potencial": 8.8, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "20-60", "engagement_rate": 14.0,
+    },
+    # === OCULTISMO (8) ===
+    {
+        "tema": "ritual", "keywords": ["ritual", "invocación", "maldición"],
+        "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas"],
+        "acciones": ["hice", "participé", "encontré", "interrumpí"],
+        "lugares_t": ["el cementerio", "la casa abandonada", "la cueva", "la iglesia en ruinas"],
+        "criaturas": ["candles dark room", "old cemetery night", "cave darkness"],
+        "emoji": "🔮", "hashtags": ["#Rituales", "#Ocultismo"],
+        "busquedas": 470000, "competencia": "baja", "ctr_potencial": 9.8, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "16-45", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "ouija", "keywords": ["ouija", "tabla", "espíritus"],
+        "contextos": ["casa de amigo", "cuarto oscuro", "sótano", "habitación de hotel"],
+        "acciones": ["usé", "encontré", "quemé", "escondí"],
+        "lugares_t": ["la tabla", "el cuarto oscuro", "el sótano", "la habitación"],
+        "criaturas": ["ouija board candles", "dark room hands", "seance circle dark"],
+        "emoji": "🔯", "hashtags": ["#Ouija", "#TerrorOculto"],
+        "busquedas": 510000, "competencia": "media", "ctr_potencial": 9.7, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "16-45", "engagement_rate": 16.0,
+    },
+    {
+        "tema": "pacto_demonio", "keywords": ["pacto", "demonio", "trato"],
+        "contextos": ["encrucijada", "casa abandonada", "camino solitario", "cementerio"],
+        "acciones": ["hice", "acepté", "rompí", "firmé"],
+        "lugares_t": ["la encrucijada", "la casa abandonada", "el camino", "el cementerio"],
+        "criaturas": ["crossroads night dark", "candles pentagram dark", "old contract candle"],
+        "emoji": "📜", "hashtags": ["#Pacto", "#TerrorOculto"],
+        "busquedas": 400000, "competencia": "media", "ctr_potencial": 9.5, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-50", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "maldicion", "keywords": ["maldición", "familia", "herencia"],
+        "contextos": ["casa familiar", "pueblo", "cementerio", "hacienda"],
+        "acciones": ["heredé", "descubrí", "rompí", "cargué"],
+        "lugares_t": ["la casa familiar", "el pueblo", "el cementerio", "la hacienda"],
+        "criaturas": ["old family photo dark", "abandoned house interior", "old diary pages"],
+        "emoji": "🩸", "hashtags": ["#Maldición", "#TerrorFamiliar"],
+        "busquedas": 380000, "competencia": "media", "ctr_potencial": 9.3, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "objeto_maldito", "keywords": ["objeto", "maldito", "maldición"],
+        "contextos": ["tienda de antigüedades", "tianguis", "casa heredada", "subasta"],
+        "acciones": ["compré", "heredé", "encontré", "guardé"],
+        "lugares_t": ["la tienda de antigüedades", "el tianguis", "la casa heredada", "la subasta"],
+        "criaturas": ["antique shop", "old doll", "old mirror dark"],
+        "emoji": "🗿", "hashtags": ["#ObjetoMaldito", "#Coleccionista"],
+        "busquedas": 450000, "competencia": "baja", "ctr_potencial": 9.6, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "espejo_maldito", "keywords": ["espejo", "reflejo", "aparición"],
+        "contextos": ["casa antigua", "baño", "recámara", "hotel"],
+        "acciones": ["compré", "encontré", "limpié", "rompí"],
+        "lugares_t": ["el espejo", "el baño", "la recámara", "el hotel"],
+        "criaturas": ["old mirror dark room", "cracked mirror dark", "bathroom mirror fog dark"],
+        "emoji": "🪞", "hashtags": ["#EspejoMaldito", "#Fantasmas"],
+        "busquedas": 410000, "competencia": "media", "ctr_potencial": 9.5, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-50", "engagement_rate": 15.0,
+    },
+    {
+        "tema": "santero", "keywords": ["santero", "trabajo", "espiritual"],
+        "contextos": ["casa del santero", "mercado esotérico", "cementerio", "altar"],
+        "acciones": ["consulté", "pedí", "pagué", "recibí"],
+        "lugares_t": ["el altar", "el mercado esotérico", "el cementerio", "la casa del santero"],
+        "criaturas": ["dark altar candles bones", "esoteric shop night", "skull candle dark"],
+        "emoji": "💀", "hashtags": ["#Santería", "#TrabajoEspiritual"],
+        "busquedas": 340000, "competencia": "baja", "ctr_potencial": 9.2, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 14.5,
+    },
+    {
+        "tema": "curandero", "keywords": ["curandero", "limpia", "energía"],
+        "contextos": ["casa del curandero", "mercado", "pueblo", "temazcal"],
+        "acciones": ["consulté", "recibí", "pedí", "entré"],
+        "lugares_t": ["la limpia", "el temazcal", "la casa del curandero", "el mercado"],
+        "criaturas": ["herbs hanging dark", "smoke ritual dark", "candles eggs limpia"],
+        "emoji": "🌿", "hashtags": ["#Curanderos", "#Limpia"],
+        "busquedas": 320000, "competencia": "baja", "ctr_potencial": 9.0, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-60", "engagement_rate": 14.0,
+    },
+    # === EXTRATERRESTRES (2) ===
+    {
+        "tema": "abduccion", "keywords": ["abducción", "recuerdo", "marca"],
+        "contextos": ["casa de campo", "carretera", "rancho", "montaña"],
+        "acciones": ["desperté", "vi", "recordé", "encontré"],
+        "lugares_t": ["la casa de campo", "la carretera", "el rancho", "la montaña"],
+        "criaturas": ["bright light sky night", "car headlights ufo", "strange marks skin"],
+        "emoji": "🛸", "hashtags": ["#Abducción", "#Extraterrestres"],
+        "busquedas": 420000, "competencia": "media", "ctr_potencial": 9.3, "retencion_objetivo": 80,
+        "duracion_optima": 50, "tendencia": "creciente", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 15.5,
+    },
+    {
+        "tema": "encuentro_cercano", "keywords": ["encuentro", "ser", "objeto"],
+        "contextos": ["camino rural", "campo", "sierra", "rancho"],
+        "acciones": ["vi", "toqué", "hablé", "escapé"],
+        "lugares_t": ["el campo", "el camino rural", "la sierra", "el rancho"],
+        "criaturas": ["ufo landed field night", "strange silhouette fog", "alien figure dark"],
+        "emoji": "👽", "hashtags": ["#EncuentroCercano", "#Extraterrestres"],
+        "busquedas": 390000, "competencia": "media", "ctr_potencial": 9.0, "retencion_objetivo": 78,
+        "duracion_optima": 50, "tendencia": "estable", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "18-55", "engagement_rate": 14.5,
+    },
+    # === LEYENDA (1) ===
+    {
+        "tema": "leyenda_mexicana", "keywords": ["leyenda", "pueblo", "mexicana"],
+        "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
+        "acciones": ["escuché", "vi", "descubrí", "presencié"],
+        "lugares_t": ["el pueblo", "el río", "el panteón", "el rancho"],
+        "criaturas": ["old village night", "colonial church night", "river fog night"],
+        "emoji": "🌙", "hashtags": ["#LeyendasMexicanas", "#TerrorMexicano"],
+        "busquedas": 680000, "competencia": "alta", "ctr_potencial": 10.0, "retencion_objetivo": 84,
+        "duracion_optima": 55, "tendencia": "explosiva", "estacionalidad": "todo_el_año",
+        "audiencia_objetivo": "16-60", "engagement_rate": 17.5,
+    },
 ]
 
-FORMULAS_TITULOS_ELITE = {
-    "el_que_nadie_menciona": [
-        "El {lugar} que nadie menciona en {estado}",
-        "El {objeto} de {lugar} que nadie menciona"
-    ],
-    "testimonio_real": [
-        "TESTIMONIO: La noche que {accion} en {lugar} y todo cambió",
-        "TESTIMONIO: 'La noche que {accion} en {lugar} y todo cambió'"
-    ],
-    "advertencia_peligro": [
-        "ADVERTENCIA: Nunca {accion} en {lugar} después de las 3 AM",
-        "ADVERTENCIA: Nunca {accion} en {lugar} después de las 11 PM"
-    ],
-    "pregunta_imposible": [
-        "¿Qué {accion} en {lugar} a las 3 AM?",
-        "¿Qué harías si {accion} en {lugar} a las 3 AM?"
-    ]
-}
+# ================================================================
+# FÓRMULAS DE TÍTULO (v7.2)
+# NARRATIVAS usan {pasado} — verbo simple en pasado 1ª persona.
+# NEUTRAS usan solo {lugar}, {Lugar}, {estado}.
+# Se proveen todas las claves en .format(); las no usadas se ignoran.
+# ================================================================
+FORMULAS_NARRATIVAS = [
+    "Lo que {pasado} en {lugar} no me dejó dormir",
+    "La noche que {pasado} en {lugar}",
+    "Después de lo que {pasado} en {lugar}, nada fue igual",
+    "Lo que pasó cuando {pasado} en {lugar}",
+    "Nadie sabe lo que {pasado} en {lugar}",
+]
+
+FORMULAS_NEUTRAS = [
+    "Cuidado con {lugar}",
+    "Nunca más solo en {lugar}",
+    "{Lugar} guarda un secreto",
+    "Algo vive en {lugar}",
+    "Encontré algo en {lugar}",
+    "Lo que hay debajo de {lugar}",
+    "¿Qué hay en {lugar} a esta hora?",
+    "No vuelvas a {lugar}",
+    "El velador me advirtió sobre {lugar}",
+    "'No me esperen': lo que dijo antes de ir a {lugar}",
+    "El {lugar} de {estado} donde pasan cosas",
+    "Así empezó todo en {lugar}",
+    "No te quedes en {lugar}",
+    "Me advirtieron sobre {lugar}",
+]
 
 PSICOLOGIA_COLOR = {
-    "miedo": {"primario": "#FF0000", "secundario": "#000000", "acento": "#FFD700", "contraste_minimo": 4.5, "emoji": "😱"},
-    "misterio": {"primario": "#4B0082", "secundario": "#1a1a1a", "acento": "#00FFFF", "contraste_minimo": 4.5, "emoji": "🔮"},
-    "urgencia": {"primario": "#FF4500", "secundario": "#000000", "acento": "#FFFF00", "contraste_minimo": 7.0, "emoji": "⚠️"},
-    "confianza": {"primario": "#000080", "secundario": "#FFFFFF", "acento": "#FF0000", "contraste_minimo": 4.5, "emoji": "👁️"},
+    "miedo":    {"primario": "#FF0000", "secundario": "#000000", "acento": "#FFD700", "emoji": "😱"},
+    "misterio": {"primario": "#4B0082", "secundario": "#1a1a1a", "acento": "#00FFFF", "emoji": "🔮"},
+    "urgencia": {"primario": "#FF4500", "secundario": "#000000", "acento": "#FFFF00", "emoji": "⚠️"},
+    "confianza":{"primario": "#000080", "secundario": "#FFFFFF", "acento": "#FF0000", "emoji": "👁️"},
 }
+
+# ================================================================
+# VOCES / ESTADOS
+# ================================================================
+VOCES_DISPONIBLES = [
+    {"voz": "es-MX-JorgeNeural",   "velocidad": "+12%", "tono": "-2Hz", "estilo": "narrativo"},
+    {"voz": "es-ES-AlvaroNeural",  "velocidad": "+10%", "tono": "-3Hz", "estilo": "dramatico"},
+    {"voz": "es-MX-ManuelNeural",  "velocidad": "+12%", "tono": "-1Hz", "estilo": "conversacional"},
+    {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz", "estilo": "suspenso"},
+    {"voz": "es-AR-ElenaNeural",   "velocidad": "+10%", "tono": "+1Hz", "estilo": "femenino_misterio"},
+]
+CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
+
+ESTADOS_MEXICO = [
+    "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
+    "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México",
+    "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit",
+    "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí",
+    "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas",
+]
+ESTADO_HISTORIA_SHORTS = random.choice(ESTADOS_MEXICO)
+
+FONDOS_DISPONIBLES = [
+    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
+    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
+]
+
+OUTLIERS_TERROR = [
+    "Intenté sobrevivir 7 días en el hotel más embrujado de México",
+    "¿Qué vi en el espejo del manicomio abandonado?",
+    "De creyente a escéptico en una noche en el panteón",
+    "El ritual que hice y nunca debí hacer",
+    "Sobreviví a la carretera fantasma de Chihuahua sin gasolina",
+]
+
+ANIO_SUCESO = None
+EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, LED lighting, smartphones era"
+
+# ================================================================
+# UTILIDADES - ÉPOCA
+# ================================================================
+def construir_modificadores_epoca(anio):
+    if anio is None or anio >= 2015:
+        return "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, LED lighting, smartphones era"
+    elif anio >= 2000:
+        return f"early 2000s era (year {anio}): 2000s cars, CRT televisions, old flip cellphones, 2000s fashion and architecture, no smartphones"
+    elif anio >= 1990:
+        return f"1990s era (year {anio}): 90s cars, cassette players, CRT TVs, analog phones, 90s fashion, older architecture, no smartphones"
+    elif anio >= 1980:
+        return f"1980s era (year {anio}): 80s cars, analog rotary phones, vintage clothing, older buildings, no modern technology"
+    else:
+        return f"past era (year {anio}): old classic cars, analog technology, period clothing, aged architecture, no modern devices"
+
+def actualizar_epoca(anio):
+    global ANIO_SUCESO, EPOCA_MOD
+    try:
+        ANIO_SUCESO = int(anio)
+    except Exception:
+        ANIO_SUCESO = None
+    EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
+    print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
 
 # ================================================================
 # VIRALIDAD
 # ================================================================
 def calcular_puntuacion_viralidad(tema):
     factores = {
-        "busquedas": tema["busquedas"] / 1000000 * 30,
-        "ctr_potencial": tema["ctr_potencial"] * 2.5,
-        "retencion": tema["retencion_objetivo"] * 2.0,
+        "busquedas":  tema["busquedas"] / 1_000_000 * 30,
+        "ctr":        tema["ctr_potencial"] * 2.5,
+        "retencion":  tema["retencion_objetivo"] * 2.0,
         "engagement": tema["engagement_rate"] * 1.5,
-        "tendencia": 10 if tema["tendencia"] == "explosiva" else 5,
+        "tendencia":  10 if tema["tendencia"] == "explosiva" else 5,
     }
-    score_total = sum(factores.values())
+    score = sum(factores.values())
     return {
-        "score": score_total,
-        "factores": factores,
-        "categoria": "Alta" if score_total > 75 else "Media" if score_total > 50 else "Baja"
+        "score": score, "factores": factores,
+        "categoria": "Alta" if score > 75 else "Media" if score > 50 else "Baja",
     }
-
-def generar_cluster_keywords(tema_principal):
-    clusters = {
-        "velador": {
-            "primarias": ["velador", "turno nocturno", "vigilante"],
-            "secundarias": ["cámaras", "ronda", "seguridad"],
-            "long_tail": ["historias de veladores reales", "turno de noche terror"],
-            "relacionadas": ["trabajo nocturno", "seguridad privada"]
-        },
-        "hospital": {
-            "primarias": ["hospital", "enfermero", "quirófano"],
-            "secundarias": ["turno nocturno", "paciente", "morgue"],
-            "long_tail": ["historias de terror de hospitales", "enfermeros turno nocturno"],
-            "relacionadas": ["experiencia cercana a la muerte", "paranormal"]
-        },
-        "carretera": {
-            "primarias": ["carretera", "taxi", "tráiler"],
-            "secundarias": ["viaje nocturno", "autoestopista", "ruta"],
-            "long_tail": ["historias de terror en la carretera", "taxistas terror"],
-            "relacionadas": ["viajes nocturnos", "carreteras de mexico"]
-        }
-    }
-    return clusters.get(tema_principal, {})
-
-def analizar_competencia_youtube(tema):
-    analisis = {
-        "velador": {"videos_top_10_avg_views": 350000, "avg_ctr_competencia": 8.5, "avg_retencion": 80, "gap_oportunidad": "Alta demanda de testimonios reales de veladores", "mejor_horario_publicacion": ["14:00", "18:00", "21:00"], "duracion_optima": "45-55 segundos"},
-        "hospital": {"videos_top_10_avg_views": 420000, "avg_ctr_competencia": 9.0, "avg_retencion": 82, "gap_oportunidad": "Poca competencia en testimonios reales de enfermeros", "mejor_horario_publicacion": ["15:00", "19:00", "22:00"], "duracion_optima": "50-55 segundos"},
-        "carretera": {"videos_top_10_avg_views": 500000, "avg_ctr_competencia": 9.5, "avg_retencion": 85, "gap_oportunidad": "Alto engagement en historias de traileros y taxistas", "mejor_horario_publicacion": ["13:00", "17:00", "20:00"], "duracion_optima": "50-60 segundos"}
-    }
-    return analisis.get(tema, {"videos_top_10_avg_views": 100000, "avg_ctr_competencia": 5.0, "avg_retencion": 60, "gap_oportunidad": "Oportunidad general", "mejor_horario_publicacion": ["14:00", "18:00"], "duracion_optima": "45-55 segundos"})
-
-# ================================================================
-# MINIATURA ELITE
-# ================================================================
-def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
-    if any(p in tema_viral for p in ["miedo", "terror", "peligro"]):
-        color_scheme = PSICOLOGIA_COLOR["miedo"]
-    elif any(p in tema_viral for p in ["misterio", "secreto", "oculto"]):
-        color_scheme = PSICOLOGIA_COLOR["misterio"]
-    elif any(p in tema_viral for p in ["urgencia", "alerta", "peligro"]):
-        color_scheme = PSICOLOGIA_COLOR["urgencia"]
-    else:
-        color_scheme = PSICOLOGIA_COLOR["confianza"]
-
-    try:
-        with Image.open(img_path) as img:
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-
-            img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
-            img = ImageEnhance.Contrast(img).enhance(1.8)
-            img = ImageEnhance.Color(img).enhance(1.5)
-            img = ImageEnhance.Sharpness(img).enhance(2.5)
-            img = ImageEnhance.Brightness(img).enhance(1.15)
-
-            draw = ImageDraw.Draw(img)
-            width, height = img.size
-
-            palabras = texto.upper().strip().split()
-            if len(palabras) > 3:
-                palabras = palabras[:3]
-            texto_final = " ".join(palabras)
-
-            lineas = [texto_final] if len(palabras) <= 2 else [
-                " ".join(palabras[:len(palabras)//2]),
-                " ".join(palabras[len(palabras)//2:])
-            ]
-
-            font_paths = [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-            ]
-
-            font_size = 130
-            font = None
-            for path in font_paths:
-                try:
-                    font = ImageFont.truetype(path, font_size)
-                    break
-                except Exception:
-                    continue
-
-            if font is None:
-                font = ImageFont.load_default()
-
-            total_height = 0
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                total_height += bbox[3] - bbox[1] + 25
-
-            y_start = (height - total_height) // 2 + 100
-
-            padding = 50
-            max_width = max(draw.textbbox((0, 0), linea, font=font)[2] for linea in lineas)
-
-            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-            overlay_draw = ImageDraw.Draw(overlay)
-            overlay_draw.rectangle(
-                [(width - max_width) // 2 - padding, y_start - padding,
-                 (width + max_width) // 2 + padding, y_start + total_height + padding],
-                fill=(0, 0, 0, 220)
-            )
-            overlay = overlay.filter(ImageFilter.GaussianBlur(radius=10))
-            img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
-            draw = ImageDraw.Draw(img)
-
-            y_current = y_start
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                w = bbox[2] - bbox[0]
-                h = bbox[3] - bbox[1]
-                x = (width - w) // 2
-
-                for offset in range(12, 0, -2):
-                    for dx in [-offset, 0, offset]:
-                        for dy in [-offset, 0, offset]:
-                            if dx != 0 or dy != 0:
-                                draw.text((x + dx, y_current + dy), linea, font=font, fill=(0, 0, 0))
-
-                draw.text((x, y_current), linea, font=font, fill=color_scheme["acento"])
-                y_current += h + 25
-
-            draw.line([(width - 150, height - 300), (width - 300, height - 450)], fill=(255, 0, 0), width=35)
-            draw.polygon([(width - 300, height - 450), (width - 260, height - 500), (width - 340, height - 500)], fill=(255, 0, 0))
-            draw.ellipse([(180, 380), (470, 670)], outline=(255, 0, 0), width=30)
-
-            try:
-                emoji_font = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 120)
-                draw.text((width - 150, 80), color_scheme["emoji"], font=emoji_font)
-            except Exception:
-                pass
-
-            img.save(output_path, "JPEG", quality=95, optimize=True)
-            print(f"✅ Miniatura MRBEAST creada: {output_path}")
-            return True
-
-    except Exception as e:
-        print(f"❌ Error creando miniatura élite: {e}")
-        traceback.print_exc()
-        return False
 
 # ================================================================
 # TÍTULOS
 # ================================================================
-def generar_titulo_viral_con_hashtags(keywords, lugar, tema_viral, anio_suceso=None):
-    categorias = list(FORMULAS_TITULOS_ELITE.keys())
-    if tema_viral in ["carretera", "velador"]:
-        categoria_principal = "testimonio_real"
-    elif tema_viral in ["leyenda_mexicana", "ritual"]:
-        categoria_principal = "advertencia_peligro"
+def generar_titulo_variado(tema, estado_mx):
+    """Genera título coherente con verbos simples en pasado."""
+    pasado = random.choice(tema["acciones"])
+    lugar  = random.choice(tema["lugares_t"])
+
+    if random.random() < 0.45:
+        formula = random.choice(FORMULAS_NARRATIVAS)
     else:
-        categoria_principal = random.choice(categorias)
+        formula = random.choice(FORMULAS_NEUTRAS)
 
-    formulas = FORMULAS_TITULOS_ELITE[categoria_principal]
-    formula = random.choice(formulas)
+    try:
+        titulo = formula.format(
+            pasado=pasado,
+            lugar=lugar,
+            Lugar=lugar[0].upper() + lugar[1:],
+            estado=estado_mx,
+        )
+    except KeyError:
+        titulo = f"Cuidado con {lugar}"
 
-    horas = ["3:33 AM", "2:14 AM", "4:44 AM", "medianoche", "3:00 AM", "2:47 AM"]
-    acciones = ["patrullé", "hice mi ronda", "conduje", "recogí a un pasajero", "entré", "repartí"]
-    lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
+    # Palabra de impacto opcional (35 % de las veces)
+    if random.random() < 0.35:
+        impacto = random.choice(["NUNCA", "NADIE", "PELIGRO", "SOLO"])
+        if not titulo.upper().startswith(impacto):
+            titulo = f"{impacto}: {titulo}"
 
-    titulo = formula.replace("{hora}", random.choice(horas)).replace("{lugar}", random.choice(lugares)).replace("{estado}", lugar).replace("{accion}", random.choice(acciones))
-
-    palabras = titulo.split()
-    palabras_clave = ["PROHIBIDO", "ILEGAL", "NADIE", "SECRETO", "ALERTA", "PELIGRO", "REAL", "VERDAD", "NUNCA", "ERROR"]
-    for j, palabra in enumerate(palabras):
-        if palabra.upper() in palabras_clave or len(palabra) > 7:
-            palabras[j] = palabra.upper()
-    titulo = " ".join(palabras)
-
-    emojis_map = {
-        "velador": "👁️", "hospital": "🏥", "carretera": "🚗", "leyenda_mexicana": "👻", "ritual": "🔮"
-    }
-    emoji_principal = emojis_map.get(tema_viral, "😱")
-
-    hashtags = [f"#{tema_viral.capitalize()}"]
-    if keywords:
-        for kw in keywords[:2]:
-            kw_clean = re.sub(r'[áéíóú]', lambda m: {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}.get(m.group(), m.group()), kw)
-            kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
-            if kw_clean and len(kw_clean) > 2:
-                hashtags.append(f"#{kw_clean.capitalize()}")
+    # Emoji + hashtags
+    hashtags = [f"#{tema['tema'].replace('_','').capitalize()}"]
+    hashtags.extend(tema["hashtags"][:1])
     hashtags.extend(["#Terror", "#Misterio"])
+    titulo_final = f"{titulo} {tema['emoji']} {' '.join(hashtags)}"
 
-    hashtags_str = " " + " ".join(hashtags)
-    titulo_con_emoji = f"{titulo} {emoji_principal}{hashtags_str}"
-
-    if len(titulo_con_emoji) > 100:
-        titulo_con_emoji = f"{titulo[:60]} {emoji_principal}{hashtags_str}"
-        if len(titulo_con_emoji) > 100:
-            titulo_con_emoji = titulo_con_emoji[:97] + "..."
-
-    return titulo_con_emoji
+    if len(titulo_final) > 100:
+        titulo_final = titulo_final[:97] + "..."
+    return titulo_final
 
 def calcular_score_titulo(titulo):
     score = 50
-    if 55 <= len(titulo) <= 100: score += 15
-    elif 40 <= len(titulo) <= 110: score += 8
-    if any(p in titulo.upper() for p in ["PROHIBIDO", "SECRETO", "PELIGRO", "REAL", "VERDAD", "NADIE", "NUNCA"]): score += 12
-    if any(c.isdigit() for c in titulo): score += 8
-    if "?" in titulo: score += 10
-    if any(ord(c) > 127743 for c in titulo): score += 5
-    if sum(1 for c in titulo if c.isupper()) > 3: score += 5
-    if "#" in titulo: score += 5
-    return min(score, 100)
+    if 40 <= len(titulo) <= 100: score += 10
+    if any(p in titulo.upper() for p in ["NUNCA","NADIE","PELIGRO","PROHIBIDO","SOLO"]): score += 10
+    if "?" in titulo: score += 5
+    if any(ord(c) > 127743 for c in titulo): score += 3
+    if "#" in titulo: score += 3
+    # Penalizar horas forzadas
+    if re.search(r"\b[0-2]?[0-9]:[0-5][0-9]\b", titulo): score -= 12
+    # Penalizar prefijos rígidos
+    if "TESTIMONIO" in titulo.upper() or "ADVERTENCIA" in titulo.upper(): score -= 12
+    return min(max(score, 0), 100)
 
 # ================================================================
 # ANALYTICS
@@ -390,7 +656,8 @@ def cargar_analytics_elite():
         with open(ANALYTICS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"videos_publicados": [], "mejores_horarios": {}, "mejores_temas": {}, "ctr_promedio": 0, "retencion_promedio": 0}
+        return {"videos_publicados": [], "mejores_horarios": {}, "mejores_temas": {},
+                "ctr_promedio": 0, "retencion_promedio": 0}
 
 def guardar_analytics_elite(analytics):
     tmp = ANALYTICS_FILE + ".tmp"
@@ -399,21 +666,15 @@ def guardar_analytics_elite(analytics):
     os.replace(tmp, ANALYTICS_FILE)
 
 def predecir_rendimiento(tema, titulo, hora_publicacion):
-    analytics = cargar_analytics_elite()
-    score_tema = next((t["ctr_potencial"] for t in TEMAS_VIRALES_2024 if t["tema"] == tema), 7.0)
+    score_tema   = next((t["ctr_potencial"] for t in TEMAS_VIRALES_2024 if t["tema"] == tema), 7.0)
     score_titulo = calcular_score_titulo(titulo)
-    horario_optimo = ["14:00", "18:00", "21:00"]
-    score_horario = 1.0 if hora_publicacion[:2] in [h[:2] for h in horario_optimo] else 0.8
-
-    vistas_predichas = int((score_tema * score_titulo * score_horario) * 1000)
-    ctr_predicho = score_tema * (score_titulo / 100)
-    retencion_predicha = 70 + (score_titulo / 10)
-
+    score_hora   = 1.0 if hora_publicacion[:2] in ["14","18","21"] else 0.8
+    vistas   = int(score_tema * score_titulo * score_hora * 1000)
+    ctr      = round(score_tema * (score_titulo / 100), 2)
+    retencion = round(70 + (score_titulo / 10), 1)
     return {
-        "vistas_predichas": vistas_predichas,
-        "ctr_predicho": round(ctr_predicho, 2),
-        "retencion_predicha": round(retencion_predicha, 1),
-        "confianza": "Alta" if vistas_predichas > 50000 else "Media" if vistas_predichas > 10000 else "Baja"
+        "vistas_predichas": vistas, "ctr_predicho": ctr, "retencion_predicha": retencion,
+        "confianza": "Alta" if vistas > 50000 else "Media" if vistas > 10000 else "Baja",
     }
 
 # ================================================================
@@ -424,32 +685,32 @@ def validar_pexels_api_key():
         print("⚠️ PEXELS_API_KEY no configurada.")
         return False
     try:
-        headers = {"Authorization": PEXELS_API_KEY}
-        r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1", headers=headers, timeout=10)
+        r = requests.get("https://api.pexels.com/v1/search?query=test&per_page=1",
+                         headers={"Authorization": PEXELS_API_KEY}, timeout=10)
         if r.status_code == 200:
             print("✅ API Key de Pexels válida.")
             return True
-        else:
-            print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
-            return False
+        print(f"⚠️ API Key de Pexels inválida (código {r.status_code}).")
+        return False
     except Exception as e:
-        print(f"⚠️ Error probando API Key: {e}")
+        print(f"⚠️ Error probando Pexels: {e}")
         return False
 
 PEXELS_VALIDA = validar_pexels_api_key()
+ULTIMA_URL_PEXELS = None
 
 # ================================================================
-# ESTADO
+# ESTADO / PERSISTENCIA
 # ================================================================
 def cargar_estado():
     try:
         with open(ESTADO_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
             if "publicaciones_hoy" not in data:
-                data["publicaciones_hoy"] = None
+                data["publicaciones_hoy"] = 0
             return data
     except Exception:
-        return {"ultimo_fondo": None, "publicaciones_hoy": None, "fecha": None, "ultima_publicacion": None}
+        return {"ultimo_fondo": None, "publicaciones_hoy": 0, "fecha": None, "ultima_publicacion": None}
 
 def guardar_estado(estado):
     tmp = ESTADO_FILE + ".tmp"
@@ -494,155 +755,62 @@ def guardar_tema_usado(tema):
 def obtener_temas_recientes():
     return cargar_temas_usados()["temas"]
 
-def obtener_publicaciones_hoy():
-    estado = cargar_estado()
-    pub = estado.get("publicaciones_hoy", 0)
-    if not pub:
-        return 0
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
-    return pub if estado.get("fecha") == hoy else 0
-
 # ================================================================
 # DECISIÓN DE PUBLICAR
 # ================================================================
 def deberia_publicar_ahora(estado):
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
-    fecha_hoy = hoy.isoformat()
-
-    if estado.get("fecha") != fecha_hoy:
-        estado["fecha"] = fecha_hoy
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date().isoformat()
+    if estado.get("fecha") != hoy:
+        estado["fecha"] = hoy
         estado["publicaciones_hoy"] = 0
         guardar_estado(estado)
         print("📅 Nuevo día. Contador reiniciado.")
 
-    publicadas_hoy = estado.get("publicaciones_hoy", 0)
-    if publicadas_hoy >= MAX_SHORTS_DIA:
-        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado (CALIDAD > CANTIDAD).")
+    publicadas = estado.get("publicaciones_hoy", 0)
+    if publicadas >= MAX_SHORTS_DIA:
+        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
         return False
 
-    ultima_hora = estado.get("ultima_publicacion")
-    if ultima_hora:
-        ultima_hora = datetime.fromisoformat(ultima_hora)
-        hora_actual = datetime.now(pytz.timezone("America/Mexico_City"))
-        diff_horas = (hora_actual - ultima_hora).total_seconds() / 3600
-        intervalo_requerido = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
-
-        if diff_horas < intervalo_requerido:
-            print(f"⏳ Esperando {intervalo_requerido:.1f}h desde la última publicación.")
-            print(f"   Han pasado {diff_horas:.1f}h. Aún no es momento.")
-            print(f"   Shorts publicados hoy: {publicadas_hoy}/{MAX_SHORTS_DIA}")
+    ultima = estado.get("ultima_publicacion")
+    if ultima:
+        ultima_dt = datetime.fromisoformat(ultima)
+        ahora = datetime.now(pytz.timezone("America/Mexico_City"))
+        diff_h = (ahora - ultima_dt).total_seconds() / 3600
+        intervalo = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
+        if diff_h < intervalo:
+            print(f"⏳ Esperando {intervalo:.1f}h. Van {diff_h:.1f}h. Publicadas hoy: {publicadas}/{MAX_SHORTS_DIA}")
             return False
-        else:
-            print(f"✅ Han pasado {diff_horas:.1f}h. Intervalo superado.")
+        print(f"✅ Han pasado {diff_h:.1f}h. Publicando.")
 
-    hora_actual = datetime.now(pytz.timezone("America/Mexico_City")).hour
-    horas_optimas = [14, 18, 21]
-    if hora_actual not in horas_optimas:
-        print(f"⏰ Hora actual ({hora_actual}:00) no es óptima. Horas recomendadas: {horas_optimas}")
+    retraso = random.randint(0, RETRASO_MAX_MINUTOS * 60)
+    if retraso > 0:
+        print(f"⏳ Retraso aleatorio: {retraso//60} min {retraso%60} seg...")
+        time.sleep(retraso)
 
-    print(f"✅ Decisión: Publicar. (Short {publicadas_hoy + 1}/{MAX_SHORTS_DIA} del día - CALIDAD ÉLITE)")
-    retraso_segundos = random.randint(0, RETRASO_MAX_MINUTOS * 60)
-    if retraso_segundos > 0:
-        print(f"⏳ Esperando {retraso_segundos//60} min {retraso_segundos%60} seg antes de comenzar...")
-        time.sleep(retraso_segundos)
+    print(f"✅ Decisión: Publicar. (Short {publicadas + 1}/{MAX_SHORTS_DIA})")
     return True
 
 # ================================================================
-# OUTLIERS / ÉPOCA
-# ================================================================
-OUTLIERS_TERROR = [
-    "Intenté sobrevivir 7 días en el hotel más embrujado de México",
-    "¿Qué vi en el espejo del manicomio abandonado?",
-    "De creyente a escéptico en una noche en el panteón",
-    "El ritual que hice y nunca debí hacer",
-    "Sobreviví a la carretera fantasma de Chihuahua sin gasolina",
-]
-
-ANIO_SUCESO = None
-EPOCA_MOD = "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, smartphones era"
-
-def construir_modificadores_epoca(anio):
-    if anio is None or anio >= 2015:
-        return "present day contemporary era (2020s), modern vehicles, modern architecture, modern clothing, LED lighting, smartphones era"
-    elif anio >= 2000:
-        return f"early 2000s era (year {anio}): 2000s cars, CRT televisions, old flip cellphones, 2000s fashion and architecture, no smartphones"
-    elif anio >= 1990:
-        return f"1990s era (year {anio}): 90s cars, cassette players, CRT TVs, analog phones, 90s fashion, older architecture, no smartphones, no modern tech"
-    elif anio >= 1980:
-        return f"1980s era (year {anio}): 80s cars, analog rotary phones, vintage clothing, older buildings, no modern technology"
-    else:
-        return f"past era (year {anio}): old classic cars, analog technology, period clothing, aged architecture, no modern devices"
-
-def actualizar_epoca(anio):
-    global ANIO_SUCESO, EPOCA_MOD
-    try:
-        ANIO_SUCESO = int(anio)
-    except Exception:
-        ANIO_SUCESO = None
-    EPOCA_MOD = construir_modificadores_epoca(ANIO_SUCESO)
-    print(f"📅 Época del suceso: {ANIO_SUCESO if ANIO_SUCESO else 'actualidad'}")
-
-# ================================================================
-# VOCES
-# ================================================================
-VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+12%", "tono": "-2Hz", "estilo": "narrativo"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+10%", "tono": "-3Hz", "estilo": "dramatico"},
-    {"voz": "es-MX-ManuelNeural", "velocidad": "+12%", "tono": "-1Hz", "estilo": "conversacional"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+10%", "tono": "-2Hz", "estilo": "suspenso"},
-    {"voz": "es-AR-ElenaNeural", "velocidad": "+10%", "tono": "+1Hz", "estilo": "femenino_misterio"},
-]
-CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
-
-def generar_perfil_personaje_shorts():
-    edades = ["21-year-old", "28-year-old", "35-year-old", "42-year-old", "50-year-old"]
-    vestimentas = ["wearing a denim jacket and t-shirt", "wearing a dark green coat and wool scarf", "wearing a simple white shirt and leather belt", "wearing a blue mechanic uniform", "wearing a dark sweater and trousers", "wearing a red flannel shirt and jeans"]
-    cabellos = ["short curly dark hair", "grey cropped hair", "bald with a short beard", "short spiky black hair", "chestnut brown curly hair"]
-    rasgos = ["with mestizo features and light olive skin", "with light brown skin and freckles", "with olive skin and a strong jaw", "with pale skin and green eyes"]
-    profesiones = ["trailero conduciendo un tráiler en autopista nocturna", "policía en su turno nocturno", "conductor de taxi en ciudad", "repartidor en moto", "velador en condominio residencial", "enfermero en hospital", "guardia de seguridad en centro comercial"]
-    profesion = random.choice(profesiones)
-    perfil_fisico = f"a {random.choice(edades)} Mexican man, {random.choice(rasgos)}, with {random.choice(cabellos)}, {random.choice(vestimentas)}"
-    return perfil_fisico, profesion, "un", "man"
-
-PERFIL_PERSONAJE_SHORTS, PERSONAJE_SHORTS, ARTICULO_SHORTS, GENERO_SHORTS = generar_perfil_personaje_shorts()
-ESTADO_HISTORIA_SHORTS = random.choice(["Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"])
-
-# ================================================================
-# MÚSICA
-# ================================================================
-FONDOS_DISPONIBLES = ["Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3", "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"]
-
-def seleccionar_fondo_disponible(estado):
-    encontrados = {}
-    for root, dirs, files in os.walk("."):
-        if "/." in root or "\\." in root:
-            continue
-        for file in files:
-            for fondo in FONDOS_DISPONIBLES:
-                if file.lower() == fondo.lower():
-                    encontrados[fondo] = os.path.join(root, file)
-    if not encontrados:
-        print("⚠️ No se encontraron archivos de música de fondo.")
-        return None
-    ultimo_fondo = estado.get("ultimo_fondo")
-    candidatos = [f for f in encontrados if f != ultimo_fondo] or list(encontrados.keys())
-    seleccionado = random.choice(candidatos)
-    estado["ultimo_fondo"] = seleccionado
-    print(f"🎵 Música de fondo: {seleccionado} ({len(candidatos)} candidatas)")
-    return encontrados[seleccionado]
-
-# ================================================================
-# LIMPIADORES
+# LIMPIADORES DE TEXTO
 # ================================================================
 def limpiar_caracteres_para_tts(texto):
-    texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
+    texto = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]+', '', texto)
     return re.sub(r'\s+', ' ', texto).strip()
+
+def limpiar_texto_para_audio(texto):
+    texto = re.sub(
+        r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
+        r'\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF'
+        r'\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF'
+        r'\U00002700-\U000027BF\U000024C2-\U0001F251]+', '', texto)
+    texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
+    return re.sub(r'\s+', ' ', texto.replace('"', "'")).strip()
 
 def limpiar_respuesta_json(respuesta):
     respuesta = re.sub(r"```json\s*", "", respuesta)
     respuesta = re.sub(r"```\s*", "", respuesta)
     inicio = respuesta.find("{")
-    fin = respuesta.rfind("}")
+    fin    = respuesta.rfind("}")
     if inicio != -1 and fin != -1:
         json_str = respuesta[inicio: fin + 1]
         json_str = re.sub(r",\s*}", "}", json_str)
@@ -650,14 +818,12 @@ def limpiar_respuesta_json(respuesta):
         return json_str
     return respuesta
 
-def limpiar_texto_para_audio(texto):
-    texto = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002700-\U000027BF\U000024C2-\U0001F251]', '', texto)
-    texto = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto)
-    return re.sub(r'\s+', ' ', texto.replace('"', "'")).strip()
-
+# ================================================================
+# PLACEHOLDER LOCAL
+# ================================================================
 def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
     try:
-        img = Image.new("RGB", size, (20, 20, 20))
+        img  = Image.new("RGB", size, (20, 20, 20))
         draw = ImageDraw.Draw(img)
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 140)
@@ -674,127 +840,186 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         return None
 
 # ================================================================
-# MINIATURA VIRAL
+# MINIATURA ÉLITE (estilo MrBeast)
 # ================================================================
-def crear_miniatura_viral(img_path, texto, output_path):
-    colores_impacto = [
-        {"texto": (255, 255, 0), "fondo": (0, 0, 0)},
-        {"texto": (255, 50, 50), "fondo": (0, 0, 0)},
-        {"texto": (255, 140, 0), "fondo": (0, 0, 0)},
-        {"texto": (0, 255, 255), "fondo": (0, 0, 0)},
-        {"texto": (255, 255, 255), "fondo": (0, 0, 0)},
-    ]
-    color_elegido = random.choice(colores_impacto)
-    color_texto = color_elegido["texto"]
-    font_paths = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"]
+def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
+    if any(p in tema_viral for p in ["miedo", "terror", "peligro"]):
+        cs = PSICOLOGIA_COLOR["miedo"]
+    elif any(p in tema_viral for p in ["misterio", "secreto", "oculto"]):
+        cs = PSICOLOGIA_COLOR["misterio"]
+    elif any(p in tema_viral for p in ["urgencia", "alerta"]):
+        cs = PSICOLOGIA_COLOR["urgencia"]
+    else:
+        cs = PSICOLOGIA_COLOR["confianza"]
 
     try:
         with Image.open(img_path) as img:
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            img = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
-            img = ImageEnhance.Contrast(img).enhance(1.5)
-            img = ImageEnhance.Sharpness(img).enhance(2.0)
-
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img  = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
+            img  = ImageEnhance.Contrast(img).enhance(1.8)
+            img  = ImageEnhance.Color(img).enhance(1.5)
+            img  = ImageEnhance.Sharpness(img).enhance(2.5)
+            img  = ImageEnhance.Brightness(img).enhance(1.15)
             draw = ImageDraw.Draw(img)
-            width, height = img.size
-            texto_final = texto.upper().strip()
-            palabras = texto_final.split()
+            w, h = img.size
 
-            if len(palabras) > 3:
-                palabras = palabras[:3]
-                texto_final = " ".join(palabras)
+            palabras = texto.upper().strip().split()[:3]
+            lineas = [" ".join(palabras)] if len(palabras) <= 2 else [
+                " ".join(palabras[:len(palabras)//2]),
+                " ".join(palabras[len(palabras)//2:]),
+            ]
 
-            if len(palabras) > 2:
-                mitad = len(palabras) // 2
-                linea1 = " ".join(palabras[:mitad])
-                linea2 = " ".join(palabras[mitad:])
-                lineas = [linea1, linea2]
-            else:
-                lineas = [texto_final]
-
-            font_size = 130
             font = None
-            for size in range(130, 80, -5):
+            for path in [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraBold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            ]:
                 try:
-                    font = ImageFont.truetype(font_paths[0], size)
-                    max_width = 0
-                    total_height = 0
-                    for linea in lineas:
-                        bbox = draw.textbbox((0, 0), linea, font=font)
-                        w = bbox[2] - bbox[0]
-                        h = bbox[3] - bbox[1]
-                        max_width = max(max_width, w)
-                        total_height += h + 25
-                    if max_width < width * 0.85 and total_height < height * 0.35:
-                        font_size = size
-                        break
+                    font = ImageFont.truetype(path, 130); break
                 except Exception:
                     continue
             if font is None:
-                try:
-                    font = ImageFont.truetype(font_paths[0], font_size)
-                except Exception:
-                    font = ImageFont.load_default()
+                font = ImageFont.load_default()
 
-            total_height = 0
+            alto_total = sum(
+                draw.textbbox((0,0), l, font=font)[3] - draw.textbbox((0,0), l, font=font)[1] + 25
+                for l in lineas
+            )
+            y0 = (h - alto_total) // 2 + 100
+            pad = 50
+            max_w = max(draw.textbbox((0,0), l, font=font)[2] for l in lineas)
+
+            overlay = Image.new("RGBA", img.size, (0,0,0,0))
+            od = ImageDraw.Draw(overlay)
+            od.rectangle(
+                [(w-max_w)//2-pad, y0-pad, (w+max_w)//2+pad, y0+alto_total+pad],
+                fill=(0,0,0,220)
+            )
+            overlay = overlay.filter(ImageFilter.GaussianBlur(radius=10))
+            img  = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+            draw = ImageDraw.Draw(img)
+
+            y = y0
             for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                h = bbox[3] - bbox[1]
-                total_height += h + 25
+                bb = draw.textbbox((0,0), linea, font=font)
+                lw, lh = bb[2]-bb[0], bb[3]-bb[1]
+                x = (w - lw) // 2
+                for o in range(12, 0, -2):
+                    for dx in [-o, 0, o]:
+                        for dy in [-o, 0, o]:
+                            if dx or dy:
+                                draw.text((x+dx, y+dy), linea, font=font, fill=(0,0,0))
+                draw.text((x, y), linea, font=font, fill=cs["acento"])
+                y += lh + 25
 
-            y_start = (height - total_height) // 2 + 80
-            padding = 50
-            max_line_width = 0
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                w = bbox[2] - bbox[0]
-                max_line_width = max(max_line_width, w)
+            draw.line([(w-150, h-300), (w-300, h-450)], fill=(255,0,0), width=35)
+            draw.polygon([(w-300, h-450),(w-260, h-500),(w-340, h-500)], fill=(255,0,0))
 
-            rect_x = (width - max_line_width) // 2 - padding
-            rect_y = y_start - padding
-            rect_w = max_line_width + (padding * 2)
-            rect_h = total_height + (padding * 2)
-            draw.rectangle([rect_x, rect_y, rect_x + rect_w, rect_y + rect_h], fill=(0, 0, 0, 240))
+            try:
+                ef = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 120)
+                draw.text((w-150, 80), cs["emoji"], font=ef)
+            except Exception:
+                pass
 
-            y_current = y_start
-            for linea in lineas:
-                bbox = draw.textbbox((0, 0), linea, font=font)
-                w = bbox[2] - bbox[0]
-                h = bbox[3] - bbox[1]
-                x = (width - w) // 2
-
-                for dx in [-8, -6, -4, -2, 0, 2, 4, 6, 8]:
-                    for dy in [-8, -6, -4, -2, 0, 2, 4, 6, 8]:
-                        draw.text((x + dx, y_current + dy), linea, font=font, fill=(0, 0, 0))
-
-                draw.text((x, y_current), linea, font=font, fill=color_texto)
-                y_current += h + 25
-
-            draw.line([(width - 200, height - 400), (width - 100, height - 300)], fill=(255, 0, 0), width=20)
-            draw.polygon([(width - 100, height - 300), (width - 80, height - 330), (width - 120, height - 330)], fill=(255, 0, 0))
-            img.convert('RGB').save(output_path, "JPEG", quality=95, optimize=True)
-            print(f"✅ Miniatura viral creada: {output_path}")
-            print(f"   📝 Texto: '{texto}'")
-            print(f"   🎨 Color: {color_texto}")
+            img.save(output_path, "JPEG", quality=95, optimize=True)
+            print(f"✅ Miniatura élite creada: {output_path}")
             return True
     except Exception as e:
-        print(f"❌ Error creando miniatura viral: {e}")
+        print(f"❌ Error miniatura élite: {e}")
         traceback.print_exc()
         return False
 
 # ================================================================
-# EXPANDIR / TRUNCAR
+# MINIATURA VIRAL (alternativa)
+# ================================================================
+def crear_miniatura_viral(img_path, texto, output_path):
+    colores = [
+        (255,255,0), (255,50,50), (255,140,0), (0,255,255), (255,255,255),
+    ]
+    color_texto = random.choice(colores)
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]
+    try:
+        with Image.open(img_path) as img:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img  = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
+            img  = ImageEnhance.Contrast(img).enhance(1.5)
+            img  = ImageEnhance.Sharpness(img).enhance(2.0)
+            draw = ImageDraw.Draw(img)
+            w, h = img.size
+
+            palabras = texto.upper().strip().split()[:3]
+            if len(palabras) > 2:
+                m = len(palabras) // 2
+                lineas = [" ".join(palabras[:m]), " ".join(palabras[m:])]
+            else:
+                lineas = [" ".join(palabras)]
+
+            font = None
+            for sz in range(130, 80, -5):
+                try:
+                    font = ImageFont.truetype(font_paths[0], sz)
+                    max_w, tot_h = 0, 0
+                    for l in lineas:
+                        bb = draw.textbbox((0,0), l, font=font)
+                        max_w = max(max_w, bb[2]-bb[0])
+                        tot_h += bb[3]-bb[1] + 25
+                    if max_w < w*0.85 and tot_h < h*0.35:
+                        break
+                except Exception:
+                    continue
+            if font is None:
+                font = ImageFont.load_default()
+
+            alto_total = sum(
+                draw.textbbox((0,0), l, font=font)[3] - draw.textbbox((0,0), l, font=font)[1] + 25
+                for l in lineas
+            )
+            y0  = (h - alto_total) // 2 + 80
+            pad = 50
+            max_w2 = max(draw.textbbox((0,0), l, font=font)[2] for l in lineas)
+            draw.rectangle(
+                [(w-max_w2)//2-pad, y0-pad, (w+max_w2)//2+pad, y0+alto_total+pad],
+                fill=(0,0,0,240)
+            )
+
+            y = y0
+            for linea in lineas:
+                bb = draw.textbbox((0,0), linea, font=font)
+                lw, lh = bb[2]-bb[0], bb[3]-bb[1]
+                x = (w - lw) // 2
+                for dx in [-8,-6,-4,-2,0,2,4,6,8]:
+                    for dy in [-8,-6,-4,-2,0,2,4,6,8]:
+                        draw.text((x+dx, y+dy), linea, font=font, fill=(0,0,0))
+                draw.text((x, y), linea, font=font, fill=color_texto)
+                y += lh + 25
+
+            img.convert("RGB").save(output_path, "JPEG", quality=95, optimize=True)
+            print(f"✅ Miniatura viral creada: {output_path}")
+            return True
+    except Exception as e:
+        print(f"❌ Error miniatura viral: {e}")
+        traceback.print_exc()
+        return False
+
+# ================================================================
+# EXPANDIR / TRUNCAR TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, ubicacion, personaje):
-    prompt = f"""Expande el siguiente relato a 110-130 palabras con detalles sensoriales de {ubicacion}.
-IMPORTANTE: Asegúrate de que el relato tenga un OBJETIVO CLARO, una RESTRICCIÓN y que el protagonista ACTÚE.
-Mantén trama y tono. Sin CTA. Debe sonar como un relato personal real.
-RELATO: {texto_corto}
-Devuelve SOLO el relato."""
+    prompt = (
+        f"Expande el siguiente relato a 110-130 palabras con detalles sensoriales de {ubicacion}.\n"
+        f"IMPORTANTE: Asegúrate de que el relato tenga un OBJETIVO CLARO, una RESTRICCIÓN y que el protagonista ACTÚE.\n"
+        f"Mantén trama y tono. Sin CTA. Debe sonar como un relato personal real.\n"
+        f"RELATO: {texto_corto}\nDevuelve SOLO el relato."
+    )
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "temperature": 0.8, "max_tokens": 700}
+    payload = {"model":"deepseek-chat","messages":[{"role":"user","content":prompt}],"temperature":0.8,"max_tokens":700}
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
@@ -808,107 +1033,84 @@ def truncar_texto_largo(texto, max_palabras=130):
     if len(palabras) <= max_palabras:
         return texto
     for i in range(max_palabras, max_palabras - 30, -1):
-        if i < len(palabras) and palabras[i - 1].endswith(('.', '!', '?')):
+        if i < len(palabras) and palabras[i-1].endswith(('.','!','?')):
             return ' '.join(palabras[:i])
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# GENERAR HISTORIA
+# ELEGIR TEMA Y GENERAR HISTORIA
 # ================================================================
-def generar_historia_completa():
-    tema_viral = random.choice(TEMAS_VIRALES_2024)
-    contexto = random.choice(tema_viral["contextos"])
-    keywords = tema_viral["keywords"]
+def elegir_tema_variado():
+    recientes = set(obtener_temas_recientes()[-8:])
+    pool = [t for t in TEMAS_VIRALES_2024 if t["tema"] not in recientes] or TEMAS_VIRALES_2024[:]
+    tema = random.choice(pool)
+    print(f"🎯 Tema: {tema['tema']} ({len(pool)} disponibles)")
+    return tema
 
-    cluster_keywords = generar_cluster_keywords(tema_viral["tema"])
-    analisis_competencia = analizar_competencia_youtube(tema_viral["tema"])
-    score_viralidad = calcular_puntuacion_viralidad(tema_viral)
+def generar_historia_completa():
+    tema_viral = elegir_tema_variado()
+    contexto   = random.choice(tema_viral["contextos"])
+    keywords   = tema_viral["keywords"]
 
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
-    titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+    tit_ref = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
     temas_recientes = obtener_temas_recientes()
-    temas_bloqueo = ""
+    bloqueo = ""
     if temas_recientes:
-        temas_bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE:\n"
-        for t in temas_recientes[-5:]:
-            if isinstance(t, dict):
-                temas_bloqueo += f"- {t.get('tipo', 'historia')} en {t.get('lugar', 'lugar desconocido')} (contexto: {t.get('contexto', '')})\n"
-            else:
-                temas_bloqueo += f"- {t}\n"
-        temas_bloqueo += "\nAsegúrate de que tu historia NO tenga el mismo tipo de fenómeno ni el mismo lugar.\n"
+        bloqueo = "\n🚫 TEMAS YA PUBLICADOS RECIENTEMENTE (no repetir):\n" + \
+                  "\n".join(f"- {t}" for t in temas_recientes[-5:])
 
-    outliers_referencia = random.sample(OUTLIERS_TERROR, min(3, len(OUTLIERS_TERROR)))
-    outliers_texto = "\n".join([f"  • {t}" for t in outliers_referencia])
-
-    categoria = random.choice(list(FORMULAS_TITULOS_ELITE.keys()))
-    formula_aleatoria = random.choice(FORMULAS_TITULOS_ELITE[categoria])
-
-    acciones = ["patrullé", "hice mi ronda", "conduje", "recogí a un pasajero", "entré", "repartí"]
-    lugares = ["la carretera", "el hospital", "el panteón", "la casa abandonada", "el estacionamiento"]
-    titulo_base = formula_aleatoria.replace("{accion}", random.choice(acciones)).replace("{lugar}", random.choice(lugares)).replace("{estado}", ESTADO_HISTORIA_SHORTS)
+    outliers = "\n".join(f"  • {t}" for t in random.sample(OUTLIERS_TERROR, 3))
+    score_viral = calcular_puntuacion_viralidad(tema_viral)
 
     prompt = f"""Eres un curador de relatos de terror que la comunidad comparte en foros de internet.
-Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersivas, atrapantes y escalofriantes, como si el narrador te lo estuviera contando a ti directamente.
+Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersivas, atrapantes y escalofriantes.
 
-🔥 TEMA VIRAL SELECCIONADO: {tema_viral['tema'].upper()}
+🔥 TEMA: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
-🔑 KEYWORDS PRIMARIAS: {', '.join(keywords)}
-🔑 KEYWORDS LONG-TAIL: {', '.join(cluster_keywords.get('long_tail', [])[:2])}
-📊 BUSQUEDAS/MES: {tema_viral['busquedas']:,}
-🎯 CTR POTENCIAL: {tema_viral['ctr_potencial']}%
-⏱️ RETENCIÓN OBJETIVO: {tema_viral['retencion_objetivo']}%
-⏱️ DURACIÓN ÓPTIMA: {tema_viral['duracion_optima']} segundos
-📊 SCORE VIRALIDAD: {score_viralidad['score']:.1f}/100 ({score_viralidad['categoria']})
+🔑 KEYWORDS: {', '.join(keywords)}
+📊 SCORE VIRALIDAD: {score_viral['score']:.1f}/100 ({score_viral['categoria']})
 
-📚 REFERENCIAS DE OUTLIERS (temas que ya funcionaron):
-{outliers_texto}
-
-📊 ANÁLISIS DE COMPETENCIA:
-- Vistas promedio competencia: {analisis_competencia['videos_top_10_avg_views']:,}
-- CTR promedio competencia: {analisis_competencia['avg_ctr_competencia']}%
-- Gap de oportunidad: {analisis_competencia['gap_oportunidad']}
-
-Inspírate en la estructura, pero NO copies. Crea tu propia variación.
+📚 OUTLIERS DE REFERENCIA:
+{outliers}
 
 🚨 REGLAS DE ORO:
-1. Debe sonar como un relato personal real, contado por una persona común (velador, enfermero, trailero, policía, etc.).
-2. NUNCA menciones que es ficción, IA, Deep Web o algo inventado. Debe sentirse 100% terrenal y posible.
-3. Longitud: 110-130 palabras EXACTAS (esto es crucial para que dure entre 45 y 55 segundos).
-4. El gancho inicial debe atrapar en los primeros 3 segundos.
-5. Usa detalles sensoriales: sonidos, olores, frío, horas exactas.
-
-TÍTULO SUGERIDO: {titulo_base}
+1. Relato personal real. NUNCA menciones IA, ficción o invención.
+2. 110-130 palabras EXACTAS (45-55 segundos de audio).
+3. Gancho en los primeros 3 segundos.
+4. Detalles sensoriales: sonidos, olores, frío, texturas.
+5. ⚠️ SI mencionas una hora, VARÍALA. NO uses "3:33 AM", "3:00 AM" ni "4:44 AM". En la MAYORÍA de relatos NO pongas hora.
+6. NO empieces con "TESTIMONIO:" ni "ADVERTENCIA:".
 
 🚫 TÍTULOS YA PUBLICADOS:
-{titulos_referencia}
-
-{temas_bloqueo}
+{tit_ref}
+{bloqueo}
 
 Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "{titulo_base}",
-    "texto_completo": "El relato de 110-130 palabras exactas.",
+    "texto_completo": "El relato de 110-130 palabras.",
     "palabras_portada": "2 palabras EN MAYÚSCULAS de alto impacto",
-    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+    "tags": ["tag1","tag2","tag3","tag4","tag5"]
 }}"""
+
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
+        "temperature": 0.85,
         "max_tokens": 600,
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
     }
 
     for intento in range(6):
         try:
-            print(f"🔄 Intento {intento+1}/6 generando historia viral...")
+            print(f"🔄 Intento {intento+1}/6 generando historia...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
-            respuesta = r.json()["choices"][0]["message"]["content"].strip()
-            json_str = limpiar_respuesta_json(respuesta)
+            raw = r.json()["choices"][0]["message"]["content"].strip()
+            json_str = limpiar_respuesta_json(raw)
             try:
                 data = json.loads(json_str, strict=False)
             except json.JSONDecodeError:
@@ -921,20 +1123,19 @@ Devuelve ESTRICTAMENTE este JSON:
 
             palabras = data["texto_completo"].split()
             if len(palabras) > 130:
-                data["texto_completo"] = " ".join(palabras[:130])
+                data["texto_completo"] = truncar_texto_largo(data["texto_completo"], 130)
 
-            data["tema"] = tema_viral["tema"]
-            data["estado"] = ESTADO_HISTORIA_SHORTS
+            data["tema"]    = tema_viral["tema"]
+            data["estado"]  = ESTADO_HISTORIA_SHORTS
+            data["contexto"] = contexto
+            data["titulo"]  = generar_titulo_variado(tema_viral, ESTADO_HISTORIA_SHORTS)
 
-            if "gancho_descripcion" not in data:
-                data["gancho_descripcion"] = f"Relato de terror: {data['titulo'][:80]}"
-            if "contexto_descripcion" not in data:
-                data["contexto_descripcion"] = f"Un relato de fenómenos extraños en {ESTADO_HISTORIA_SHORTS}, México."
-            if "fuente_relato" not in data:
-                data["fuente_relato"] = "Compartido por un oyente de la comunidad."
-            if "hashtags_descripcion" not in data:
-                hashtags = [f"#{tema_viral['tema'].capitalize()}", "#Terror", "#Misterio", f"#{ESTADO_HISTORIA_SHORTS.replace(' ', '')}", "#Shorts"]
-                data["hashtags_descripcion"] = " ".join(hashtags)
+            data.setdefault("gancho_descripcion", f"Relato de terror: {data['titulo'][:80]}")
+            data.setdefault("contexto_descripcion", f"Un relato de fenómenos extraños en {ESTADO_HISTORIA_SHORTS}, México.")
+            data.setdefault("fuente_relato", "Compartido por un oyente de la comunidad.")
+            hashtags = ["#Shorts"] + tema_viral["hashtags"][:2] + [
+                "#Terror", "#Misterio", f"#{ESTADO_HISTORIA_SHORTS.replace(' ','')}"]
+            data.setdefault("hashtags_descripcion", " ".join(hashtags))
 
             return data
 
@@ -946,710 +1147,617 @@ Devuelve ESTRICTAMENTE este JSON:
     print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
 
-def titulo_ya_publicado(titulo):
-    data = cargar_titulos_publicados()
-    titulo_norm = titulo.lower().strip()
-    for t in data["titulos"]:
-        if titulo_norm == t.lower().strip():
-            return True
-    return False
-
 # ================================================================
 # QUERIES CINEMATOGRÁFICOS
 # ================================================================
-def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral, segmento_index=0, total_segmentos=1):
+def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_viral,
+                                   segmento_index=0, total_segmentos=1):
     progreso = segmento_index / max(total_segmentos - 1, 1)
-    prompts = []
+
     if etapa == "inicio_casa":
-        if progreso < 0.3:
-            prompts = [f"wide shot of dark mexican {ubicacion_escena}, establishing shot, cinematic horror photography, atmospheric lighting, film grain", f"medium shot of {ubicacion_escena} interior, dim lighting, cinematic composition, 35mm film look", f"overhead shot of empty {ubicacion_escena}, top-down view, eerie atmosphere, horror photography", f"wide angle shot of {ubicacion_escena}, room perspective, cinematic horror, deep shadows"]
-        else:
-            prompts = [f"POV shot walking through {ubicacion_escena}, handheld camera, cinematic horror, shallow depth of field", f"tracking shot in {ubicacion_escena}, smooth movement, atmospheric fog, film noir style"]
+        prompts = [
+            f"wide shot of dark mexican {ubicacion_escena}, establishing shot, cinematic horror, atmospheric lighting, film grain",
+            f"medium shot of {ubicacion_escena} interior, dim lighting, cinematic composition, 35mm film look",
+            f"overhead shot of empty {ubicacion_escena}, top-down view, eerie atmosphere",
+        ] if progreso < 0.3 else [
+            f"POV shot walking through {ubicacion_escena}, handheld camera, cinematic horror, shallow depth of field",
+        ]
     elif etapa == "desplazamiento":
-        prompts = [f"wide shot of dark mexican road at night, {ubicacion_escena}, cinematic thriller, motion blur, atmospheric", f"medium shot from inside car, dashboard view, night driving, {ubicacion_escena}, rain on windshield", f"exterior shot of vehicle on dark road, {ubicacion_escena}, headlights cutting through fog, cinematic", f"aerial view of lonely road at night, {ubicacion_escena}, drone shot, mysterious atmosphere", f"street view of empty mexican street at night, {ubicacion_escena}, cinematic horror, streetlights"]
+        prompts = [
+            f"wide shot of dark mexican road at night, {ubicacion_escena}, cinematic thriller",
+            f"exterior shot of vehicle on dark road, {ubicacion_escena}, headlights cutting through fog",
+            f"street view of empty mexican street at night, {ubicacion_escena}, horror",
+        ]
     elif etapa == "lugar_destino":
-        if progreso < 0.5:
-            prompts = [f"wide establishing shot of {ubicacion_escena} at night, mexican location, ultra wide angle, dramatic lighting", f"exterior shot of {ubicacion_escena}, building facade, night photography, cinematic horror, deep shadows", f"medium shot approaching {ubicacion_escena}, walking towards entrance, atmospheric tension", f"wide angle of {ubicacion_escena}, architectural shot, night photography, horror atmosphere"]
-        else:
-            prompts = [f"interior shot of {ubicacion_escena}, exploring inside, flashlight beam, cinematic horror, shallow focus", f"POV shot inside {ubicacion_escena}, first person perspective, handheld camera, tension building", f"medium shot of {ubicacion_escena} details, close-up of objects, atmospheric lighting, film grain", f"detail shot of {ubicacion_escena}, textures and surfaces, horror photography, moody lighting"]
+        prompts = [
+            f"wide establishing shot of {ubicacion_escena} at night, ultra wide angle, horror",
+            f"exterior shot of {ubicacion_escena}, building facade, night photography",
+            f"interior shot of {ubicacion_escena}, exploring inside, flashlight beam",
+            f"POV shot inside {ubicacion_escena}, first person perspective, tension",
+        ]
     elif etapa == "climax_evento":
-        if progreso < 0.7:
-            prompts = [f"medium shot of person reacting in {ubicacion_escena}, shocked expression, dramatic lighting, horror film still", f"detail shot of hands trembling in {ubicacion_escena}, tension, cinematic close-up, shallow depth of field", f"over-the-shoulder shot in {ubicacion_escena}, seeing something horrifying, POV perspective, horror photography", f"wide shot of chaotic scene in {ubicacion_escena}, action moment, dynamic composition, cinematic horror", f"medium shot of person running in {ubicacion_escena}, panic, motion blur, cinematic thriller", f"detail shot of object in {ubicacion_escena}, mysterious item, dramatic lighting, horror photography"]
-        else:
-            prompts = [f"extreme close-up of terrified eyes in {ubicacion_escena}, intense fear, dramatic chiaroscuro lighting, hyperrealistic", f"close-up of person screaming in {ubicacion_escena}, pure terror, high contrast, horror movie still", f"medium close-up of person running in {ubicacion_escena}, panic, motion blur, cinematic thriller", f"wide shot of dramatic moment in {ubicacion_escena}, action scene, dynamic angle, horror cinematography"]
-    elif etapa == "resolucion":
-        prompts = [f"wide shot of person leaving {ubicacion_escena} at dawn, silhouette, atmospheric fog, emotional aftermath, cinematic", f"medium shot from behind, walking away from {ubicacion_escena}, sunrise, wide angle, contemplative mood", f"establishing shot of {ubicacion_escena} in morning light, aftermath, quiet atmosphere, cinematic photography", f"aerial shot of {ubicacion_escena} at dawn, drone view, peaceful but eerie, wide landscape", f"wide angle of {ubicacion_escena} at sunrise, aftermath scene, atmospheric lighting, cinematic"]
+        prompts = [
+            f"medium shot of person reacting in {ubicacion_escena}, shocked expression, horror film still",
+            f"extreme close-up of terrified eyes in {ubicacion_escena}, intense fear, dramatic lighting",
+            f"wide shot of dramatic moment in {ubicacion_escena}, action scene, dynamic angle",
+        ] if progreso >= 0.7 else [
+            f"detail shot of hands trembling in {ubicacion_escena}, tension, cinematic close-up",
+        ]
+    else:  # resolucion
+        prompts = [
+            f"wide shot of person leaving {ubicacion_escena} at dawn, silhouette, atmospheric fog",
+            f"establishing shot of {ubicacion_escena} in morning light, aftermath, quiet atmosphere",
+        ]
 
-    tema_keywords = {
-        "velador": "security camera, night shift, dark warehouse, flashlight",
-        "hospital": "hospital corridor dark, empty hospital bed, wheelchair dark, operating room old",
-        "carretera": "highway night fog, truck night highway, car headlights fog",
-        "leyenda_mexicana": "old village night, colonial church night, dirt road night, river fog night",
-        "ritual": "candles dark room, old cemetery night, abandoned church, cave darkness"
-    }
-    prompt_base = random.choice(prompts)
-    if tema_viral in tema_keywords:
-        prompt_base += f", {tema_keywords[tema_viral]}"
-    prompt_base += f", {EPOCA_MOD}"
-    return re.sub(r'\s+', ' ', prompt_base).strip()[:200]
-
-# ================================================================
-# PEXELS SEARCH
-# ================================================================
-def buscar_miniatura_pexels(query, intentos=5):
-    variantes_texto = ["empty space", "copy space", "negative space", "dark background", "blurry background", "minimal", "dramatic", "cinematic", "horror"]
-    url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": PEXELS_API_KEY}
-    for intento in range(intentos):
-        try:
-            variante = random.choice(variantes_texto)
-            query_completa = f"{query} {variante}"
-            params = {"query": query_completa, "orientation": "portrait", "per_page": 10, "page": random.randint(1, 5), "size": "large"}
-            print(f"🖼️ Buscando miniatura vertical: '{query_completa}'...")
-            r = requests.get(url, headers=headers, params=params, timeout=25)
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("photos") and len(data["photos"]) > 0:
-                    for foto in data["photos"][:5]:
-                        img_url = foto["src"]["large2x"] or foto["src"]["large"]
-                        try:
-                            r_img = requests.get(img_url, timeout=10)
-                            if r_img.status_code == 200:
-                                print(f"✅ Miniatura vertical encontrada: {img_url[:80]}...")
-                                return img_url
-                        except Exception:
-                            continue
-            else:
-                print(f"⚠️ Error Pexels: {r.status_code}")
-        except Exception as e:
-            print(f"⚠️ Error: {e}")
-        if intento < intentos - 1:
-            time.sleep(3)
-
-    print("⚠️ Usando búsqueda de fallback...")
-    params = {"query": query, "orientation": "portrait", "per_page": 5, "page": 1}
-    try:
-        r = requests.get(url, headers=headers, params=params, timeout=25)
-        if r.status_code == 200:
-            data = r.json()
-            if data.get("photos"):
-                return data["photos"][0]["src"]["large2x"]
-    except Exception:
-        pass
-    return None
-
-ULTIMA_URL_PEXELS = None
-def buscar_imagen_pexels_shorts(query, intentos=3):
-    global ULTIMA_URL_PEXELS
-    if not PEXELS_VALIDA:
-        print("⚠️ API Key de Pexels inválida.")
-        return None
-    variantes = ["cinematic", "dramatic", "atmospheric", "moody", "film"]
-    variacion = random.choice(variantes)
-    query_variada = f"{query} {variacion}"
-    url = "https://api.pexels.com/v1/search"
-    headers = {"Authorization": PEXELS_API_KEY}
-    params = {"query": query_variada, "orientation": "portrait", "per_page": 10, "page": random.randint(1, 8)}
-
-    for intento in range(intentos):
-        try:
-            print(f"🔍 Intento {intento+1}/{intentos} Pexels: '{query_variada}'...")
-            r = requests.get(url, headers=headers, params=params, timeout=25)
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("photos") and len(data["photos"]) > 0:
-                    fotos = data["photos"][:min(5, len(data["photos"]))]
-                    foto = random.choice(fotos)
-                    image_url = foto["src"]["large2x"] or foto["src"]["large"] or foto["src"]["original"]
-                    if ULTIMA_URL_PEXELS and image_url == ULTIMA_URL_PEXELS:
-                        print("   ⚠️ URL repetida, buscando otra página...")
-                        params["page"] = (params["page"] % 8) + 1
-                        continue
-                    ULTIMA_URL_PEXELS = image_url
-                    print(f"✅ Imagen encontrada: {image_url[:80]}...")
-                    return image_url
-                else:
-                    print("⚠️ No se encontraron fotos.")
-            else:
-                print(f"⚠️ Error Pexels: {r.status_code}")
-                if r.status_code == 401:
-                    print("❌ API key inválida.")
-                    break
-        except Exception as e:
-            print(f"⚠️ Error conexión Pexels: {e}")
-        if intento < intentos - 1:
-            print(f"   ⏳ Esperando 5s...")
-            time.sleep(5)
-    print("❌ No se pudo obtener imagen de Pexels.")
-    return None
+    base = random.choice(prompts)
+    visuales = next((t["criaturas"] for t in TEMAS_VIRALES_2024 if t["tema"] == tema_viral), [])
+    if visuales:
+        base += f", {random.choice(visuales)}"
+    base += f", {EPOCA_MOD}"
+    return re.sub(r'\s+', ' ', base).strip()[:200]
 
 # ================================================================
-# DIVIDIR / ETAPAS
+# DIVIDIR TEXTO EN SEGMENTOS
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
     oraciones = [o.strip() for o in oraciones if o.strip()]
-    if not oraciones:
-        return [texto]
-    segmentos, seg_actual, palabras_actuales = [], [], 0
+    segmentos, actual, cuenta = [], [], 0
     for oracion in oraciones:
-        palabras_oracion = len(oracion.split())
-        if palabras_actuales + palabras_oracion > max_palabras_por_segmento and seg_actual:
-            segmentos.append(" ".join(seg_actual))
-            seg_actual, palabras_actuales = [oracion], palabras_oracion
+        n = len(oracion.split())
+        if cuenta + n > max_palabras_por_segmento and actual:
+            segmentos.append(" ".join(actual))
+            actual, cuenta = [oracion], n
         else:
-            seg_actual.append(oracion)
-            palabras_actuales += palabras_oracion
-    if seg_actual:
-        segmentos.append(" ".join(seg_actual))
+            actual.append(oracion)
+            cuenta += n
+    if actual:
+        segmentos.append(" ".join(actual))
     return segmentos
 
-def asignar_etapas_visuales(segmentos, ubicacion):
-    n = len(segmentos)
-    etapas, ubicaciones = [], []
-    for i in range(n):
-        progreso = i / max(n - 1, 1)
-        if progreso < 0.2:
-            etapas.append("inicio_casa"); ubicaciones.append(f"interior del hogar en {ubicacion}")
-        elif progreso < 0.4:
-            etapas.append("desplazamiento"); ubicaciones.append(f"calle o vehículo en movimiento, {ubicacion}")
-        elif progreso < 0.65:
-            etapas.append("lugar_destino"); ubicaciones.append(f"lugar específico del suceso en {ubicacion}")
-        elif progreso < 0.85:
-            etapas.append("climax_evento"); ubicaciones.append(f"mismo lugar del suceso en {ubicacion}, momento del evento")
-        else:
-            etapas.append("resolucion"); ubicaciones.append(f"salida o regreso desde el lugar, {ubicacion}")
-    return etapas, ubicaciones
+def determinar_etapa_narrativa(segmento_index, total_segmentos, segmento_texto):
+    progreso = segmento_index / max(total_segmentos - 1, 1)
+    texto_lower = segmento_texto.lower()
+    palabras_desp   = ["caminé","manejé","conduje","llegué","fui","viajé","crucé"]
+    palabras_climax = ["corrí","grité","escapé","huí","cayó","apareció","vi","escuché algo"]
+    if progreso <= 0.2:
+        return "inicio_casa"
+    elif progreso <= 0.4:
+        return "desplazamiento" if any(p in texto_lower for p in palabras_desp) else "inicio_casa"
+    elif progreso <= 0.7:
+        return "lugar_destino"
+    elif progreso <= 0.9:
+        return "climax_evento" if any(p in texto_lower for p in palabras_climax) else "lugar_destino"
+    else:
+        return "resolucion"
 
 # ================================================================
-# AUDIO
+# BÚSQUEDA DE IMÁGENES PEXELS
 # ================================================================
-def generar_audio(texto, index, max_intentos=3):
-    global CONFIG_VOZ_ACTUAL
-    texto_limpio = limpiar_caracteres_para_tts(limpiar_texto_para_audio(texto))
-    if not texto_limpio or len(texto_limpio.strip()) < 5:
-        print(f"⚠️ Texto inválido para audio en segmento {index}.")
-        return None
-
-    filename = f"audio_short_{index}.mp3"
-    voces_a_probar = [CONFIG_VOZ_ACTUAL] + [v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]]
-    edge_failed_403 = False
-
-    for intento in range(max_intentos):
-        for voz_config in voces_a_probar:
-            voz = voz_config["voz"]
-            rate = voz_config["velocidad"]
-            pitch = voz_config["tono"]
-
-            async def _generar():
-                communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
-                await communicate.save(filename)
-
-            try:
-                asyncio.run(_generar())
-                if os.path.exists(filename) and os.path.getsize(filename) > 500:
-                    if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f"🔄 Cambiando a voz de respaldo: {voz}")
-                        CONFIG_VOZ_ACTUAL = voz_config
-                    return filename
-            except Exception as e:
-                error_str = str(e)
-                print(f"⚠️ Fallo TTS (intento {intento+1}, voz {voz}): {error_str}")
-                if "403" in error_str or "Forbidden" in error_str:
-                    edge_failed_403 = True
-                time.sleep(2)
-
-    if edge_failed_403 or not os.path.exists(filename) or os.path.getsize(filename) <= 500:
-        print("🚨 Edge TTS bloqueó la IP (403). Activando gTTS...")
+def buscar_miniatura_pexels(query, intentos=5):
+    variantes = ["empty space","copy space","dark background","dramatic","cinematic","horror"]
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": PEXELS_API_KEY}
+    for intento in range(intentos):
         try:
-            from gtts import gTTS
-            tts = gTTS(text=texto_limpio, lang='es', slow=False)
-            tts.save(filename)
-            if os.path.exists(filename) and os.path.getsize(filename) > 500:
-                print("✅ Audio generado con gTTS.")
-                return filename
+            q = f"{query} {random.choice(variantes)}"
+            params = {"query": q, "orientation": "portrait",
+                      "per_page": 10, "page": random.randint(1,5), "size": "large"}
+            print(f"🖼️ Miniatura vertical: '{q}'...")
+            r = requests.get(url, headers=headers, params=params, timeout=25)
+            if r.status_code == 200:
+                fotos = r.json().get("photos", [])
+                for foto in fotos[:5]:
+                    img_url = foto["src"]["large2x"] or foto["src"]["large"]
+                    try:
+                        ri = requests.get(img_url, timeout=10)
+                        if ri.status_code == 200:
+                            print(f"✅ Miniatura encontrada.")
+                            return img_url
+                    except Exception:
+                        continue
         except Exception as e:
-            print(f"❌ gTTS también falló: {e}")
-
-    print(f"❌ No se pudo generar audio para segmento {index}.")
+            print(f"⚠️ Error: {e}")
+        if intento < intentos - 1:
+            time.sleep(3)
+    # Fallback simple
+    try:
+        r = requests.get(url, headers=headers,
+                         params={"query": query, "orientation": "portrait", "per_page": 5}, timeout=25)
+        if r.status_code == 200:
+            fotos = r.json().get("photos", [])
+            if fotos:
+                return fotos[0]["src"]["large2x"]
+    except Exception:
+        pass
     return None
 
-def generar_audio_cta_final():
-    filename = "audio_cta_final.mp3"
-    async def _generar(v, r, p):
-        communicate = edge_tts.Communicate("Relatos completos en el canal. Visítanos.", v, rate=r, pitch=p)
-        await communicate.save(filename)
-    for voz_config in VOCES_DISPONIBLES:
+def buscar_imagen_pexels_shorts(query, intentos=3):
+    global ULTIMA_URL_PEXELS
+    if not PEXELS_VALIDA:
+        return None
+    variantes = ["cinematic","dramatic","atmospheric","moody","film"]
+    url = "https://api.pexels.com/v1/search"
+    headers = {"Authorization": PEXELS_API_KEY}
+    params  = {"query": f"{query} {random.choice(variantes)}", "orientation": "portrait",
+               "per_page": 10, "page": random.randint(1,8)}
+    for intento in range(intentos):
         try:
-            asyncio.run(_generar(voz_config["voz"], voz_config["velocidad"], voz_config["tono"]))
-            if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                return filename
-        except Exception:
-            pass
-    return None
-
-# ================================================================
-# RECURSOS
-# ================================================================
-def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_viral, intentos_por_imagen=3):
-    resultados, imagen_anterior = [], None
-    total_seg = len(segmentos)
-    for idx, seg in enumerate(segmentos):
-        etapa = etapas[idx] if idx < len(etapas) else "lugar_destino"
-        ubic_escena = ubicaciones[idx] if idx < len(ubicaciones) else ESTADO_HISTORIA_SHORTS
-        print(f"  🎬 Segmento {idx+1}/{total_seg} ({len(seg.split())} palabras) - Etapa: {etapa}")
-        print(f"     📍 Ubicación: {ubic_escena}")
-
-        query = generar_query_cinematografico(seg, etapa, ubic_escena, tema_viral, idx, total_seg)
-        print(f"    🎥 Query: {query[:100]}...")
-        img_url = buscar_imagen_pexels_shorts(query, intentos=intentos_por_imagen)
-
-        if not img_url:
-            fallbacks = [f"mexican night landscape dark cinematic", f"dark atmospheric {etapa} horror photography", f"cinematic horror {ubic_escena} night"]
-            for fallback_query in fallbacks:
-                print(f"    🔄 Fallback: {fallback_query}")
-                img_url = buscar_imagen_pexels_shorts(fallback_query, intentos=2)
-                if img_url:
-                    break
-
-        if not img_url:
-            if imagen_anterior:
-                img_url = imagen_anterior
-                print(f"    🔄 Reutilizando imagen del segmento anterior ({idx})")
-            else:
-                placeholder = generar_placeholder_local("TERROR", (1080, 1920))
-                img_url = placeholder if placeholder else "https://via.placeholder.com/1080x1920/1a1a1a/ff0000?text=TERROR"
-                print(f"    🔄 Usando placeholder")
-
-        if img_url:
-            imagen_anterior = img_url
-
-        audio_path = generar_audio(seg, f"seg_{idx}")
-        if not audio_path:
-            print(f"    ❌ Falló audio para segmento {idx+1}. Abortando...")
-            return None
-
-        try:
-            duracion = AudioFileClip(audio_path).duration
-        except Exception:
-            duracion = 10.0
-
-        resultados.append({"imagen_url": img_url, "audio_path": audio_path, "duracion": duracion, "etapa": etapa, "segmento_index": idx})
-        if idx < len(segmentos) - 1:
-            print(f"     ⏳ Esperando 5s...")
+            print(f"🔍 Pexels intento {intento+1}: '{params['query'][:60]}'...")
+            r = requests.get(url, headers=headers, params=params, timeout=25)
+            if r.status_code == 200:
+                fotos = r.json().get("photos", [])
+                if fotos:
+                    foto = random.choice(fotos[:5])
+                    img_url = foto["src"]["large2x"] or foto["src"]["large"]
+                    if img_url != ULTIMA_URL_PEXELS:
+                        ULTIMA_URL_PEXELS = img_url
+                        return img_url
+            elif r.status_code == 401:
+                print("❌ API key inválida.")
+                break
+        except Exception as e:
+            print(f"⚠️ Pexels error: {e}")
+        if intento < intentos - 1:
             time.sleep(5)
-    return resultados
+    return None
+
+# ================================================================
+# DESCARGAR / PROCESAR IMÁGENES
+# ================================================================
+def descargar_imagen(url, output_path, timeout=30):
+    try:
+        r = requests.get(url, timeout=timeout, stream=True)
+        r.raise_for_status()
+        with open(output_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"✅ Imagen descargada: {output_path}")
+            return True
+    except Exception as e:
+        print(f"❌ Error descargando: {e}")
+    return False
+
+def procesar_imagen_para_short(img_path, output_path, size=(1080, 1920)):
+    try:
+        with Image.open(img_path) as img:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img = ImageOps.fit(img, size, Image.Resampling.LANCZOS)
+            img = ImageEnhance.Contrast(img).enhance(1.3)
+            img = ImageEnhance.Brightness(img).enhance(0.85)
+            img.save(output_path, "JPEG", quality=95)
+            print(f"✅ Imagen procesada: {output_path}")
+            return True
+    except Exception as e:
+        print(f"❌ Error procesando imagen: {e}")
+    return False
+
+# ================================================================
+# MÚSICA DE FONDO
+# ================================================================
+def seleccionar_fondo_disponible(estado):
+    encontrados = {}
+    for root, dirs, files in os.walk("."):
+        if "/." in root or "\\." in root:
+            continue
+        for file in files:
+            for fondo in FONDOS_DISPONIBLES:
+                if file.lower() == fondo.lower():
+                    encontrados[fondo] = os.path.join(root, file)
+    if not encontrados:
+        print("⚠️ No se encontraron archivos de música.")
+        return None
+    ultimo = estado.get("ultimo_fondo")
+    candidatos = [f for f in encontrados if f != ultimo] or list(encontrados.keys())
+    seleccionado = random.choice(candidatos)
+    estado["ultimo_fondo"] = seleccionado
+    print(f"🎵 Música: {seleccionado}")
+    return encontrados[seleccionado]
+
+# ================================================================
+# GENERACIÓN DE AUDIO
+# ================================================================
+async def generar_audio_edge_tts(texto, output_path, voz_config=None):
+    if voz_config is None:
+        voz_config = CONFIG_VOZ_ACTUAL
+    texto_limpio = limpiar_texto_para_audio(texto)
+    communicate = edge_tts.Communicate(
+        text=texto_limpio,
+        voice=voz_config["voz"],
+        rate=voz_config["velocidad"],
+        pitch=voz_config["tono"],
+    )
+    await communicate.save(output_path)
+    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+        print(f"✅ Audio Edge TTS: {output_path}")
+        return True
+    return False
+
+def generar_audio_gtts_fallback(texto, output_path):
+    try:
+        from gtts import gTTS
+        texto_limpio = limpiar_texto_para_audio(texto)
+        gTTS(text=texto_limpio, lang="es", slow=False).save(output_path)
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"✅ Audio gTTS fallback: {output_path}")
+            return True
+    except Exception as e:
+        print(f"❌ Error gTTS: {e}")
+    return False
+
+def generar_audio_con_fallback(texto, output_path):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        ok = loop.run_until_complete(generar_audio_edge_tts(texto, output_path))
+        if ok:
+            return True
+    except Exception as e:
+        print(f"⚠️ Edge TTS falló: {e}. Usando gTTS...")
+    finally:
+        loop.close()
+    return generar_audio_gtts_fallback(texto, output_path)
 
 # ================================================================
 # MONTAR VIDEO
 # ================================================================
-def montar_video_shorts(recursos, fondo_path, palabras_portada, salida="short_final.mp4"):
-    if not recursos:
-        raise ValueError("No hay recursos para montar el video")
-    clips_video, clips_audio = [], []
-
-    for i, recurso in enumerate(recursos):
-        try:
-            audio_clip = AudioFileClip(recurso["audio_path"])
-            clips_audio.append(audio_clip)
-        except Exception as e:
-            print(f"⚠️ Error cargando audio {i}: {e}")
-            continue
-
-        try:
-            if recurso["imagen_url"].startswith("http"):
-                r = requests.get(recurso["imagen_url"], timeout=30)
-                if r.status_code == 200:
-                    img_path = f"temp_short_{i}.jpg"
-                    with open(img_path, "wb") as f:
-                        f.write(r.content)
-                else:
-                    raise Exception("No se pudo descargar imagen")
-            else:
-                img_path = recurso["imagen_url"]
-
-            if i == 0 and palabras_portada:
-                print(f"🎨 Aplicando miniatura MRBEAST a la PRIMERA imagen...")
-                img_path_procesada = f"temp_short_{i}_viral.jpg"
-                if crear_miniatura_viral(img_path, palabras_portada, img_path_procesada):
-                    img_path = img_path_procesada
-                else:
-                    with Image.open(img_path) as img:
-                        img_fitted = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
-                        img_fitted.save(img_path)
-            else:
-                with Image.open(img_path) as img:
-                    img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
-                    if recurso["etapa"] == "climax_evento":
-                        img = ImageEnhance.Contrast(img).enhance(1.4)
-                        img = img.filter(ImageFilter.SHARPEN)
-                    elif recurso["etapa"] == "inicio_casa":
-                        img = ImageEnhance.Brightness(img).enhance(0.8)
-                        img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
-                    img.save(img_path)
-
-            duracion = recurso["duracion"]
-            video_clip = ImageClip(img_path).set_duration(duracion)
-            clips_video.append(video_clip)
-        except Exception as e:
-            print(f"⚠️ Error procesando imagen {i}: {e}")
-            placeholder = generar_placeholder_local(f"Img {i+1}")
-            if placeholder:
-                with Image.open(placeholder) as img:
-                    ImageOps.fit(img, (1080, 1920), Image.LANCZOS).save(placeholder)
-                video_clip = ImageClip(placeholder).set_duration(recurso["duracion"])
-                clips_video.append(video_clip)
-
-    if not clips_video:
-        raise ValueError("No se pudieron crear clips de video")
-
-    PAUSA = 0.3
-    if len(clips_audio) > 1:
-        audio_con_pausas = []
-        for i, audio in enumerate(clips_audio):
-            audio_con_pausas.append(audio)
-            if i < len(clips_audio) - 1:
-                audio_con_pausas.append(AudioClip(lambda t: 0, duration=PAUSA))
-        audio_narracion = concatenate_audioclips(audio_con_pausas)
-    else:
-        audio_narracion = clips_audio[0]
-
-    video = concatenate_videoclips(clips_video, method="compose")
-    cta_audio_path = generar_audio_cta_final()
-    if cta_audio_path and os.path.exists(cta_audio_path):
-        try:
-            cta_clip = AudioFileClip(cta_audio_path)
-            silencio = AudioClip(lambda t: 0, duration=0.5)
-            audio_narracion = concatenate_audioclips([audio_narracion, silencio, cta_clip])
-            duracion_cta = cta_clip.duration + 0.5
-            ultimo_clip = clips_video[-1].set_duration(clips_video[-1].duration + duracion_cta)
-            clips_video[-1] = ultimo_clip
-            video = concatenate_videoclips(clips_video, method="compose")
-            print(f"✅ CTA final agregado ({duracion_cta:.1f}s adicionales)")
-        except Exception as e:
-            print(f"⚠️ Error CTA final: {e}")
-
-    duracion_total = audio_narracion.duration
-    audio_final = audio_narracion
-    if fondo_path and os.path.exists(fondo_path):
-        try:
-            fondo_clip = AudioFileClip(fondo_path)
-            if fondo_clip.duration < duracion_total:
-                veces = int(duracion_total / fondo_clip.duration) + 1
-                fondo_clip = concatenate_audioclips([fondo_clip] * veces)
-            fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.08)
-            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print("🎵 Audio de fondo mezclado al 8%")
-        except Exception as e:
-            print(f"⚠️ Error en audio de fondo: {e}")
-            audio_final = audio_narracion
-
-    video = video.set_audio(audio_final)
-    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast", logger=None)
-    video.close()
-    audio_final.close()
-    audio_narracion.close()
-    for c in clips_video:
-        c.close()
-    for a in clips_audio:
-        a.close()
-    print(f"✅ Short vertical creado: {salida}")
-    return salida
-
-# ================================================================
-# MINIATURA SEPARADA
-# ================================================================
-def generar_miniatura_separada(historia_raw, palabras_portada):
-    print("🖼️ Generando miniatura SEPARADA para YouTube...")
-    miniatura_prompt = historia_raw.get("miniatura_prompt", "scary horror night dark")
-    tema_viral = historia_raw.get("tema", "paranormal")
-    query_miniatura = f"{miniatura_prompt} dramatic horror cinematic"
-    img_url = buscar_miniatura_pexels(query_miniatura)
-
-    if not img_url:
-        print("⚠️ No se pudo obtener imagen para miniatura separada.")
-        return None
-
+def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, palabras_portada, tema_viral):
     try:
-        r = requests.get(img_url, timeout=30)
-        r.raise_for_status()
-        temp_miniatura = "thumbnail_shorts.jpg"
-        with open(temp_miniatura, "wb") as f:
-            f.write(r.content)
+        audio_clip    = AudioFileClip(audio_path)
+        duracion_total = audio_clip.duration
+        print(f"⏱️ Duración audio: {duracion_total:.1f}s")
 
-        if crear_miniatura_elite_mrbeast(temp_miniatura, palabras_portada, tema_viral, "thumbnail_final.jpg"):
-            print("✅ Miniatura élite MRBEAST generada")
-            if os.path.exists(temp_miniatura):
-                os.remove(temp_miniatura)
-            return "thumbnail_final.jpg"
+        dur_img = duracion_total / max(len(imagenes_paths), 1)
+        clips_video = []
+
+        for i, img_path in enumerate(imagenes_paths):
+            try:
+                clip = ImageClip(img_path, duration=dur_img).set_fps(30)
+
+                # Zoom Ken Burns suave
+                def make_zoom(dur=dur_img):
+                    def zoom(t):
+                        return 1.0 + 0.05 * (t / dur)
+                    return zoom
+
+                clip = clip.resize(make_zoom())
+                clips_video.append(clip)
+            except Exception as e:
+                print(f"⚠️ Error clip {i+1}: {e}")
+
+        if not clips_video:
+            print("❌ Sin clips de video.")
+            return False
+
+        video_final = concatenate_videoclips(clips_video, method="compose").set_duration(duracion_total)
+
+        # Música de fondo
+        if musica_path and os.path.exists(musica_path):
+            try:
+                musica     = AudioFileClip(musica_path)
+                musica_loop = musica.audio_loop(duration=duracion_total)
+                musica_baja = musica_loop.volumex(0.08)
+                audio_final = CompositeAudioClip([audio_clip, musica_baja])
+            except Exception as e:
+                print(f"⚠️ Música falló: {e}")
+                audio_final = audio_clip
         else:
-            import shutil
-            shutil.copy(temp_miniatura, "thumbnail_final.jpg")
-            if os.path.exists(temp_miniatura):
-                os.remove(temp_miniatura)
-            return "thumbnail_final.jpg"
+            audio_final = audio_clip
+
+        video_final = video_final.set_audio(audio_final)
+
+        print(f"🎬 Renderizando {output_path}...")
+        video_final.write_videofile(
+            output_path,
+            fps=30,
+            codec="libx264",
+            audio_codec="aac",
+            temp_audiofile="temp_audio_short.m4a",
+            remove_temp=True,
+            preset="fast",
+            bitrate="4000k",
+            audio_bitrate="128k",
+            threads=2,
+            logger=None,
+        )
+
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"✅ Video listo: {output_path} ({os.path.getsize(output_path)//1024//1024}MB)")
+            return True
+        return False
+
     except Exception as e:
-        print(f"❌ Error generando miniatura separada: {e}")
+        print(f"❌ Error montando video: {e}")
+        traceback.print_exc()
+        return False
+
+# ================================================================
+# YOUTUBE
+# ================================================================
+def validar_token_youtube():
+    if not YOUTUBE_USER_TOKEN:
+        print("⚠️ YOUTUBE_USER_TOKEN no configurado.")
+        return None
+    try:
+        creds = Credentials(
+            token=YOUTUBE_USER_TOKEN.get("token"),
+            refresh_token=YOUTUBE_USER_TOKEN.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=YOUTUBE_USER_TOKEN.get("client_id"),
+            client_secret=YOUTUBE_USER_TOKEN.get("client_secret"),
+            scopes=YOUTUBE_USER_TOKEN.get("scopes",
+                   ["https://www.googleapis.com/auth/youtube.upload"]),
+        )
+        service = build("youtube", "v3", credentials=creds)
+        print("✅ Cliente YouTube listo.")
+        return service
+    except Exception as e:
+        print(f"❌ Error token YouTube: {e}")
         return None
 
-# ================================================================
-# SUBIR A YOUTUBE
-# ================================================================
-def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas, gancho_descripcion, contexto_descripcion, hashtags_descripcion, fuente_relato=""):
-    try:
-        creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
-        youtube = build("youtube", "v3", credentials=creds)
-    except Exception as e:
-        print(f"❌ Error autenticando con YouTube: {e}")
-        sys.exit(1)
+def subir_a_youtube(video_path, miniatura_path, titulo, etiquetas,
+                    gancho_descripcion, contexto_descripcion,
+                    hashtags_descripcion, fuente_relato=""):
+    youtube = validar_token_youtube()
+    if not youtube:
+        return None
 
-    if isinstance(etiquetas, str):
-        etiquetas = [tag.strip() for tag in etiquetas.split(",") if tag.strip()]
-
-    descripcion = f"""{gancho_descripcion}
-{contexto_descripcion}
-🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
-📖 {fuente_relato}
-📱 Facebook: {FACEBOOK_LINK}
-{hashtags_descripcion}"""
+    partes_desc = [gancho_descripcion, "", contexto_descripcion, ""]
     if ACTIVAR_DISCLOSURE_IA:
-        descripcion += DISCLOSURE_TEXT
+        partes_desc.extend([DISCLOSURE_TEXT, ""])
+    partes_desc.extend([
+        f"📌 Síguenos en Facebook: {FACEBOOK_LINK}",
+        f"🎙️ Canal: {CANAL_LINK}",
+        "",
+        hashtags_descripcion,
+        "",
+        "#Shorts",
+    ])
+    descripcion = "\n".join(partes_desc)[:5000]
+    titulo_limpio = titulo[:100]
 
     body = {
-        "snippet": {"title": titulo, "description": descripcion[:5000], "tags": etiquetas[:30], "categoryId": "24", "defaultLanguage": "es", "defaultAudioLanguage": "es"},
-        "status": {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True},
+        "snippet": {
+            "title":           titulo_limpio,
+            "description":     descripcion,
+            "tags":            (etiquetas[:10] if isinstance(etiquetas, list) else [str(etiquetas)]),
+            "categoryId":      "22",
+            "defaultLanguage": "es",
+        },
+        "status": {
+            "privacyStatus":          "public",
+            "selfDeclaredMadeForKids": False,
+            "madeForKids":            False,
+        },
     }
+
     media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
     try:
-        request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
-        response = request.execute()
+        request  = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print(f"📤 Subiendo: {int(status.progress()*100)}%")
+
         video_id = response["id"]
-        print(f"✅ Short subido: https://youtu.be/{video_id}")
+        print(f"✅ Short publicado: https://youtu.be/{video_id}")
 
         if miniatura_path and os.path.exists(miniatura_path):
             try:
-                print(f"🖼️ Subiendo miniatura: {miniatura_path}")
-                media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True, mimetype="image/jpeg")
-                youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-                print("✅ Miniatura subida")
-            except Exception as e:
+                youtube.thumbnails().set(
+                    videoId=video_id,
+                    media_body=MediaFileUpload(miniatura_path)
+                ).execute()
+                print("✅ Miniatura subida.")
+            except HttpError as e:
                 print(f"⚠️ Error subiendo miniatura: {e}")
-        else:
-            print("⚠️ Sin miniatura. YouTube usará una por defecto.")
+
         return video_id
+
+    except HttpError as e:
+        print(f"❌ Error HTTP YouTube: {e}")
+        traceback.print_exc()
+        return None
     except Exception as e:
-        print(f"❌ Error subiendo a YouTube: {e}")
-        sys.exit(1)
+        print(f"❌ Error YouTube: {e}")
+        traceback.print_exc()
+        return None
 
-# ================================================================
-# FACEBOOK vía MAKE
-# ================================================================
-def subir_video_temporal(video_path, intentos=2):
-    for _ in range(intentos):
-        try:
-            with open(video_path, "rb") as f:
-                r = requests.post("https://litterbox.catbox.moe/resources/internals/api.php", data={"reqtype": "fileupload", "time": "72h"}, files={"fileToUpload": f}, timeout=180)
-                if r.status_code == 200 and r.text.strip().startswith("http"):
-                    return r.text.strip()
-        except Exception:
-            pass
-        time.sleep(3)
-    return None
 
-def enviar_a_make(titulo, descripcion, video_url, url_youtube=""):
-    webhook_url = os.getenv("MAKE_WEBHOOK_URL_REELS")
-    if not webhook_url:
-        return False
-    payload = {"titulo": titulo, "descripcion": descripcion, "video_url": video_url, "url_youtube": url_youtube}
-    try:
-        r = requests.post(webhook_url, json=payload, timeout=60)
-        return r.status_code == 200
-    except Exception:
-        return False
 
 # ================================================================
 # LIMPIEZA
 # ================================================================
-def limpiar_temporales_shorts():
-    for f in os.listdir("."):
-        if (f.startswith("temp_short_") or f.startswith("audio_short_") or f.startswith("placeholder_")) and (f.endswith(".jpg") or f.endswith(".mp3")):
-            try:
-                os.remove(f)
-            except Exception:
-                pass
-    for f in ["thumbnail_shorts.jpg", "thumbnail_final.jpg"]:
-        if os.path.exists(f):
-            try:
-                os.remove(f)
-            except Exception:
-                pass
-    if os.path.exists("short_final.mp4"):
+def limpiar_archivos_temporales(archivos):
+    for archivo in archivos:
         try:
-            os.remove("short_final.mp4")
-        except Exception:
-            pass
+            if archivo and os.path.exists(archivo):
+                os.remove(archivo)
+                print(f"🗑️  Eliminado: {archivo}")
+        except Exception as e:
+            print(f"⚠️ No se pudo eliminar {archivo}: {e}")
 
 # ================================================================
 # MAIN
 # ================================================================
 def main():
-    print("🚀 Iniciando Bot de SHORTS VIRAL 2024-2025 (NIVEL VIDIQ PREMIUM)")
-    print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🎤 Voz inicial: {CONFIG_VOZ_ACTUAL['voz']} ({CONFIG_VOZ_ACTUAL['estilo']})")
-
-    # ✅ Validaciones tempranas básicas
-    if not YOUTUBE_USER_TOKEN:
-        print("❌ No se encontró YOUTUBE_USER_TOKEN.")
-        sys.exit(1)
-    if not DEEPSEEK_API_KEY:
-        print("❌ No se encontró DEEPSEEK_API_KEY.")
-        sys.exit(1)
-
-    # ✅ Validación TOLERANTE de YouTube (soporta tokens sin youtube.readonly)
-    try:
-        creds_check = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
-        yt_check = build("youtube", "v3", credentials=creds_check)
-        yt_check.channels().list(part="id", mine=True).execute()
-        print("✅ Credenciales YouTube válidas (con scope de lectura).")
-    except HttpError as e:
-        err_str = str(e)
-        if "insufficientPermissions" in err_str or "insufficient authentication scopes" in err_str:
-            print("⚠️ El token no tiene permiso de LECTURA del canal (youtube.readonly).")
-            print("   Esto es normal si solo generaste el token con youtube.upload.")
-            print("   Continuando... (la subida de video y miniatura funcionarán).")
-            print("   ℹ️ Si quieres analytics y moderación de comentarios, regenera el token")
-            print("      con scope: youtube.readonly + youtube.force-ssl")
-        elif "401" in err_str or "invalid_grant" in err_str or "invalid_token" in err_str:
-            print(f"❌ YouTube token expirado o revocado: {e}")
-            sys.exit(1)
-        else:
-            print(f"❌ Error inesperado autenticando YouTube: {e}")
-            sys.exit(1)
-    except Exception as e:
-        print(f"❌ YouTube token inválido/expirado: {e}")
-        sys.exit(1)
-
-    if not PEXELS_VALIDA:
-        print("⚠️ PEXELS_API_KEY inválida. Se usarán placeholders.")
+    print("=" * 65)
+    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v7.2")
+    print("=" * 65)
 
     estado = cargar_estado()
     if not deberia_publicar_ahora(estado):
-        print("⚠️ Decisión: No publicar en esta ejecución.")
-        guardar_estado(estado)
+        print("💤 No es momento de publicar. Saliendo.")
         sys.exit(0)
 
-    fondo_path = seleccionar_fondo_disponible(estado)
-    historia_raw = generar_historia_completa()
-    if not historia_raw:
-        print("❌ No se pudo generar la historia.")
-        sys.exit(1)
-
-    texto_completo = historia_raw.get("texto_completo", "")
-    palabras = len(texto_completo.split())
-    if palabras < 110:
-        texto_completo = expandir_texto_corto(texto_completo, ESTADO_HISTORIA_SHORTS, PERSONAJE_SHORTS)
-    elif palabras > 130:
-        texto_completo = truncar_texto_largo(texto_completo)
-
-    perfil = PERFIL_PERSONAJE_SHORTS
-    ubicacion = ESTADO_HISTORIA_SHORTS
-    tipo_paleta = random.choice(list(PSICOLOGIA_COLOR.keys()))
-    paleta = PSICOLOGIA_COLOR[tipo_paleta]
-    palabras_portada = historia_raw.get("palabras_portada", "TERROR")
-    tema_viral = historia_raw.get("tema", "paranormal")
-
-    prediccion = predecir_rendimiento(tema_viral, historia_raw["titulo"], datetime.now(pytz.timezone("America/Mexico_City")).strftime("%H:%M"))
-
-    print(f"\n📊 RESUMEN SEO ÉLITE:")
-    print(f"   🔥 Título VIRAL: {historia_raw['titulo']} ({len(historia_raw['titulo'])} chars)")
-    print(f"   🔄 Alternativo: {historia_raw.get('titulo_alternativo', 'N/A')}")
-    print(f"   📅 Año del suceso: {historia_raw.get('anio_suceso', 'actualidad')}")
-    print(f"   🔑 Keywords: {historia_raw.get('palabras_clave', [])}")
-    print(f"   📖 Fuente: {historia_raw.get('fuente_relato', 'N/A')}")
-    print(f"   🏷️ Tags: {historia_raw.get('tags', [])}")
-    print(f"   🧩 Hashtags: {historia_raw.get('hashtags_descripcion', '#Terror #Shorts')}")
-    print(f"   🎨 Texto portada: {palabras_portada}")
-    print(f"   🎯 Tema viral: {tema_viral}")
-    print(f"   🎨 Paleta: {tipo_paleta} - {paleta}")
-    print(f"\n📈 PREDICCIÓN DE RENDIMIENTO:")
-    print(f"   👁️ Vistas predichas: {prediccion['vistas_predichas']:,}")
-    print(f"   🎯 CTR predicho: {prediccion['ctr_predicho']}%")
-    print(f"   ⏱️ Retención predicha: {prediccion['retencion_predicha']}%")
-    print(f"   🎯 Confianza: {prediccion['confianza']}")
-    if "tema" in historia_raw:
-        print(f"   🧩 Contexto: {historia_raw['tema']}")
-    print(f"\n📝 Procesando historia ({len(texto_completo.split())} palabras)...")
-
-    segmentos = dividir_en_segmentos(texto_completo)
-    etapas, ubicaciones = asignar_etapas_visuales(segmentos, ubicacion)
-
-    print(f"\n🎥 Buscando {len(segmentos)} imágenes cinematográficas en Pexels...")
-    for i, (etapa, ubic) in enumerate(zip(etapas, ubicaciones)):
-        print(f"   📍 Segmento {i+1}: [{etapa}] {ubic}")
-
-    recursos = generar_recursos_por_segmento(segmentos=segmentos, etapas=etapas, ubicaciones=ubicaciones, tema_viral=tema_viral, intentos_por_imagen=3)
-    if not recursos:
-        print("❌ Error generando recursos.")
-        sys.exit(1)
-
-    miniatura_separada_path = generar_miniatura_separada(historia_raw, palabras_portada)
+    analytics    = cargar_analytics_elite()
+    archivos_temp = []
 
     try:
-        video_final = montar_video_shorts(recursos, fondo_path, palabras_portada)
+        # 1. HISTORIA ──────────────────────────────────────────────
+        print("\n📝 GENERANDO HISTORIA...")
+        datos = generar_historia_completa()
+
+        tema          = datos["tema"]
+        titulo        = datos["titulo"]
+        texto         = datos["texto_completo"]
+        palabras_portada = datos.get("palabras_portada", "TERROR REAL").upper()
+        tags          = datos.get("tags", ["#Terror","#Shorts","#Misterio"])
+        gancho        = datos.get("gancho_descripcion",   titulo)
+        ctx_desc      = datos.get("contexto_descripcion", "")
+        hashtags_desc = datos.get("hashtags_descripcion", "#Shorts #Terror #Misterio")
+        fuente        = datos.get("fuente_relato",        "Relato de la comunidad.")
+        estado_mx     = datos.get("estado", ESTADO_HISTORIA_SHORTS)
+        tema_obj      = next((t for t in TEMAS_VIRALES_2024 if t["tema"] == tema), TEMAS_VIRALES_2024[0])
+
+        print(f"\n📌 Título: {titulo}")
+        print(f"🎭 Tema: {tema} | 📍 Estado: {estado_mx}")
+        print(f"📝 Palabras portada: {palabras_portada}")
+        print(f"📊 Score título: {calcular_score_titulo(titulo)}")
+        print(f"📖 Texto ({len(texto.split())} palabras): {texto[:180]}...")
+
+        # Detectar época si el relato menciona un año
+        anio_match = re.search(r'\b(19[5-9]\d|20[0-2]\d)\b', texto)
+        if anio_match:
+            actualizar_epoca(int(anio_match.group()))
+
+        # 2. AUDIO ─────────────────────────────────────────────────
+        print(f"\n🎤 GENERANDO AUDIO ({CONFIG_VOZ_ACTUAL['voz']})...")
+        audio_path = f"audio_{int(time.time())}.mp3"
+        archivos_temp.append(audio_path)
+        if not generar_audio_con_fallback(limpiar_caracteres_para_tts(texto), audio_path):
+            print("❌ No se pudo generar audio.")
+            sys.exit(1)
+
+        # 3. MÚSICA ────────────────────────────────────────────────
+        musica_path = seleccionar_fondo_disponible(estado)
+
+        # 4. IMÁGENES ──────────────────────────────────────────────
+        print("\n🖼️  OBTENIENDO IMÁGENES...")
+        segmentos  = dividir_en_segmentos(texto)
+        n_imagenes = max(2, min(len(segmentos), 4))
+        imagenes   = []
+
+        for i in range(n_imagenes):
+            seg_idx    = min(i, len(segmentos)-1)
+            segmento   = segmentos[seg_idx]
+            etapa      = determinar_etapa_narrativa(i, n_imagenes, segmento)
+            ctx_escena = random.choice(tema_obj["contextos"])
+            query      = generar_query_cinematografico(segmento, etapa, ctx_escena, tema, i, n_imagenes)
+
+            print(f"🔍 Imagen {i+1}/{n_imagenes} — etapa: {etapa}")
+            img_url = buscar_imagen_pexels_shorts(query) or \
+                      buscar_imagen_pexels_shorts(f"{random.choice(tema_obj['criaturas'])} dark atmospheric")
+
+            if img_url:
+                raw_path  = f"img_raw_{i}_{int(time.time())}.jpg"
+                proc_path = f"img_proc_{i}_{int(time.time())}.jpg"
+                archivos_temp.extend([raw_path, proc_path])
+                if descargar_imagen(img_url, raw_path):
+                    if procesar_imagen_para_short(raw_path, proc_path):
+                        imagenes.append(proc_path)
+                    else:
+                        imagenes.append(raw_path)
+            else:
+                print(f"⚠️ Sin imagen {i+1}. Usando placeholder.")
+                ph = generar_placeholder_local(palabras_portada.split()[0])
+                if ph:
+                    archivos_temp.append(ph)
+                    imagenes.append(ph)
+
+        if not imagenes:
+            print("❌ Sin imágenes. Saliendo.")
+            sys.exit(1)
+
+        print(f"✅ {len(imagenes)} imágenes listas.")
+
+        # 5. MINIATURA ─────────────────────────────────────────────
+        print("\n🖼️  CREANDO MINIATURA...")
+        miniatura_path = f"miniatura_{int(time.time())}.jpg"
+        archivos_temp.append(miniatura_path)
+        miniatura_ok = False
+
+        query_mini = buscar_miniatura_pexels(random.choice(tema_obj["criaturas"]))
+        if query_mini:
+            img_mini = f"img_mini_{int(time.time())}.jpg"
+            archivos_temp.append(img_mini)
+            if descargar_imagen(query_mini, img_mini):
+                miniatura_ok = crear_miniatura_elite_mrbeast(img_mini, palabras_portada, tema, miniatura_path)
+
+        if not miniatura_ok and imagenes:
+            miniatura_ok = crear_miniatura_elite_mrbeast(imagenes[0], palabras_portada, tema, miniatura_path)
+        if not miniatura_ok:
+            miniatura_path = None
+
+        # 6. VIDEO ─────────────────────────────────────────────────
+        print("\n🎬 MONTANDO VIDEO...")
+        video_path = f"short_{int(time.time())}.mp4"
+        archivos_temp.append(video_path)
+        if not montar_video_short(audio_path, imagenes, musica_path, video_path, palabras_portada, tema):
+            print("❌ Error montando video.")
+            sys.exit(1)
+
+        # 7. YOUTUBE ───────────────────────────────────────────────
+        print("\n📺 SUBIENDO A YOUTUBE...")
+        video_id = subir_a_youtube(
+            video_path, miniatura_path, titulo,
+            tags, gancho, ctx_desc, hashtags_desc, fuente,
+        )
+        if not video_id:
+            print("❌ Error subiendo a YouTube.")
+            sys.exit(1)
+        print(f"\n✅ SHORT PUBLICADO → https://youtu.be/{video_id}")
+
+        # 8. ACTUALIZAR ESTADO ─────────────────────────────────────
+        ahora = datetime.now(pytz.timezone("America/Mexico_City"))
+        estado["ultima_publicacion"] = ahora.isoformat()
+        estado["publicaciones_hoy"]  = estado.get("publicaciones_hoy", 0) + 1
+        guardar_estado(estado)
+        guardar_titulo_publicado(titulo)
+        guardar_tema_usado(tema)
+
+        # 9. ANALYTICS ─────────────────────────────────────────────
+        prediccion = predecir_rendimiento(tema, titulo, ahora.strftime("%H:%M"))
+        analytics["videos_publicados"].append({
+            "video_id":       video_id,
+            "titulo":         titulo,
+            "tema":           tema,
+            "estado":         estado_mx,
+            "fecha":          ahora.isoformat(),
+            "prediccion":     prediccion,
+            "palabras_portada": palabras_portada,
+            "score_titulo":   calcular_score_titulo(titulo),
+            "voz":            CONFIG_VOZ_ACTUAL["voz"],
+            "voz_estilo":     CONFIG_VOZ_ACTUAL["estilo"],
+        })
+        analytics["videos_publicados"] = analytics["videos_publicados"][-100:]
+        guardar_analytics_elite(analytics)
+
+        print("\n📊 PREDICCIÓN DE RENDIMIENTO:")
+        print(f"   👁️  Vistas estimadas:  {prediccion['vistas_predichas']:,}")
+        print(f"   📈 CTR predicho:       {prediccion['ctr_predicho']}%")
+        print(f"   ⏱️  Retención predicha: {prediccion['retencion_predicha']}%")
+        print(f"   🎯 Confianza:          {prediccion['confianza']}")
+
+        print("\n" + "=" * 65)
+        print(f"🏆 SHORT #{estado['publicaciones_hoy']}/{MAX_SHORTS_DIA} DEL DÍA COMPLETADO")
+        print(f"🔗 https://youtu.be/{video_id}")
+        print("=" * 65)
+
     except Exception as e:
-        print(f"❌ Error montando video: {e}")
-        sys.exit(1)
-
-    print(f"\n🚀 Subiendo Short a YouTube...")
-    video_id_youtube = subir_a_youtube(
-        video_path=video_final, miniatura_path=miniatura_separada_path, titulo=historia_raw["titulo"],
-        etiquetas=historia_raw.get("tags", []),
-        gancho_descripcion=historia_raw.get("gancho_descripcion", "Relato de terror"),
-        contexto_descripcion=historia_raw.get("contexto_descripcion", f"Un relato de fenómenos extraños en {ESTADO_HISTORIA_SHORTS}, México."),
-        hashtags_descripcion=historia_raw.get("hashtags_descripcion", "#Terror #Shorts #Mexico"),
-        fuente_relato=historia_raw.get("fuente_relato", "Compartido por un oyente de la comunidad."),
-    )
-
-    guardar_titulo_publicado(historia_raw["titulo"])
-    if "tema" in historia_raw:
-        guardar_tema_usado(historia_raw["tema"])
-        print(f"✅ Tema guardado: {historia_raw['tema']}")
-
-    analytics = cargar_analytics_elite()
-    analytics["videos_publicados"].append({"titulo": historia_raw["titulo"], "tema": tema_viral, "fecha": datetime.now().isoformat(), "video_id": video_id_youtube, "prediccion": prediccion})
-    guardar_analytics_elite(analytics)
-
-    estado["publicaciones_hoy"] = estado.get("publicaciones_hoy", 0) + 1
-    estado["ultima_publicacion"] = datetime.now(pytz.timezone("America/Mexico_City")).isoformat()
-    guardar_estado(estado)
-
-    publicaciones_antes = obtener_publicaciones_hoy()
-    if publicaciones_antes < 2:
-        print(f"\n📘 Reel #{publicaciones_antes + 1}: enviando a Facebook...")
-        video_url_temporal = subir_video_temporal(video_final)
-        if video_url_temporal:
-            descripcion_facebook = f"""{historia_raw.get('gancho_descripcion', 'Relato de terror')}
-{historia_raw.get('contexto_descripcion', 'Un relato de fenómenos extraños.')}
-🔴 RELATO COMPLETO en el canal: {CANAL_LINK}
-📖 {historia_raw.get('fuente_relato', 'Compartido por un oyente de la comunidad.')}
-📱 Síguenos: {FACEBOOK_LINK}
-{historia_raw.get('hashtags_descripcion', '#Terror #Shorts')}"""
-            enviar_a_make(
-                titulo=historia_raw["titulo"],
-                descripcion=descripcion_facebook,
-                video_url=video_url_temporal,
-                url_youtube=f"https://youtu.be/{video_id_youtube}"
-            )
-        else:
-            print("⚠️ No se pudo subir al host temporal.")
-
-    limpiar_temporales_shorts()
-    print("✨ Ejecución completada. ¡Short viral ÉLITE listo!")
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"❌ Error fatal: {e}")
+        print(f"\n❌ ERROR CRÍTICO: {e}")
         traceback.print_exc()
         sys.exit(1)
+
+    finally:
+        print("\n🧹 Limpiando archivos temporales...")
+        limpiar_archivos_temporales(archivos_temp)
+
+    print("\n✅ Bot de shorts finalizado exitosamente.")
+
+
+if __name__ == "__main__":
+    main()
