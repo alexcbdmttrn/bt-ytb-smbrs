@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v5.3 (relatos + IA + duración 8-12 min)
-v5.3 - Fix validación de token:
-  - Tolera tokens sin scope youtube.readonly (insufficientPermissions)
-  - Distingue 401 (expirado real) de 403 (válido pero sin lectura)
-v5.2 - Correcciones anteriores:
-  - Fix SyntaxError en limpiar_titulo
-  - Divulgación IA sin "REALES"
-  - Tags sin variantes "testimonios/casos/historias reales"
-  - crear_short copia segs y renumera inicio
-  - Truncado de duración recorta solo expansiones
-  - proximo_slot buffer 30->10 min
-  - write_videofile logger=None
-  - puntuar_demanda con contexto de nicho
+SOMBRAS DE MEDIANOCHE - Bot v6.0 (VARIEDAD PARANORMAL)
+v6.0 - Overhaul de temas y variedad:
+  - 38 temas paranormales (brujas, duendes, demonios, fantasmas, aluxes,
+    llorona, charro negro, nahual, chupacabras, aliens, posesión, exorcismo,
+    ouija, pacto, cementerio, hotel, bosque, mina, hacienda, etc.)
+  - REMOVIDOS temas tecnológicos (backrooms, IA, deep web, llamada)
+  - Títulos con ESTRUCTURA VARIADA (no siempre "Si... NUNCA...")
+  - PROHIBIDO fijar 3:33 AM / 3:00 / 4:44 como hora por defecto
+  - GANCHOS sin palabras de hora; más hooks variados
+v5.3 - Fix validación de token (tolerante a youtube.upload sin readonly)
+v5.2 - Fix SyntaxError, disclosure sin "REALES", tags limpios
 """
 import asyncio
 import bisect
@@ -95,7 +93,6 @@ RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "
 PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
 FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
-SUFIJO_TITULO = ""
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
@@ -109,69 +106,242 @@ ESTADOS_MEXICO = [
 ]
 
 # =================================================================
-# TEMAS
+# TEMAS — 38 CATEGORÍAS PARANORMALES (sin tecnología)
 # =================================================================
 TEMAS = [
-    {"tema": "backrooms", "seed": "backrooms historia", "angulo": "Un espacio liminal aparece al cruzar una puerta común; reglas extrañas, imposible salir.",
-     "keywords": ["backrooms", "espacios liminales", "dimensión paralela", "atrapado"],
-     "contextos": ["hotel abandonado", "centro comercial vacío", "túneles", "edificio de oficinas"],
-     "visuales": ["empty office corridor", "yellow wallpaper room", "fluorescent light hallway", "empty parking garage", "abandoned mall interior"],
-     "hashtags": ["#Backrooms", "#EspaciosLiminales"]},
-    {"tema": "skinwalker", "seed": "skinwalker relatos", "angulo": "Algo imita voces y te sigue por un camino solitario durante varias noches.",
+    # ========== CRIATURAS Y SERES LEGENDARIOS (7) ==========
+    {"tema": "skinwalker", "seed": "skinwalker relatos", "angulo": "Algo imita voces humanas y te sigue por el bosque; cada noche se acerca más.",
      "keywords": ["skinwalker", "criatura", "persecución", "bosque"],
      "contextos": ["carretera solitaria", "bosque profundo", "sierra aislada", "desierto de noche"],
      "visuales": ["dark forest fog", "desert road night", "mountain night", "lonely highway night", "eyes in the dark"],
      "hashtags": ["#Skinwalker", "#CriaturasDeLaNoche"]},
-    {"tema": "ritual", "seed": "ritual prohibido historia de terror", "angulo": "Un ritual hecho por curiosidad abre algo que no se puede cerrar.",
-     "keywords": ["ritual", "invocación", "maldición", "ocultismo"],
-     "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas"],
-     "visuales": ["candles dark room", "old cemetery night", "abandoned church", "cave darkness", "old book candle"],
-     "hashtags": ["#Rituales", "#Ocultismo"]},
-    {"tema": "ia_maldita", "seed": "inteligencia artificial terror historia", "angulo": "Una IA empieza a predecir cosas íntimas y cada predicción se cumple.",
-     "keywords": ["inteligencia artificial", "predicción", "algoritmo", "tecnología"],
-     "contextos": ["oficina de noche", "cuarto de servidores", "universidad", "casa con domótica"],
-     "visuales": ["computer screen dark", "server room", "laptop night dark", "glitch screen", "dark office night"],
-     "hashtags": ["#IA", "#TerrorTecnologico"]},
-    {"tema": "llamada_misteriosa", "seed": "llamada misteriosa terror", "angulo": "Un número desconocido llama a la misma hora y sabe cosas que nadie debería saber.",
-     "keywords": ["llamada misteriosa", "teléfono", "número desconocido", "voz"],
-     "contextos": ["casa sola", "oficina nocturna", "sótano", "cabina telefónica"],
-     "visuales": ["old telephone dark", "phone booth night", "ringing phone dark", "dark basement", "empty office night"],
-     "hashtags": ["#LlamadaMisteriosa"]},
-    {"tema": "deep_web", "seed": "deep web terror historia", "angulo": "Un archivo encontrado en foros oscuros parece describir la vida del narrador.",
-     "keywords": ["deep web", "archivos", "foro oscuro", "internet"],
-     "contextos": ["cuarto oscuro", "cibercafé viejo", "sótano", "departamento en la madrugada"],
-     "visuales": ["dark room computer", "monitor glow dark", "bunker corridor", "cables dark", "hooded figure dark"],
-     "hashtags": ["#DeepWeb", "#TerrorDigital"]},
-    {"tema": "creepypasta", "seed": "creepypasta relato", "angulo": "Una leyenda de internet resulta tener un punto de origen físico y cercano.",
-     "keywords": ["creepypasta", "leyenda urbana", "internet", "origen"],
-     "contextos": ["parque abandonado", "calle solitaria", "bosque nocturno", "casa del barrio"],
-     "visuales": ["dark forest night", "abandoned playground", "empty street night", "old house night", "foggy park night"],
-     "hashtags": ["#Creepypasta", "#LeyendasUrbanas"]},
-    {"tema": "objeto_maldito", "seed": "objeto maldito historia", "angulo": "Un objeto comprado barato en el tianguis trae reglas silenciosas y consecuencias cada noche.",
-     "keywords": ["objeto maldito", "antigüedad", "espejo", "muñeca", "tianguis"],
-     "contextos": ["tienda de antigüedades", "mercado de pulgas", "casa heredada", "subasta"],
-     "visuales": ["antique shop", "old doll", "old mirror dark", "antique room dark", "pawn shop night"],
-     "hashtags": ["#ObjetoMaldito"]},
+
+    {"tema": "duendes", "seed": "duendes historia real", "angulo": "Objetos que desaparecen, risas en la madrugada, y un niño que habla con alguien que no está.",
+     "keywords": ["duendes", "duende", "casa", "travesuras"],
+     "contextos": ["casa del pueblo", "rancho", "bosque cercano", "milpa", "casa antigua"],
+     "visuales": ["old mexican house night", "dark forest small figure", "rustic mexican ranch night", "cornfield night fog", "small footprints dust"],
+     "hashtags": ["#Duendes", "#DuendesReales"]},
+
+    {"tema": "aluxes", "seed": "aluxes mayas terror", "angulo": "Los guardianes mayas de la milpa cobran venganza cuando alguien invade su territorio.",
+     "keywords": ["aluxes", "alux", "mayas", "milpa"],
+     "contextos": ["milpa yucateca", "ruinas mayas", "cenote", "selva", "pueblo maya"],
+     "visuales": ["mayan ruins night", "jungle fog night", "mexican cornfield night", "cenote dark water", "small stone altar jungle"],
+     "hashtags": ["#Aluxes", "#LeyendasMayas"]},
+
+    {"tema": "chupacabras", "seed": "chupacabras avistamiento", "angulo": "Los animales aparecen sin sangre y el rancho entero escucha algo en el monte.",
+     "keywords": ["chupacabras", "ganado", "avistamiento", "rancho"],
+     "contextos": ["rancho ganadero", "monte", "sierra", "desierto", "pueblo rural"],
+     "visuales": ["mexican ranch night", "dead livestock field night", "desert ranch night", "mountain silhouette creature", "cattle field fog"],
+     "hashtags": ["#Chupacabras", "#CriaturasReales"]},
+
+    {"tema": "nahual", "seed": "nahual historia terror", "angulo": "Un vecino del pueblo puede convertirse en animal; tú lo viste cambiar.",
+     "keywords": ["nahual", "brujo", "animal", "pueblo"],
+     "contextos": ["pueblo viejo", "barrio del pueblo", "cerro", "camino de tierra", "casa del brujo"],
+     "visuales": ["mexican village night", "dirt road night fog", "mountain silhouette night", "coyote eyes dark", "old mexican house night"],
+     "hashtags": ["#Nahual", "#LeyendasMexicanas"]},
+
+    {"tema": "llorona", "seed": "la llorona historia", "angulo": "El llanto de una mujer en el río anuncia la muerte de alguien del pueblo.",
+     "keywords": ["la llorona", "río", "leyenda", "llanto"],
+     "contextos": ["río del pueblo", "panteón", "puente viejo", "camino a la iglesia", "casa junto al río"],
+     "visuales": ["mexican river night fog", "old bridge night", "colonial church night", "woman silhouette river", "candles altar night"],
+     "hashtags": ["#LaLlorona", "#LeyendasMexicanas"]},
+
+    {"tema": "charro_negro", "seed": "charro negro leyenda", "angulo": "Un jinete vestido de negro ofrece dinero en el camino; pagar el precio es perder el alma.",
+     "keywords": ["charro negro", "jinete", "diablo", "camino"],
+     "contextos": ["camino de terracería", "carretera solitaria", "pueblo", "encrucijada", "puente viejo"],
+     "visuales": ["dark horseman silhouette", "dusty road night", "black horse night fog", "crossroads night mexico", "old bridge night fog"],
+     "hashtags": ["#CharroNegro", "#LeyendasMexicanas"]},
+
+    # ========== SERES Y ENTIDADES PARANORMALES (7) ==========
+    {"tema": "fantasmas", "seed": "fantasmas casa historia", "angulo": "En la casa hay alguien más: mueve cosas, apaga luces, y a veces se deja ver.",
+     "keywords": ["fantasmas", "aparecidos", "casa", "espíritus"],
+     "contextos": ["casa antigua", "departamento", "casa heredada", "habitación de hotel", "edificio viejo"],
+     "visuales": ["dark hallway ghost shadow", "old house interior night", "empty room night", "door half open dark", "fog room interior"],
+     "hashtags": ["#Fantasmas", "#Aparecidos"]},
+
+    {"tema": "demonios", "seed": "demonios invocación historia", "angulo": "Algo responde cuando no debieron llamar; no es un espíritu, es algo mucho peor.",
+     "keywords": ["demonios", "invocación", "posesión", "infierno"],
+     "contextos": ["casa abandonada", "sótano", "iglesia abandonada", "cementerio", "habitación cerrada"],
+     "visuales": ["dark basement horror", "abandoned church night", "candles dark room", "shadow figure dark", "old wooden door dark"],
+     "hashtags": ["#Demonios", "#TerrorOculto"]},
+
+    {"tema": "brujas", "seed": "brujas historia terror", "angulo": "Una mujer del pueblo sabe demasiado; la gente la evita, y los que no, desaparecen.",
+     "keywords": ["brujas", "hechicería", "pueblo", "maldición"],
+     "contextos": ["casa al final del pueblo", "cerro", "mercado", "camino al panteón", "cueva"],
+     "visuales": ["old mexican woman dark", "candles ritual night", "abandoned shack night", "herbs hanging dark", "moonlight house silhouette"],
+     "hashtags": ["#Brujas", "#Hechicería"]},
+
+    {"tema": "brujos", "seed": "brujo trabajo magia negra", "angulo": "Le pidieron un trabajo de magia negra; ahora el cliente no puede escapar de lo que pidió.",
+     "keywords": ["brujos", "magia negra", "trabajo", "maldición"],
+     "contextos": ["casa del brujo", "mercado esotérico", "cementerio de noche", "camino solitario", "altar"],
+     "visuales": ["dark altar candles", "old esoteric shop night", "cemetery candle night", "ritual circle dark", "skull candle dark"],
+     "hashtags": ["#Brujos", "#MagiaNegra"]},
+
+    {"tema": "poltergeist", "seed": "poltergeist casa real", "angulo": "Los objetos se mueven solos, las puertas se azotan, y la actividad aumenta cada noche.",
+     "keywords": ["poltergeist", "objetos", "casa", "actividad"],
+     "contextos": ["casa familiar", "departamento", "casa de la infancia", "habitación", "ático"],
+     "visuales": ["objects flying room dark", "thrown furniture room night", "slammed door dark", "broken mirror room night", "scattered objects floor dark"],
+     "hashtags": ["#Poltergeist", "#CasaEmbrujada"]},
+
+    {"tema": "muneca_poseida", "seed": "muñeca poseída historia", "angulo": "La muñeca cambia de posición sola y empieza a aparecer en los sueños de la familia.",
+     "keywords": ["muñeca", "poseída", "juguete", "maldita"],
+     "contextos": ["casa antigua", "cuarto de niña", "ático", "tienda de antigüedades", "casa heredada"],
+     "visuales": ["creepy doll dark room", "old doll chair night", "doll face closeup dark", "antique doll cabinet", "child room dark"],
+     "hashtags": ["#MuñecaMaldita", "#ObjetoMaldito"]},
+
+    {"tema": "payaso_maldito", "seed": "payaso maldito historia", "angulo": "Un payaso aparece en el mismo lugar cada noche; nadie lo contrató.",
+     "keywords": ["payaso", "maldito", "aparición", "circo"],
+     "contextos": ["circo abandonado", "parque", "calle solitaria", "cumpleaños", "feria"],
+     "visuales": ["creepy clown dark", "abandoned circus night", "empty carnival night", "clown silhouette fog", "broken carousel night"],
+     "hashtags": ["#PayasoMaldito", "#TerrorPsicológico"]},
+
+    # ========== LUGARES EMBRUJADOS (9) ==========
+    {"tema": "casa_embrujada", "seed": "casa embrujada historia real", "angulo": "La casa nueva tiene historia; los vecinos hablan de la familia anterior y nadie quiere entrar.",
+     "keywords": ["casa embrujada", "aparición", "familia", "historia"],
+     "contextos": ["casa antigua", "casa de campo", "casa heredada", "casa en venta", "casa del barrio"],
+     "visuales": ["abandoned mexican house night", "haunted house fog", "dark house interior hallway", "broken window house night", "creepy attic dark"],
+     "hashtags": ["#CasaEmbrujada", "#Fantasmas"]},
+
+    {"tema": "hospital", "seed": "hospital terror historia", "angulo": "En la guardia nocturna, un paciente que ya no debería existir sigue apareciendo en el mismo pasillo.",
+     "keywords": ["hospital", "guardia nocturna", "paciente", "morgue"],
+     "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue", "quirófano abandonado"],
+     "visuales": ["hospital corridor dark", "abandoned hospital", "empty hospital bed", "morgue dark", "operating room old"],
+     "hashtags": ["#HospitalEmbrujado", "#TerrorNocturno"]},
+
     {"tema": "velador", "seed": "trabajé de velador terror", "angulo": "Turno nocturno de vigilante; las cámaras muestran algo que no está en el pasillo real.",
      "keywords": ["velador", "turno de noche", "cámaras de seguridad", "trabajo nocturno"],
-     "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento"],
+     "contextos": ["fábrica abandonada", "bodega", "escuela vacía", "estacionamiento", "condominio"],
      "visuales": ["security guard night", "empty factory night", "warehouse dark", "cctv camera", "parking lot night"],
      "hashtags": ["#Velador", "#TurnoDeNoche"]},
-    {"tema": "hospital", "seed": "hospital terror historia", "angulo": "Guardia nocturna en un hospital donde un paciente ya no debería existir.",
-     "keywords": ["hospital", "guardia nocturna", "paciente", "enfermera"],
-     "contextos": ["hospital viejo", "clínica cerrada", "ala clausurada", "morgue"],
-     "visuales": ["hospital corridor dark", "abandoned hospital", "empty hospital bed", "wheelchair dark", "operating room old"],
-     "hashtags": ["#HospitalEmbrujado"]},
-    {"tema": "carretera", "seed": "carretera de noche terror historia", "angulo": "Un viaje nocturno por carretera con un pasajero o una señal que no debieron existir.",
+
+    {"tema": "carretera", "seed": "carretera de noche terror", "angulo": "Un viaje nocturno con un pasajero que no recuerda haber subido, o una parada que nadie debió hacer.",
      "keywords": ["carretera", "viaje nocturno", "taxi", "autoestopista"],
-     "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte"],
+     "contextos": ["carretera federal", "gasolinera", "túnel", "curva de la muerte", "desvío"],
      "visuales": ["highway night fog", "taxi night city", "road tunnel dark", "truck night highway", "gas station night"],
-     "hashtags": ["#CarreteraMaldita"]},
+     "hashtags": ["#CarreteraMaldita", "#TerrorNocturno"]},
+
+    {"tema": "hotel_embrujado", "seed": "hotel embrujado historia", "angulo": "En el hotel hay habitaciones que no deberían estar en el mapa, y un huésped que nunca se fue.",
+     "keywords": ["hotel", "habitación", "huésped", "embrujado"],
+     "contextos": ["hotel viejo", "motel de carretera", "hostal", "hotel de pueblo", "casa de huéspedes"],
+     "visuales": ["hotel corridor dark", "old hotel room night", "abandoned hotel lobby", "motel neon night", "vintage room dark"],
+     "hashtags": ["#HotelEmbrujado", "#Fantasmas"]},
+
+    {"tema": "cementerio", "seed": "cementerio noche terror", "angulo": "Algo se mueve entre las tumbas; los que se quedan hasta tarde escuchan rezos que nadie reza.",
+     "keywords": ["cementerio", "panteón", "tumba", "noche"],
+     "contextos": ["panteón del pueblo", "cementerio antiguo", "cripta", "mausoleo", "fosa común"],
+     "visuales": ["cemetery night fog", "old mexican pantheon", "crypt candles dark", "graveyard silhouette night", "grave candles night"],
+     "hashtags": ["#Cementerio", "#TerrorNocturno"]},
+
+    {"tema": "bosque_maldito", "seed": "bosque maldito terror", "angulo": "Los que entran al bosque no salen iguales; algunos no salen, y otros vuelven cambiados.",
+     "keywords": ["bosque", "maldito", "perdido", "criatura"],
+     "contextos": ["bosque profundo", "sierra", "montaña", "camino de tierra", "cabaña"],
+     "visuales": ["dark forest fog night", "cabin in woods night", "trail in forest dark", "tall trees silhouette night", "campfire forest dark"],
+     "hashtags": ["#BosqueMaldito", "#Criaturas"]},
+
+    {"tema": "mina_abandonada", "seed": "mina abandonada terror", "angulo": "En la mina cerrada hubo un accidente; los que bajaron después escucharon golpes desde dentro.",
+     "keywords": ["mina", "abandonada", "túnel", "accidente"],
+     "contextos": ["mina abandonada", "túnel", "cerro", "pueblo minero", "entrada tapiada"],
+     "visuales": ["abandoned mine entrance", "mine tunnel dark", "mine shaft night", "old mining town night", "minecart abandoned dark"],
+     "hashtags": ["#MinaAbandonada", "#Fantasmas"]},
+
+    {"tema": "hacienda", "seed": "hacienda embrujada historia", "angulo": "La hacienda vieja guarda lo que pasó con los dueños anteriores; los nuevos no duermen igual.",
+     "keywords": ["hacienda", "embrujada", "historia", "antigua"],
+     "contextos": ["hacienda vieja", "ex-hacienda", "rancho heredado", "casa de campo", "casona"],
+     "visuales": ["old hacienda night", "colonial house dark", "mexican hacienda night fog", "courtyard night dark", "old wooden doors night"],
+     "hashtags": ["#HaciendaEmbrujada", "#Fantasmas"]},
+
+    # ========== OCULTISMO (10) ==========
+    {"tema": "ritual", "seed": "ritual prohibido historia", "angulo": "Un ritual hecho por curiosidad abre algo que no se puede cerrar.",
+     "keywords": ["ritual", "invocación", "maldición", "ocultismo"],
+     "contextos": ["cementerio antiguo", "casa abandonada", "cueva", "iglesia en ruinas", "sótano"],
+     "visuales": ["candles dark room", "old cemetery night", "abandoned church", "cave darkness", "old book candle"],
+     "hashtags": ["#Rituales", "#Ocultismo"]},
+
+    {"tema": "ouija", "seed": "ouija historia terror", "angulo": "Algo respondió en la tabla; desde esa noche, no dejó de responder.",
+     "keywords": ["ouija", "tabla", "espíritus", "sesión"],
+     "contextos": ["casa de amigo", "cuarto oscuro", "sótano", "casa abandonada", "habitación de hotel"],
+     "visuales": ["ouija board candles", "dark room hands", "old wooden table candle", "seance circle dark", "mysterious planchette dark"],
+     "hashtags": ["#Ouija", "#TerrorOculto"]},
+
+    {"tema": "posesion", "seed": "posesión demoníaca historia", "angulo": "Alguien de la familia cambió; habla en otra lengua, no duerme, y sabe cosas que no debería.",
+     "keywords": ["posesión", "demonio", "familia", "cambio"],
+     "contextos": ["casa familiar", "habitación", "iglesia", "casa del pueblo", "convento"],
+     "visuales": ["dark bedroom horror", "candlelit church interior", "old wooden crucifix dark", "shadow figure bed", "priest silhouette dark"],
+     "hashtags": ["#Posesión", "#Exorcismo"]},
+
+    {"tema": "exorcismo", "seed": "exorcismo real historia", "angulo": "El sacerdote accedió a hacer el exorcismo; lo que salió del cuerpo no era humano.",
+     "keywords": ["exorcismo", "sacerdote", "demonio", "ritual"],
+     "contextos": ["iglesia vieja", "casa del pueblo", "convento abandonado", "habitación cerrada", "capilla"],
+     "visuales": ["candlelit church dark", "priest silhouette", "rosary candle dark", "old church interior night", "confessional dark"],
+     "hashtags": ["#Exorcismo", "#TerrorReligioso"]},
+
+    {"tema": "pacto_demonio", "seed": "pacto con el diablo historia", "angulo": "Alguien hizo un pacto por dinero o poder; ahora el precio se está cobrando.",
+     "keywords": ["pacto", "demonio", "diablo", "trato"],
+     "contextos": ["encrucijada", "casa abandonada", "camino solitario", "cueva", "cementerio"],
+     "visuales": ["crossroads night dark", "candles pentagram dark", "old contract candle", "shadow figure door", "dark ritual circle"],
+     "hashtags": ["#Pacto", "#TerrorOculto"]},
+
+    {"tema": "maldicion", "seed": "maldición familiar historia", "angulo": "La familia carga una maldición de generaciones; cada cierto tiempo, cobra una vida.",
+     "keywords": ["maldición", "familia", "herencia", "tragedia"],
+     "contextos": ["casa familiar", "pueblo", "cementerio", "casa antigua", "hacienda"],
+     "visuales": ["old family photo dark", "abandoned house interior", "family portrait creepy", "candles altar dark", "old diary pages"],
+     "hashtags": ["#Maldición", "#TerrorFamiliar"]},
+
+    {"tema": "objeto_maldito", "seed": "objeto maldito historia", "angulo": "Un objeto comprado barato trae reglas silenciosas y consecuencias cada noche.",
+     "keywords": ["objeto maldito", "antigüedad", "espejo", "muñeca", "tianguis"],
+     "contextos": ["tienda de antigüedades", "mercado de pulgas", "casa heredada", "subasta", "tianguis"],
+     "visuales": ["antique shop", "old doll", "old mirror dark", "antique room dark", "pawn shop night"],
+     "hashtags": ["#ObjetoMaldito", "#Coleccionista"]},
+
+    {"tema": "espejo_maldito", "seed": "espejo maldito historia", "angulo": "En el espejo hay alguien más; refleja cosas que no están en la habitación.",
+     "keywords": ["espejo", "reflejo", "maldito", "aparición"],
+     "contextos": ["casa antigua", "baño", "recámara", "hotel", "casa heredada"],
+     "visuales": ["old mirror dark room", "reflection strange silhouette", "cracked mirror dark", "antique mirror night", "bathroom mirror fog dark"],
+     "hashtags": ["#EspejoMaldito", "#Fantasmas"]},
+
+    {"tema": "santero", "seed": "santero trabajo espiritual", "angulo": "Le pidieron un trabajo espiritual; lo que llegó no era lo que esperaban.",
+     "keywords": ["santero", "palo mayombe", "trabajo", "espiritual"],
+     "contextos": ["casa del santero", "mercado esotérico", "cementerio", "altar", "sótano"],
+     "visuales": ["dark altar candles bones", "esoteric shop night", "skull candle dark", "ritual objects dark", "incense smoke dark"],
+     "hashtags": ["#Santería", "#TrabajoEspiritual"]},
+
+    {"tema": "curandero", "seed": "curandero limpia terror", "angulo": "La limpia espiritual debía quitarle el mal; el mal se quedó, y algo más entró.",
+     "keywords": ["curandero", "limpia", "energía", "mal"],
+     "contextos": ["casa del curandero", "mercado", "pueblo", "cerro", "temazcal"],
+     "visuales": ["herbs hanging dark", "smoke ritual dark", "old mexican healer house", "candles eggs limpia", "temazcal night"],
+     "hashtags": ["#Curanderos", "#Limpia"]},
+
+    # ========== EXTRATERRESTRES (3) ==========
+    {"tema": "aliens", "seed": "avistamiento ovni historia", "angulo": "Lo que bajó del cielo no era un avión; la luz se movió como algo vivo.",
+     "keywords": ["ovni", "extraterrestre", "avistamiento", "luces"],
+     "contextos": ["campo abierto", "carretera solitaria", "sierra", "rancho", "desierto"],
+     "visuales": ["ufo lights sky night", "strange light rural night", "silhouette hill ufo", "farm field night lights", "desert night sky object"],
+     "hashtags": ["#Ovnis", "#Extraterrestres"]},
+
+    {"tema": "abduccion", "seed": "abducción extraterrestre historia", "angulo": "Recuerdas fragmentos: luces, frialdad, voces; y una marca que no estaba antes.",
+     "keywords": ["abducción", "extraterrestre", "recuerdo", "marca"],
+     "contextos": ["casa de campo", "carretera", "rancho", "montaña", "bosque"],
+     "visuales": ["bright light sky night", "car headlights ufo", "rural house light beam", "strange marks skin", "silhouette hills night ufo"],
+     "hashtags": ["#Abducción", "#Extraterrestres"]},
+
+    {"tema": "encuentro_cercano", "seed": "encuentro cercano extraterrestre", "angulo": "El encuentro fue cercano; el ser que salió del objeto habló sin mover la boca.",
+     "keywords": ["encuentro", "extraterrestre", "ser", "objeto"],
+     "contextos": ["camino rural", "campo", "sierra", "mina abandonada", "rancho"],
+     "visuales": ["ufo landed field night", "strange silhouette fog", "field crop circle night", "glowing object rural night", "alien figure dark"],
+     "hashtags": ["#EncuentroCercano", "#Extraterrestres"]},
+
+    # ========== LEYENDAS Y CREEPYPASTA (2) ==========
     {"tema": "leyenda_mexicana", "seed": "leyenda mexicana terror", "angulo": "Una leyenda del pueblo cobra vida en versión contemporánea.",
      "keywords": ["leyendas mexicanas", "nahual", "la llorona", "pueblo"],
-     "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado"],
+     "contextos": ["pueblo antiguo", "río de noche", "panteón del pueblo", "rancho abandonado", "camino de terracería"],
      "visuales": ["old village night", "colonial church night", "dirt road night", "river fog night", "candles altar"],
      "hashtags": ["#LeyendasMexicanas", "#TerrorMexicano"]},
+
+    {"tema": "creepypasta", "seed": "creepypasta relato", "angulo": "Una leyenda de internet resulta tener un origen físico y cercano.",
+     "keywords": ["creepypasta", "leyenda urbana", "barrio", "origen"],
+     "contextos": ["parque abandonado", "calle solitaria", "bosque nocturno", "casa del barrio", "escuela abandonada"],
+     "visuales": ["dark forest night", "abandoned playground", "empty street night", "old house night", "foggy park night"],
+     "hashtags": ["#Creepypasta", "#LeyendasUrbanas"]},
 ]
 
 ESCENAS_FALLBACK = {
@@ -358,9 +528,9 @@ def actualizar_rendimiento(youtube, estado):
         print(f"⚠️ No se pudo leer rendimiento: {e}")
 
 def elegir_tema(estado, youtube):
-    recientes = estado["temas_recientes"][-4:]
+    recientes = estado["temas_recientes"][-6:]
     pool = [t for t in TEMAS if t["tema"] not in recientes] or TEMAS[:]
-    candidatos = random.sample(pool, min(4, len(pool)))
+    candidatos = random.sample(pool, min(5, len(pool)))
     acum = {}
     for v in estado["videos"]:
         if "vistas" in v:
@@ -374,23 +544,36 @@ def elegir_tema(estado, youtube):
         d = demandas[t["tema"]]
         sd = d / max_d if d else 0.4
         sr = rend[t["tema"]] / max_r if t["tema"] in rend and max_r else 0.6
-        return 0.5 * sd + 0.5 * sr + random.uniform(0, 0.15)
+        return 0.5 * sd + 0.5 * sr + random.uniform(0, 0.2)
 
     elegido = max(candidatos, key=score)
     print(f"🎯 Tema elegido: {elegido['tema']} (demanda={demandas[elegido['tema']]}, propio={rend.get(elegido['tema'])})")
     return elegido
 
 # =================================================================
-# TÍTULOS
+# TÍTULOS — GANCHOS SIN HORA, ESTRUCTURAS VARIADAS
 # =================================================================
-GANCHOS = ["nunca", "nadie", "jamás", "no ", "noche", "3:33", "3:00", "4:44", "madrugada", "medianoche",
-           "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "qué", "por qué", "cómo", "?", "si "]
+GANCHOS = [
+    # Prohibición / advertencia
+    "nunca", "nadie", "jamás", "solo", "prohibido", "prohibieron",
+    "advirtieron", "dijeron", "no debí", "no debes",
+    # Maldad / misterio
+    "maldito", "maldición", "peligro", "cuidado", "secreto",
+    # Testimonio / descubrimiento
+    "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé",
+    "entré", "confieso", "juré", "prometí", "recuerdo",
+    # Movimiento / cambio
+    "desapareció", "apareció", "cambió", "volvió", "se fue",
+    # Pregunta
+    "qué", "por qué", "cómo", "?", "si ", "cuando",
+    # Atmósfera
+    "noche", "madrugada", "oscuridad",
+]
 PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidencia", "pruebas", "autoridades",
               "filtrado", "es real", "historia real", "hechos reales"]
 GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
 
 def limpiar_titulo(t):
-    # ✅ v5.2: strip por partes (evita SyntaxError)
     t = t.strip()
     t = t.strip('"')
     t = t.strip("'")
@@ -415,6 +598,9 @@ def puntuar_titulo(t):
     if re.search(r"\d", t):
         s += 2
     s += min(3, sum(1 for g in GANCHOS if g in tl))
+    # Penalizar repetición de horas (3:33, 3:00, 4:44, 2:14...)
+    if re.search(r"\b([012]?[0-9]):[0-5][0-9]\s*(am|pm|a\.m\.|p\.m\.)?\b", tl, re.I):
+        s -= 3
     caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
     s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
     if any(p in tl for p in PROHIBIDAS):
@@ -462,7 +648,7 @@ def elegir_texto_portada(opciones, titulo):
 # HISTORIA
 # =================================================================
 ESQUEMA_PLAN = """{
- "titulos": ["6 títulos candidatos, cada uno de 45-68 caracteres. NUNCA termines con '| Relato de Terror'"],
+ "titulos": ["6 títulos candidatos de 45-68 caracteres, cada uno con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'"],
  "anio_suceso": 2014,
  "protagonista": "nombre de pila del narrador",
  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
@@ -493,13 +679,23 @@ TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
 
 REGLAS DE TÍTULO (CLAVE PARA CTR - NIVEL EXPERTO):
 1. NUNCA termines el título con "| Relato de Terror". Desperdicia espacio valioso.
-2. Usa la fórmula: [Acción prohibida] + [Objeto/Lugar específico] + [Hora/Número exacto].
-3. Ejemplo ganador: "Escuché 3 golpes en el SÓTANO a las 3:33 AM y no debí bajar".
-4. Usa mayúsculas solo para 1 o 2 palabras de impacto (ej. NUNCA, SÓTANO, 3:33 AM).
-5. Evita errores ortográficos. Revisa bien la ortografía antes de devolver.
+2. Cada uno de los 6 títulos DEBE usar una estructura DISTINTA. Alterna entre:
+   - Advertencia: "Nunca [verbo] en [lugar]"
+   - Confesión: "Lo que [verbo] en [lugar] no me dejó dormir"
+   - Testimonio: "La noche que [algo] en [lugar]"
+   - Pregunta: "¿Por qué [algo] en [lugar]?"
+   - Descubrimiento: "Encontré [algo] en [lugar]"
+   - Diálogo: "Mi [familiar] me dijo: 'no [verbo] en [lugar]'"
+   - Ubicación: "El [lugar] de [estado] donde [algo] pasa"
+   - Cita: "[Frase corta del testigo]: lo que vi en [lugar]"
+3. ⚠️ NO fijes una hora concreta como 3:33 AM, 3:00 AM, 4:44 AM, 3:17, 2:14. Ese patrón está sobre-explotado.
+   Si un título usa un número, varíalo: fechas, edades, cantidades, nombres. En la MAYORÍA de los títulos NO pongas cifras.
+4. Usa mayúsculas solo para 1-2 palabras de impacto. Puedes usar: NUNCA, NADIE, SOLO, PROHIBIDO, PELIGRO, o el nombre del lugar.
+5. NO empieces los 6 títulos igual. Alterna "Si...", "No...", "El...", "La...", "Cuando...", "Encontré...", "¿Qué...?".
+6. Evita errores ortográficos. Revisa bien antes de devolver.
 
 REGLAS DE CONTENIDO:
-1. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
+1. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, pueblos, cerros, carreteras, casas heredadas) sobre folclore exótico genérico.
 2. La divulgación de contenido sintético va en la descripción del video, NO en la narración. En la narración mantén la inmersión en primera persona sin romper la cuarta pared.
 3. El gancho debe ser lo más perturbador del relato, no una presentación.
 4. Cada capítulo termina en un cliffhanger, excepto el último.
@@ -549,12 +745,13 @@ ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
 REGLAS DE DURACIÓN Y CONTENIDO:
 1. El relato completo debe tener estrictamente entre 1100 y 1400 palabras en total (aprox. 8 a 12 minutos de audio).
 2. Este capítulo debe tener 250-350 palabras máximo.
-3. Prioriza escenarios cotidianos y relacionables (trabajos nocturnos, objetos de tianguis, teléfonos, sótanos, carreteras) sobre folclore exótico genérico. El miedo debe sentirse cercano.
-4. No rompas la inmersión: narra en primera persona sin decir "esta historia es ficticia" ni "soy una IA". El aviso de contenido sintético va en la descripción del video, no dentro de la narración.
+3. Prioriza escenarios cotidianos y relacionables sobre folclore exótico. El miedo debe sentirse cercano.
+4. No rompas la inmersión: narra en primera persona sin decir "esta historia es ficticia" ni "soy una IA".
 
 ESTILO (se leerá en voz alta):
 Español mexicano natural y coloquial, sin exagerar modismos.
-Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío), horas exactas.
+Mezcla frases cortas y secas con otras largas. Detalles sensoriales (sonidos, olores, frío, texturas).
+⚠️ Si mencionas una hora, VARÍALA: no uses siempre "3:33 AM". Puede ser cualquier hora o ninguna.
 Muestra, no expliques. Diálogos breves si ayudan. Sin listas, sin emojis, sin títulos, sin acotaciones, sin marcas de tiempo.
 Devuelve SOLO el texto del capítulo."""
         texto = None
@@ -1263,7 +1460,7 @@ def limpiar_temporales():
                 pass
 
 def verificar_envs():
-    """Valida credenciales. TOLERA tokens sin youtube.readonly. Devuelve cliente YT listo."""
+    """Valida credenciales. TOLERA tokens sin youtube.readonly."""
     faltan = [v for v in ("DEEPSEEK_API_KEY", "PEXELS_API_KEY", "YOUTUBE_USER_TOKEN") if not os.getenv(v)]
     if faltan:
         print(f"❌ Faltan variables: {', '.join(faltan)}")
@@ -1278,7 +1475,6 @@ def verificar_envs():
         print("❌ YOUTUBE_USER_TOKEN inválido/expirado (revisa el secret en GitHub)")
         sys.exit(1)
 
-    # ✅ Validación TOLERANTE: no aborta si el token solo tiene youtube.upload
     try:
         yt.channels().list(part="id", mine=True).execute()
         print("✅ Credenciales válidas (DeepSeek, Pexels, YouTube con lectura).")
@@ -1287,7 +1483,6 @@ def verificar_envs():
         if "insufficientPermissions" in err_str or "insufficient authentication scopes" in err_str:
             print("⚠️ El token no tiene permiso de LECTURA del canal (youtube.readonly).")
             print("   El bot publicará igual, pero SIN analytics ni búsqueda de demanda.")
-            print("   elegir_tema usará solo scoring random + histórico propio vacío.")
             print("   ℹ️ Regenera el token con scope youtube.readonly para activar esas features.")
         elif "401" in err_str or "invalid_grant" in err_str or "invalid_token" in err_str:
             print(f"❌ YouTube token expirado o revocado: {e}")
@@ -1314,8 +1509,9 @@ def main():
         sys.exit(0)
 
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v5.3")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.0 (VARIEDAD PARANORMAL)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos Pexels: {USAR_VIDEOS}")
+    print(f"📚 Temas disponibles: {len(TEMAS)}")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
@@ -1442,7 +1638,7 @@ def main():
 
     ahora = datetime.now(TZ).isoformat()
     guardar_titulo_largo(titulo)
-    guardar_tema(" ".join(map(str, plan.get("palabras_clave", []))) or tema["tema"])
+    guardar_tema(tema["tema"])   # ← ahora guarda el slug, no las keywords
     estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"], "fecha": ahora})
     estado["videos"] = estado["videos"][-60:]
     estado["temas_recientes"] = (estado["temas_recientes"] + [tema["tema"]])[-6:]
