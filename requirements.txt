@@ -17,3 +17,8 @@ gTTS>=2.5.1
 pytz>=2023.3
 urllib3>=2.0.0
 json5>=0.9.14
+
+# Dependencias explícitas de moviepy (evitan fallos en CI)
+imageio>=2.9.0,<3.0.0
+imageio-ffmpeg>=0.4.7
+decorator>=4.4.2
