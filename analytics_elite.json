@@ -131,6 +131,23 @@
         "retencion_predicha": 77.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "video_id": "yKu10CWQ6j0",
+      "titulo": "Lo que escapé en el bosque no me dejó dormir 🌲 #Bosquemaldito #BosqueMaldito #Terror #Misterio",
+      "tema": "bosque_maldito",
+      "estado": "Sonora",
+      "fecha": "2026-10-30T12:27:30.639136-06:00",
+      "prediccion": {
+        "vistas_predichas": 480480,
+        "ctr_predicho": 6.01,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "BOSQUE MALDITO",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo"
     }
   ],
   "mejores_horarios": {},
