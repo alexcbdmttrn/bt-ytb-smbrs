@@ -66,9 +66,6 @@ DISCLOSURE_TEXT = (
 )
 
 MAX_SHORTS_DIA = 2
-INTERVALO_MIN_HORAS = 6
-INTERVALO_MAX_HORAS = 9
-RETRASO_MAX_MINUTOS = 10
 
 # ================================================================
 # 35 TEMAS PARANORMALES
@@ -759,35 +756,25 @@ def obtener_temas_recientes():
 # DECISIÓN DE PUBLICAR
 # ================================================================
 def deberia_publicar_ahora(estado):
-    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date().isoformat()
+    tz   = pytz.timezone("America/Mexico_City")
+    hoy  = datetime.now(tz).date().isoformat()
+
+    # Reiniciar contador si es un día nuevo
     if estado.get("fecha") != hoy:
         estado["fecha"] = hoy
         estado["publicaciones_hoy"] = 0
         guardar_estado(estado)
-        print("📅 Nuevo día. Contador reiniciado.")
+        print(f"📅 Nuevo día ({hoy}). Contador reiniciado.")
 
     publicadas = estado.get("publicaciones_hoy", 0)
+    ultima     = estado.get("ultima_publicacion", "—")
+    print(f"📊 Estado actual → publicadas hoy: {publicadas}/{MAX_SHORTS_DIA} | última: {ultima}")
+
     if publicadas >= MAX_SHORTS_DIA:
-        print(f"✅ Límite de {MAX_SHORTS_DIA} shorts diarios alcanzado.")
+        print(f"🛑 Límite diario alcanzado ({MAX_SHORTS_DIA}/día). Saliendo.")
         return False
 
-    ultima = estado.get("ultima_publicacion")
-    if ultima:
-        ultima_dt = datetime.fromisoformat(ultima)
-        ahora = datetime.now(pytz.timezone("America/Mexico_City"))
-        diff_h = (ahora - ultima_dt).total_seconds() / 3600
-        intervalo = random.uniform(INTERVALO_MIN_HORAS, INTERVALO_MAX_HORAS)
-        if diff_h < intervalo:
-            print(f"⏳ Esperando {intervalo:.1f}h. Van {diff_h:.1f}h. Publicadas hoy: {publicadas}/{MAX_SHORTS_DIA}")
-            return False
-        print(f"✅ Han pasado {diff_h:.1f}h. Publicando.")
-
-    retraso = random.randint(0, RETRASO_MAX_MINUTOS * 60)
-    if retraso > 0:
-        print(f"⏳ Retraso aleatorio: {retraso//60} min {retraso%60} seg...")
-        time.sleep(retraso)
-
-    print(f"✅ Decisión: Publicar. (Short {publicadas + 1}/{MAX_SHORTS_DIA})")
+    print(f"✅ Publicando short #{publicadas + 1}/{MAX_SHORTS_DIA}.")
     return True
 
 # ================================================================
