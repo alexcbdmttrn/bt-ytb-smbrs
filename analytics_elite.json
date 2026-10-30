@@ -148,6 +148,23 @@
       "score_titulo": 66,
       "voz": "es-MX-JorgeNeural",
       "voz_estilo": "narrativo"
+    },
+    {
+      "video_id": "CcYn0GmkKnc",
+      "titulo": "Nunca más solo en la casa de campo 🛸 #Abduccion #Abducción #Terror #Misterio",
+      "tema": "abduccion",
+      "estado": "Nayarit",
+      "fecha": "2026-10-30T12:53:40.199113-06:00",
+      "prediccion": {
+        "vistas_predichas": 565440,
+        "ctr_predicho": 7.07,
+        "retencion_predicha": 77.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "ABDUCCIÓN MONTAÑA",
+      "score_titulo": 76,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional"
     }
   ],
   "mejores_horarios": {},
