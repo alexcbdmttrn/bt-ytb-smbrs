@@ -119,6 +119,18 @@
         "retencion_predicha": 77.0,
         "confianza": "Alta"
       }
+    },
+    {
+      "titulo": "El el estacionamiento que nadie menciona en Coahuila",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-10-30T07:03:39.840900",
+      "video_id": "gxacDcDA4Mc",
+      "prediccion": {
+        "vistas_predichas": 588000,
+        "ctr_predicho": 7.35,
+        "retencion_predicha": 77.0,
+        "confianza": "Alta"
+      }
     }
   ],
   "mejores_horarios": {},
