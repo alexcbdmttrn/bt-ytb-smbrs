@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Ash and Marrow.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
     "The Deep Rot.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Hollow Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-29",
+  "ultima_publicacion_exitosa": "2026-10-30",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-29T13:45:32.529529-06:00",
+  "ultima_publicacion": "2026-10-30T13:21:32.880671-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -220,14 +220,20 @@
       "titulo": "No contestes si te llaman a las 3:33 AM desde tu PROPIO sótano",
       "tema": "llamada_misteriosa",
       "fecha": "2026-10-29T13:45:32.529529-06:00"
+    },
+    {
+      "id": "cWhnDEmi2Io",
+      "titulo": "Encontré al payaso del parque y me hizo una petición PELIGROSA",
+      "tema": "payaso_maldito",
+      "fecha": "2026-10-30T13:21:32.880671-06:00"
     }
   ],
   "temas_recientes": [
-    "carretera",
     "velador",
     "deep_web",
     "creepypasta",
     "hospital",
-    "llamada_misteriosa"
+    "llamada_misteriosa",
+    "payaso_maldito"
   ]
 }
