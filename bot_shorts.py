@@ -1487,15 +1487,25 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
 # ================================================================
 # SEO — TAGS Y DESCRIPCIÓN
 # ================================================================
+def _sanitizar_tag(t):
+    """
+    Limpia un tag para cumplir con los requisitos de YouTube Data API.
+    Quita <>"#\n\r\t y normaliza espacios.
+    """
+    t = re.sub(r'[<>"#\n\r\t\\]', '', str(t))
+    t = re.sub(r'\s+', ' ', t).strip().lower()
+    return t
+
 def generar_tags_seo(tema_obj, estado_mx):
     """
-    Tags en 5 niveles estratégicos (vidiq/TubeBuddy style).
-    Orden de prioridad respetando el límite de 500 chars de YouTube.
+    Tags en 5 niveles estratégicos (vidiq / TubeBuddy style).
+    Sanitización estricta + conteo en bytes UTF-8 para respetar
+    el límite real de 500 bytes de YouTube (los acentos son 2 bytes).
 
     T1 — 1 palabra, máximo volumen global
     T2 — 2-3 palabras, alto volumen
     T3 — Específicos del tema (keywords + hashtags limpios)
-    T4 — Long-tail (4-6 palabras, alta intención de búsqueda)
+    T4 — Long-tail de alta intención (≤ 40 chars cada uno)
     T5 — Plataforma
     """
     nombre_tema = tema_obj["tema"].replace("_", " ")
@@ -1509,35 +1519,44 @@ def generar_tags_seo(tema_obj, estado_mx):
         "terror latino", "relato paranormal", "fenomenos paranormales",
         "terror corto", "historias de miedo", "audio terror",
     ]
-    # T3 — keywords y hashtags propios del tema (sin # y en minúsculas)
-    t3  = [k.lower() for k in tema_obj["keywords"]]
-    t3 += [h.lstrip("#").lower() for h in tema_obj["hashtags"]]
+    # T3 — keywords y hashtags propios del tema (sin # ni chars raros)
+    t3  = [k for k in tema_obj["keywords"]]
+    t3 += [h.lstrip("#") for h in tema_obj["hashtags"]]
 
     t4 = [
-        f"relatos de terror {nombre_tema}",
+        f"terror {nombre_tema}",
         f"historias de {nombre_tema}",
-        f"terror en {estado_mx.lower()}",
-        f"misterio en {estado_mx.lower()}",
+        f"terror en {estado_mx}",
+        f"misterio en {estado_mx}",
         f"{nombre_tema} paranormal",
         "para no dormir",
         "miedo real",
         "lo inexplicable",
-        "experiencia paranormal real",
-        "terror que no te deja dormir",
+        "experiencia paranormal",
+        "terror nocturno",
     ]
     t5 = ["shorts", "youtube shorts"]
 
-    todos = list(dict.fromkeys(t1 + t2 + t3 + t4 + t5))
-    todos = [t for t in todos if t and len(t) > 2]
+    # Sanitizar y deduplicar
+    todos = []
+    vistos = set()
+    for raw in t1 + t2 + t3 + t4 + t5:
+        tag = _sanitizar_tag(raw)
+        if tag and tag not in vistos:
+            vistos.add(tag)
+            todos.append(tag)
 
-    # Respetar límite de 500 chars de YouTube (suma de len(tag)+1 por separador)
-    resultado, chars = [], 0
+    # Respetar límite de YouTube: conteo en bytes UTF-8, margen conservador
+    resultado, total_bytes = [], 0
     for tag in todos:
-        costo = len(tag) + 1
-        if chars + costo > 499:
+        if len(tag) < 2 or len(tag) > 40:     # límite seguro por tag
+            continue
+        costo = len(tag.encode("utf-8")) + 1   # +1 por separador
+        if total_bytes + costo > 490:           # margen de 10 bytes
             break
         resultado.append(tag)
-        chars += costo
+        total_bytes += costo
+
     return resultado
 
 
