@@ -17,6 +17,7 @@ import re
 import sys
 import time
 import traceback
+import unicodedata
 from datetime import datetime, timedelta
 import pytz
 
@@ -1487,75 +1488,69 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
 # ================================================================
 # SEO — TAGS Y DESCRIPCIÓN
 # ================================================================
-def _sanitizar_tag(t):
+def _ascii_tag(t):
     """
-    Limpia un tag para cumplir con los requisitos de YouTube Data API.
-    Quita <>"#\n\r\t y normaliza espacios.
+    Convierte texto a ASCII puro para YouTube API.
+    Elimina acentos (á→a, é→e, ñ→n, ó→o...) y cualquier char especial.
+    'aparición' → 'aparicion' | 'Michoacán' → 'michoacan'
+    YouTube rechaza tags con caracteres Unicode no ASCII vía API.
     """
-    t = re.sub(r'[<>"#\n\r\t\\]', '', str(t))
-    t = re.sub(r'\s+', ' ', t).strip().lower()
-    return t
+    # NFD descompone: 'á' → 'a' + combining accent; luego quitamos Mn (marks)
+    nfd = unicodedata.normalize('NFD', str(t))
+    sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+    # Solo letras a-z, dígitos 0-9 y espacios
+    limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower())
+    return re.sub(r'\s+', ' ', limpio).strip()
+
 
 def generar_tags_seo(tema_obj, estado_mx):
     """
-    Tags en 5 niveles estratégicos (vidiq / TubeBuddy style).
-    Sanitización estricta + conteo en bytes UTF-8 para respetar
-    el límite real de 500 bytes de YouTube (los acentos son 2 bytes).
-
-    T1 — 1 palabra, máximo volumen global
-    T2 — 2-3 palabras, alto volumen
-    T3 — Específicos del tema (keywords + hashtags limpios)
-    T4 — Long-tail de alta intención (≤ 40 chars cada uno)
-    T5 — Plataforma
+    Tags SEO en ASCII puro — máx 15 tags, máx 30 chars por tag,
+    máx 400 chars totales. YouTube API rechaza cualquier char Unicode
+    fuera del rango ASCII básico aunque el Studio los acepte.
     """
-    nombre_tema = tema_obj["tema"].replace("_", " ")
+    nombre_tema = _ascii_tag(tema_obj["tema"].replace("_", " "))
+    estado_ascii = _ascii_tag(estado_mx)
 
-    t1 = [
-        "terror", "miedo", "horror", "paranormal",
-        "misterio", "suspenso", "escalofriante",
-    ]
+    t1 = ["terror", "miedo", "horror", "paranormal", "misterio"]
+
     t2 = [
-        "historias de terror", "relatos de terror", "terror mexicano",
-        "terror latino", "relato paranormal", "fenomenos paranormales",
-        "terror corto", "historias de miedo", "audio terror",
+        "historias de terror", "relatos de terror",
+        "terror mexicano", "terror latino",
+        "fenomenos paranormales", "historias de miedo",
     ]
-    # T3 — keywords y hashtags propios del tema (sin # ni chars raros)
+
+    # T3 — keywords y hashtags del tema convertidos a ASCII
     t3  = [k for k in tema_obj["keywords"]]
     t3 += [h.lstrip("#") for h in tema_obj["hashtags"]]
 
     t4 = [
         f"terror {nombre_tema}",
-        f"historias de {nombre_tema}",
-        f"terror en {estado_mx}",
-        f"misterio en {estado_mx}",
+        f"terror en {estado_ascii}",
         f"{nombre_tema} paranormal",
         "para no dormir",
         "miedo real",
-        "lo inexplicable",
-        "experiencia paranormal",
-        "terror nocturno",
     ]
-    t5 = ["shorts", "youtube shorts"]
 
-    # Sanitizar y deduplicar
-    todos = []
-    vistos = set()
+    t5 = ["shorts"]
+
+    # Sanitizar, deduplicar y filtrar
+    todos, vistos = [], set()
     for raw in t1 + t2 + t3 + t4 + t5:
-        tag = _sanitizar_tag(raw)
-        if tag and tag not in vistos:
-            vistos.add(tag)
-            todos.append(tag)
-
-    # Respetar límite de YouTube: conteo en bytes UTF-8, margen conservador
-    resultado, total_bytes = [], 0
-    for tag in todos:
-        if len(tag) < 2 or len(tag) > 40:     # límite seguro por tag
+        tag = _ascii_tag(raw)
+        if not tag or len(tag) < 2 or len(tag) > 30 or tag in vistos:
             continue
-        costo = len(tag.encode("utf-8")) + 1   # +1 por separador
-        if total_bytes + costo > 490:           # margen de 10 bytes
+        vistos.add(tag)
+        todos.append(tag)
+
+    # Máx 15 tags, máx 400 chars totales (límite conservador)
+    resultado, total_chars = [], 0
+    for tag in todos:
+        costo = len(tag) + 1        # ASCII: 1 char = 1 byte, +1 por separador
+        if total_chars + costo > 400 or len(resultado) >= 15:
             break
         resultado.append(tag)
-        total_bytes += costo
+        total_chars += costo
 
     return resultado
 
