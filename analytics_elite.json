@@ -199,6 +199,23 @@
       "score_titulo": 78,
       "voz": "es-MX-ManuelNeural",
       "voz_estilo": "conversacional"
+    },
+    {
+      "video_id": "EGBitpIWhYs",
+      "titulo": "NUNCA: El el ático de Oaxaca donde pasan cosas 🌀 #Poltergeist #CasaEmbrujada #Terror #Misterio",
+      "tema": "poltergeist",
+      "estado": "Oaxaca",
+      "fecha": "2026-10-31T15:16:01.502623-06:00",
+      "prediccion": {
+        "vistas_predichas": 547200,
+        "ctr_predicho": 6.84,
+        "retencion_predicha": 77.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "RABIA DOMÉSTICA",
+      "score_titulo": 76,
+      "voz": "es-AR-ElenaNeural",
+      "voz_estilo": "femenino_misterio"
     }
   ],
   "mejores_horarios": {},
