@@ -1524,10 +1524,14 @@ def generar_tags_seo(tema_obj, estado_mx):
     t3  = [k for k in tema_obj["keywords"]]
     t3 += [h.lstrip("#") for h in tema_obj["hashtags"]]
 
+    # T4 — Long-tail (4-6 palabras): baja competencia, alta intención
     t4 = [
-        f"terror {nombre_tema}",
-        f"terror en {estado_ascii}",
+        f"historias de terror {nombre_tema}",   # ancla título + tema
+        f"relatos de terror {nombre_tema}",
+        f"terror en {estado_ascii}",             # geolocalizado
+        f"relatos paranormales {nombre_tema}",
         f"{nombre_tema} paranormal",
+        "historias de terror cortas",
         "para no dormir",
         "miedo real",
     ]
@@ -1538,16 +1542,17 @@ def generar_tags_seo(tema_obj, estado_mx):
     todos, vistos = [], set()
     for raw in t1 + t2 + t3 + t4 + t5:
         tag = _ascii_tag(raw)
-        if not tag or len(tag) < 2 or len(tag) > 30 or tag in vistos:
+        # ASCII puro: 40 chars por tag es seguro
+        if not tag or len(tag) < 2 or len(tag) > 40 or tag in vistos:
             continue
         vistos.add(tag)
         todos.append(tag)
 
-    # Máx 15 tags, máx 400 chars totales (límite conservador)
+    # Máx 18 tags, máx 450 chars totales
     resultado, total_chars = [], 0
     for tag in todos:
-        costo = len(tag) + 1        # ASCII: 1 char = 1 byte, +1 por separador
-        if total_chars + costo > 400 or len(resultado) >= 15:
+        costo = len(tag) + 1
+        if total_chars + costo > 450 or len(resultado) >= 18:
             break
         resultado.append(tag)
         total_chars += costo
