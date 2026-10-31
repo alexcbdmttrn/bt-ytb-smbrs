@@ -182,6 +182,23 @@
       "score_titulo": 66,
       "voz": "es-MX-JorgeNeural",
       "voz_estilo": "narrativo"
+    },
+    {
+      "video_id": "aAHkiigKetg",
+      "titulo": "SOLO: ¿Qué hay en el mausoleo a esta hora? ⚰️ #Cementerio #TerrorNocturno #Terror #Misterio",
+      "tema": "cementerio",
+      "estado": "Sinaloa",
+      "fecha": "2026-10-31T10:46:03.838234-06:00",
+      "prediccion": {
+        "vistas_predichas": 580320,
+        "ctr_predicho": 7.25,
+        "retencion_predicha": 77.8,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "TUMBA ABIERTA",
+      "score_titulo": 78,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional"
     }
   ],
   "mejores_horarios": {},
