@@ -487,9 +487,13 @@ FORMULAS_NARRATIVAS = [
     "Lo que {pasado} en {lugar} no me dejó dormir",
     "La noche que {pasado} en {lugar}",
     "Después de lo que {pasado} en {lugar}, nada fue igual",
-    "Lo que pasó cuando {pasado} en {lugar}",
     "Nadie sabe lo que {pasado} en {lugar}",
+    "Desde que {pasado} en {lugar} no soy el mismo",
 ]
+
+# Verbos que NO funcionan en fórmulas narrativas — se usan solo en neutras
+_VERBOS_NO_NARRATIVOS = {"encontré", "compré", "heredé", "guardé", "usé", "quemé",
+                          "escondí", "firmé", "acepté", "rompí", "pagué", "recibí"}
 
 FORMULAS_NEUTRAS = [
     "Cuidado con {lugar}",
@@ -601,10 +605,9 @@ def generar_titulo_variado(tema, estado_mx):
     pasado = random.choice(tema["acciones"])
     lugar  = random.choice(tema["lugares_t"])
 
-    if random.random() < 0.45:
-        formula = random.choice(FORMULAS_NARRATIVAS)
-    else:
-        formula = random.choice(FORMULAS_NEUTRAS)
+    # Si el verbo no encaja en narrativas, forzar fórmula neutra
+    usar_narrativa = random.random() < 0.45 and pasado not in _VERBOS_NO_NARRATIVOS
+    formula = random.choice(FORMULAS_NARRATIVAS) if usar_narrativa else random.choice(FORMULAS_NEUTRAS)
 
     try:
         titulo = formula.format(
@@ -622,10 +625,10 @@ def generar_titulo_variado(tema, estado_mx):
         if not titulo.upper().startswith(impacto):
             titulo = f"{impacto}: {titulo}"
 
-    # Emoji + hashtags
-    hashtags = [f"#{tema['tema'].replace('_','').capitalize()}"]
-    hashtags.extend(tema["hashtags"][:1])
-    hashtags.extend(["#Terror", "#Misterio"])
+    # Emoji + hashtags (deduplicados)
+    hashtag_base   = f"#{tema['tema'].replace('_','').capitalize()}"
+    hashtags_extra = [h for h in tema["hashtags"] if h != hashtag_base][:2]
+    hashtags = list(dict.fromkeys([hashtag_base] + hashtags_extra + ["#Terror", "#Misterio"]))
     titulo_final = f"{titulo} {tema['emoji']} {' '.join(hashtags)}"
 
     if len(titulo_final) > 100:
@@ -1485,35 +1488,57 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
 # SEO — TAGS Y DESCRIPCIÓN
 # ================================================================
 def generar_tags_seo(tema_obj, estado_mx):
-    """Genera hasta 20 tags optimizados para YouTube SEO."""
+    """
+    Tags en 5 niveles estratégicos (vidiq/TubeBuddy style).
+    Orden de prioridad respetando el límite de 500 chars de YouTube.
+
+    T1 — 1 palabra, máximo volumen global
+    T2 — 2-3 palabras, alto volumen
+    T3 — Específicos del tema (keywords + hashtags limpios)
+    T4 — Long-tail (4-6 palabras, alta intención de búsqueda)
+    T5 — Plataforma
+    """
     nombre_tema = tema_obj["tema"].replace("_", " ")
 
-    tags_generales = [
-        "terror", "misterio", "miedo", "horror", "paranormal",
+    t1 = [
+        "terror", "miedo", "horror", "paranormal",
+        "misterio", "suspenso", "escalofriante",
+    ]
+    t2 = [
         "historias de terror", "relatos de terror", "terror mexicano",
-        "horror shorts", "historias reales", "fenomenos paranormales",
-        "terror para no dormir", "miedo real", "lo inexplicable",
+        "terror latino", "relato paranormal", "fenomenos paranormales",
+        "terror corto", "historias de miedo", "audio terror",
     ]
-    tags_tema = [t.lstrip("#").lower() for t in tema_obj["hashtags"]]
-    tags_tema += [k.lower() for k in tema_obj["keywords"]]
-    tags_estado = [
-        estado_mx.lower(),
-        f"terror {estado_mx.lower()}",
-        f"misterio {estado_mx.lower()}",
-    ]
-    tags_longtail = [
-        f"historia de {nombre_tema}",
-        f"relato de {nombre_tema}",
-        f"terror {nombre_tema}",
-        "experiencia paranormal",
-        "escalofriante",
-    ]
+    # T3 — keywords y hashtags propios del tema (sin # y en minúsculas)
+    t3  = [k.lower() for k in tema_obj["keywords"]]
+    t3 += [h.lstrip("#").lower() for h in tema_obj["hashtags"]]
 
-    todos = list(dict.fromkeys(
-        tags_generales + tags_tema + tags_estado + tags_longtail
-    ))
+    t4 = [
+        f"relatos de terror {nombre_tema}",
+        f"historias de {nombre_tema}",
+        f"terror en {estado_mx.lower()}",
+        f"misterio en {estado_mx.lower()}",
+        f"{nombre_tema} paranormal",
+        "para no dormir",
+        "miedo real",
+        "lo inexplicable",
+        "experiencia paranormal real",
+        "terror que no te deja dormir",
+    ]
+    t5 = ["shorts", "youtube shorts"]
+
+    todos = list(dict.fromkeys(t1 + t2 + t3 + t4 + t5))
     todos = [t for t in todos if t and len(t) > 2]
-    return todos[:20]
+
+    # Respetar límite de 500 chars de YouTube (suma de len(tag)+1 por separador)
+    resultado, chars = [], 0
+    for tag in todos:
+        costo = len(tag) + 1
+        if chars + costo > 499:
+            break
+        resultado.append(tag)
+        chars += costo
+    return resultado
 
 
 def generar_descripcion_seo(gancho, contexto_desc, tema_obj, estado_mx,
