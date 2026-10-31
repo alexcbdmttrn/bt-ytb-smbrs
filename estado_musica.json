@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Ash and Marrow.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "Ash and Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-10-30",
+  "ultima_publicacion_exitosa": "2026-10-31",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-10-30T13:21:32.880671-06:00",
+  "ultima_publicacion": "2026-10-31T11:14:15.887445-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -226,14 +226,20 @@
       "titulo": "Encontré al payaso del parque y me hizo una petición PELIGROSA",
       "tema": "payaso_maldito",
       "fecha": "2026-10-30T13:21:32.880671-06:00"
+    },
+    {
+      "id": "SOzRRoT08gY",
+      "titulo": "No estoy solo en mi departamento: alguien mueve mis cosas",
+      "tema": "fantasmas",
+      "fecha": "2026-10-31T11:14:15.887445-06:00"
     }
   ],
   "temas_recientes": [
-    "velador",
     "deep_web",
     "creepypasta",
     "hospital",
     "llamada_misteriosa",
-    "payaso_maldito"
+    "payaso_maldito",
+    "fantasmas"
   ]
 }
