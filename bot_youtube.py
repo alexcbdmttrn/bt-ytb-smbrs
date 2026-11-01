@@ -19,6 +19,7 @@ import re
 import sys
 import time
 import traceback
+import unicodedata
 import ssl
 import socket
 from datetime import datetime, timedelta, timezone
@@ -1190,48 +1191,80 @@ def crear_miniatura(img_path, texto, salida):
 # =================================================================
 # SEO  ← FIX 1 y FIX 2 aquí
 # =================================================================
+def _ascii_tag_yt(t):
+    """
+    Convierte texto a ASCII puro para YouTube Data API.
+    Elimina acentos (á→a, é→e, ñ→n...) y chars especiales.
+    YouTube API rechaza tags con Unicode no-ASCII aunque Studio los acepte.
+    """
+    nfd = unicodedata.normalize('NFD', str(t))
+    sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+    limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower())
+    return re.sub(r'\s+', ' ', limpio).strip()
+
+
 def construir_tags(plan, tema, sugerencias, estado_mx=""):
     """
-    FIX 1 v6.1:
-    - Eliminado "historia real" del filtro (es un tag válido y de alto volumen).
-    - Añadido parámetro estado_mx para incluir tags long-tail de estado.
-    - Tags de estado van al principio para que aterricen antes del límite de 480 chars.
+    Tags SEO en 4 capas — ASCII puro para evitar invalidTags del API.
+    T1: 1 palabra, alto volumen
+    T2: 2-3 palabras, alto volumen
+    T3: Long-tail tema + estado (baja competencia, alta intención)
+    T4: Sugerencias de YouTube + plan IA
+    Máx 18 tags, máx 40 chars por tag, máx 450 chars totales.
     """
-    estado_lower = estado_mx.lower() if estado_mx else ""
+    nombre_tema  = _ascii_tag_yt(tema["tema"].replace("_", " "))
+    estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
 
-    # Tags de estado — long-tail geolocalizado, alta intención de búsqueda
-    tags_estado = []
-    if estado_lower:
-        tags_estado = [
-            f"terror {estado_lower}",
-            f"leyendas {estado_lower}",
-            f"misterio {estado_lower}",
-        ]
+    t1 = ["terror", "miedo", "horror", "paranormal", "misterio"]
 
-    base = [
-        "terror", "miedo", "paranormal", "horror",
-        "relato de terror", "relatos de terror", "historias de terror",
-        "historia real", "terror mexicano", "relatos paranormales",
-        "sombras de medianoche", "narrativa de terror", "audio relatos",
-        "relatos narrados", "creepypasta", "leyendas urbanas",
+    t2 = [
+        "historias de terror", "relatos de terror", "terror mexicano",
+        "terror latino", "fenomenos paranormales", "historias de miedo",
+        "historia real", "relatos paranormales", "audio relatos de terror",
     ]
 
+    t3 = []
+    if nombre_tema:
+        t3 += [
+            f"historias de terror {nombre_tema}",
+            f"relatos de terror {nombre_tema}",
+            f"terror {nombre_tema}",
+        ]
+    if estado_ascii:
+        t3 += [
+            f"terror en {estado_ascii}",
+            f"leyendas {estado_ascii}",
+        ]
+    t3 += ["para no dormir", "miedo real", "historias de terror cortas"]
+
+    # T4: keywords del tema + sugerencias YouTube + tags del plan IA
     extra = plan.get("tags", [])
     if isinstance(extra, str):
         extra = [x.strip() for x in extra.split(",")]
+    t4 = list(tema["keywords"]) + list(extra) + list(sugerencias)
 
-    finales, total = [], 0
-    for t in tema["keywords"] + list(extra) + sugerencias + tags_estado + base:
-        t     = re.sub(r"[<>]", " ", str(t)).strip().lower()
-        # FIX: solo filtramos los realmente problemáticos; "historia real" ya no se filtra
-        if any(x in t for x in ("100% real", "veridico", "verídico", "testimonio real",
-                                 "caso real", "hechos reales")):
+    # Sanitizar, deduplicar, filtrar
+    todos, vistos = [], set()
+    # Orden de prioridad: t1 > t2 > t3 > t4
+    for raw in t1 + t2 + t3 + t4:
+        tag = _ascii_tag_yt(raw)
+        if not tag or len(tag) < 2 or len(tag) > 40 or tag in vistos:
             continue
-        costo = len(t) + 1 + (2 if " " in t else 0)
-        if 2 <= len(t) <= 40 and t not in finales and total + costo <= 480:
-            finales.append(t)
-            total += costo
-    return finales
+        # Excluir solo los realmente problemáticos
+        if any(x in tag for x in ("100 real", "veridico", "testimonio real", "caso real")):
+            continue
+        vistos.add(tag)
+        todos.append(tag)
+
+    # Aplicar límites finales
+    resultado, total_chars = [], 0
+    for tag in todos:
+        costo = len(tag) + 1
+        if total_chars + costo > 450 or len(resultado) >= 18:
+            break
+        resultado.append(tag)
+        total_chars += costo
+    return resultado
 
 def construir_hashtags(tema):
     hs = ["#RelatosDeTerror", "#Terror", "#Paranormal"] + tema.get("hashtags", [])[:2] + ["#Mexico"]
