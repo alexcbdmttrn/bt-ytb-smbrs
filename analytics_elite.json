@@ -233,6 +233,23 @@
       "score_titulo": 66,
       "voz": "es-AR-ElenaNeural",
       "voz_estilo": "femenino_misterio"
+    },
+    {
+      "video_id": "tnOxioydNyk",
+      "titulo": "Cuidado con la encrucijada 📜 #Pactodemonio #Pacto #TerrorOculto #Terror #Misterio",
+      "tema": "pacto_demonio",
+      "estado": "Quintana Roo",
+      "fecha": "2026-11-01T15:52:53.860338-06:00",
+      "prediccion": {
+        "vistas_predichas": 501600,
+        "ctr_predicho": 6.27,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "PACTO INFERNAL",
+      "score_titulo": 66,
+      "voz": "es-CL-LorenzoNeural",
+      "voz_estilo": "suspenso"
     }
   ],
   "mejores_horarios": {},
