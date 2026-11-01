@@ -216,6 +216,23 @@
       "score_titulo": 76,
       "voz": "es-AR-ElenaNeural",
       "voz_estilo": "femenino_misterio"
+    },
+    {
+      "video_id": "GPnKhx_M41A",
+      "titulo": "'No me esperen': lo que dijo antes de ir a la habitación 🕯️ #Posesion #Posesión #Exorcismo #Terro...",
+      "tema": "posesion",
+      "estado": "Aguascalientes",
+      "fecha": "2026-11-01T01:17:19.762239-06:00",
+      "prediccion": {
+        "vistas_predichas": 506880,
+        "ctr_predicho": 6.34,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "POSESIÓN FAMILIAR",
+      "score_titulo": 66,
+      "voz": "es-AR-ElenaNeural",
+      "voz_estilo": "femenino_misterio"
     }
   ],
   "mejores_horarios": {},
