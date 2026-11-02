@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Cold Hollow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-01",
+  "ultima_publicacion_exitosa": "2026-11-02",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-01T10:55:19.071796-06:00",
+  "ultima_publicacion": "2026-11-02T14:15:21.660720-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -238,14 +238,20 @@
       "titulo": "El vendedor me advirtió: nunca lo dejes solo después de medianoche",
       "tema": "objeto_maldito",
       "fecha": "2026-11-01T10:55:19.071796-06:00"
+    },
+    {
+      "id": "rWebSr2In9o",
+      "titulo": "No debí detenerme en ese camino rural de Hidalgo",
+      "tema": "encuentro_cercano",
+      "fecha": "2026-11-02T14:15:21.660720-06:00"
     }
   ],
   "temas_recientes": [
-    "creepypasta",
     "hospital",
     "llamada_misteriosa",
     "payaso_maldito",
     "fantasmas",
-    "objeto_maldito"
+    "objeto_maldito",
+    "encuentro_cercano"
   ]
 }
