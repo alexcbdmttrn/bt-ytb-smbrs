@@ -250,6 +250,23 @@
       "score_titulo": 66,
       "voz": "es-CL-LorenzoNeural",
       "voz_estilo": "suspenso"
+    },
+    {
+      "video_id": "IzRtHHJVfcA",
+      "titulo": "Desde que entré en el pueblo minero no soy el mismo ⛏️ #Mina #MinaAbandonada #Fantasmas #Terror #...",
+      "tema": "mina",
+      "estado": "Sonora",
+      "fecha": "2026-11-02T01:30:35.541429-06:00",
+      "prediccion": {
+        "vistas_predichas": 453600,
+        "ctr_predicho": 5.67,
+        "retencion_predicha": 76.3,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "MINA MALDITA",
+      "score_titulo": 63,
+      "voz": "es-ES-AlvaroNeural",
+      "voz_estilo": "dramatico"
     }
   ],
   "mejores_horarios": {},
