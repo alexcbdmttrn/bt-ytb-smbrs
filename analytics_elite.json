@@ -284,6 +284,23 @@
       "score_titulo": 66,
       "voz": "es-MX-ManuelNeural",
       "voz_estilo": "conversacional"
+    },
+    {
+      "video_id": "w6HkehGEYmA",
+      "titulo": "El velador me advirtió sobre la hacienda 🏛️ #Hacienda #HaciendaEmbrujada #Fantasmas #Terror #Mist...",
+      "tema": "hacienda",
+      "estado": "Baja California Sur",
+      "fecha": "2026-11-03T01:46:49.806703-06:00",
+      "prediccion": {
+        "vistas_predichas": 464640,
+        "ctr_predicho": 5.81,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "HERENCIA MALDITA",
+      "score_titulo": 66,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional"
     }
   ],
   "mejores_horarios": {},
