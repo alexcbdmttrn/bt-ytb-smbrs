@@ -267,6 +267,23 @@
       "score_titulo": 63,
       "voz": "es-ES-AlvaroNeural",
       "voz_estilo": "dramatico"
+    },
+    {
+      "video_id": "vQsLPBUxYLY",
+      "titulo": "El camino a la iglesia guarda un secreto 💧 #Llorona #LaLlorona #LeyendasMexicanas #Terror #Misterio",
+      "tema": "llorona",
+      "estado": "Hidalgo",
+      "fecha": "2026-11-02T18:48:17.738433-06:00",
+      "prediccion": {
+        "vistas_predichas": 673199,
+        "ctr_predicho": 6.73,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "LLANTO RÍO",
+      "score_titulo": 66,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional"
     }
   ],
   "mejores_horarios": {},
