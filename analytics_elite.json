@@ -301,6 +301,23 @@
       "score_titulo": 66,
       "voz": "es-MX-ManuelNeural",
       "voz_estilo": "conversacional"
+    },
+    {
+      "video_id": "8CKQZUsQI34",
+      "titulo": "Lo que hay debajo de la sierra 🌲 #Bosquemaldito #BosqueMaldito #Criaturas #Terror #Misterio",
+      "tema": "bosque_maldito",
+      "estado": "Guanajuato",
+      "fecha": "2026-11-03T17:03:36.734380-06:00",
+      "prediccion": {
+        "vistas_predichas": 480480,
+        "ctr_predicho": 6.01,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "BOSQUE MALDITO",
+      "score_titulo": 66,
+      "voz": "es-CL-LorenzoNeural",
+      "voz_estilo": "suspenso"
     }
   ],
   "mejores_horarios": {},
