@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-02",
+  "ultima_publicacion_exitosa": "2026-11-03",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-02T14:15:21.660720-06:00",
+  "ultima_publicacion": "2026-11-03T13:34:12.287584-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -244,14 +244,20 @@
       "titulo": "No debí detenerme en ese camino rural de Hidalgo",
       "tema": "encuentro_cercano",
       "fecha": "2026-11-02T14:15:21.660720-06:00"
+    },
+    {
+      "id": "g7Du10UvUMg",
+      "titulo": "No vuelvas a esa casa de Querétaro, me advirtieron",
+      "tema": "poltergeist",
+      "fecha": "2026-11-03T13:34:12.287584-06:00"
     }
   ],
   "temas_recientes": [
-    "hospital",
     "llamada_misteriosa",
     "payaso_maldito",
     "fantasmas",
     "objeto_maldito",
-    "encuentro_cercano"
+    "encuentro_cercano",
+    "poltergeist"
   ]
 }
