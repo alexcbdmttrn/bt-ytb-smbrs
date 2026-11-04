@@ -335,6 +335,23 @@
       "score_titulo": 66,
       "voz": "es-MX-JorgeNeural",
       "voz_estilo": "narrativo"
+    },
+    {
+      "video_id": "idK9H_02IDQ",
+      "titulo": "PELIGRO: Lo que corté en las ruinas mayas no me dejó dormir 🗿 #Aluxes #LeyendasMayas #Terror #Mis...",
+      "tema": "aluxes",
+      "estado": "Sinaloa",
+      "fecha": "2026-11-04T17:28:08.276326-06:00",
+      "prediccion": {
+        "vistas_predichas": 559360,
+        "ctr_predicho": 6.99,
+        "retencion_predicha": 77.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "ALMA MALA",
+      "score_titulo": 76,
+      "voz": "es-ES-AlvaroNeural",
+      "voz_estilo": "dramatico"
     }
   ],
   "mejores_horarios": {},
