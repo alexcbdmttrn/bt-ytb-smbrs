@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v6.1 (SEO mejorado)
-v6.1 - 3 fixes SEO sobre v6.0:
-  1. construir_tags: quita filtro "historia real" (tag válido), añade estado_mx param
-     con tags de estado long-tail (terror jalisco, leyendas veracruz, etc.)
-  2. construir_descripcion: hashtags SIEMPRE al final absoluto (YT muestra los
-     primeros 3 encima del título — no enterrarlos en medio del disclosure)
-  3. main(): pasa estado_mx a construir_tags
-v6.0 - Overhaul de temas y variedad (38 temas paranormales)
-v5.3 - Fix validación de token (tolerante a youtube.upload sin readonly)
+SOMBRAS DE MEDIANOCHE - Bot v6.2
+v6.2 - Variedad narrativa anti-plantilla (evitar penalización YouTube):
+  - 5 formatos de narración rotativos: primera persona, confesión, carta/mensaje,
+    diario, testigo indirecto
+  - 15 perfiles de narrador distintos: velador, camionero, médico, turista, etc.
+  - Prompt de historia actualizado con formato + perfil por run
+  - Ayuda a que cada video suene y se estructure distinto (YouTube prioriza
+    contenido original vs. plantilla repetida)
+v6.1 - 3 fixes SEO: tags ASCII puro (fix invalidTags API), hashtags al final,
+       estado_mx en tags long-tail
+v6.0 - 38 temas paranormales, sin temas tecnológicos
+v5.3 - Validación tolerante de token YouTube
 """
 import asyncio
 import bisect
@@ -652,15 +655,32 @@ ESQUEMA_PLAN = """{
  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
-def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos):
+def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos,
+                 formato_narracion=None, perfil_narrador=None):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug  = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
+
+    # Defaults si no se pasan
+    if formato_narracion is None:
+        formato_narracion = FORMATOS_NARRACION[0]
+    if perfil_narrador is None:
+        perfil_narrador = "persona común del pueblo"
+
     prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato de terror narrado en primera persona, presentado como un relato
-compartido por un oyente de la comunidad y mejorado con IA para mayor inmersión
-(~8-12 minutos, {NUM_CAPITULOS} capítulos).
+Diseña el PLAN de un relato de terror (~8-12 minutos, {NUM_CAPITULOS} capítulos).
+
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR: {contexto}, en {estado_mx}, México
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMATO NARRATIVO OBLIGATORIO: {formato_narracion['nombre'].upper()}
+{formato_narracion['instruccion']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERFIL DEL NARRADOR: {perfil_narrador}
+El protagonista NO es genérico. Es específicamente: {perfil_narrador}.
+Su ocupación define cómo percibe el terror y qué detalles sensoriales nota.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 BÚSQUEDAS REALES EN YOUTUBE:
 {sug}
 TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
@@ -668,14 +688,20 @@ TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
 
 REGLAS DE TÍTULO (CLAVE PARA CTR):
 1. NUNCA termines el título con "| Relato de Terror".
-2. Cada uno de los 6 títulos DEBE usar una estructura DISTINTA.
-3. ⚠️ NO fijes una hora concreta como 3:33 AM, 3:00 AM, 4:44 AM. Ese patrón está sobre-explotado.
+2. Cada uno de los 6 títulos DEBE usar una estructura DISTINTA. Alterna:
+   - Advertencia: "Nunca [verbo] en [lugar]"
+   - Confesión: "Lo que [verbo] en [lugar] no me dejó dormir"
+   - Testimonio: "La noche que [algo] en [lugar]"
+   - Pregunta: "¿Por qué [algo] en [lugar]?"
+   - Descubrimiento: "Encontré [algo] en [lugar]"
+   - Ubicación: "El [lugar] de [estado] donde [algo] pasa"
+3. ⚠️ NO fijes hora concreta: 3:33 AM, 3:00 AM, 4:44 AM. Patrón sobre-explotado.
 4. Usa mayúsculas solo para 1-2 palabras de impacto.
 5. NO empieces los 6 títulos igual.
-6. Evita errores ortográficos.
+6. Los títulos deben reflejar el PERFIL del narrador cuando sume al CTR.
 
 REGLAS DE CONTENIDO:
-1. Prioriza escenarios cotidianos y relacionables.
+1. Prioriza escenarios cotidianos y relacionables al perfil del narrador.
 2. El disclosure va en la descripción, NO en la narración.
 3. El gancho debe ser lo más perturbador del relato.
 4. Cada capítulo termina en cliffhanger, excepto el último.
@@ -699,9 +725,15 @@ def limpiar_texto_narracion(t):
     return re.sub(r"\s+", " ", t).strip()
 
 def generar_capitulos(plan, tema, contexto, estado_mx):
-    caps   = plan["capitulos"][:NUM_CAPITULOS]
-    indice = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
-    textos = []
+    caps    = plan["capitulos"][:NUM_CAPITULOS]
+    indice  = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
+    textos  = []
+
+    # Recuperar formato y perfil guardados en el plan
+    formato_instruccion = plan.get("_formato_instruccion", "Relato en primera persona directa.")
+    perfil_narrador     = plan.get("_perfil_narrador", "persona común")
+    nombre_formato      = plan.get("_nombre_formato", "primera_persona")
+
     for i, cap in enumerate(caps):
         previo = textos[-1][-700:] if textos else ""
         if i == 0:
@@ -710,17 +742,36 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
             extra = "Cierra con un final abierto e inquietante que deje una duda, sin explicar todo."
         else:
             extra = "Termina con un cliffhanger."
-        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror en primera persona.
-Narrador: {plan.get('protagonista','Marco')}. Año: {plan.get('anio_suceso','2015')}. Lugar: {contexto}, {estado_mx}, México.
-Ángulo: {tema['angulo']}
-Sinopsis: {plan.get('resumen','')}
+
+        # Instrucción de formato específica para diario (cada capítulo = entrada)
+        if nombre_formato == "diario":
+            formato_cap = f"Este capítulo es una o varias ENTRADAS DE DIARIO. Incluye una 'fecha' o 'día' al inicio de cada entrada (ej: 'Día {i*3+1}'). Termina la última entrada a mitad de frase si es el cliffhanger."
+        else:
+            formato_cap = f"Mantén el formato {nombre_formato} establecido en el capítulo anterior."
+
+        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMATO NARRATIVO: {nombre_formato.upper()}
+{formato_instruccion}
+{formato_cap}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}
+AÑO: {plan.get('anio_suceso', '2015')} | LUGAR: {contexto}, {estado_mx}, México
+ÁNGULO: {tema['angulo']}
+SINOPSIS: {plan.get('resumen', '')}
 ÍNDICE: {indice}
-ESTE CAPÍTULO: {cap.get('titulo','')} -> {cap.get('resumen','')}
+ESTE CAPÍTULO: {cap.get('titulo', '')} → {cap.get('resumen', '')}
 {extra}
-{('FINAL DEL CAPÍTULO ANTERIOR: ' + previo) if previo else ''}
-REGLAS: 250-350 palabras. Español mexicano coloquial. Sin listas, emojis, títulos ni acotaciones.
-⚠️ Si mencionas hora, VARÍALA: no uses "3:33 AM".
-Devuelve SOLO el texto."""
+{('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
+
+REGLAS:
+- 250-350 palabras exactas
+- Español mexicano coloquial, detalles sensoriales del trabajo/oficio del narrador
+- Sin listas, emojis, títulos de sección ni acotaciones entre corchetes
+- ⚠️ Si mencionas hora VARÍALA — jamás "3:33 AM"
+- El narrador percibe el terror desde su oficio: un velador nota las cámaras,
+  un médico nota síntomas, un camionero nota el odómetro, etc.
+Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
             t = llm(prompt, temperature=0.85, max_tokens=800)
@@ -747,6 +798,76 @@ def expandir_texto(titulo, texto_actual):
 OUTROS = [
     "Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame en los comentarios: ¿tú qué habrías hecho?",
     "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete para no perderte la próxima. ¿Tú habrías entrado? Te leo en los comentarios.",
+]
+
+# =================================================================
+# VARIEDAD NARRATIVA — evitar penalización YouTube por "plantilla"
+# YouTube prioriza contenido que aporta perspectiva propia vs. mismo
+# molde repetido. Rotamos formato y perfil por cada video.
+# =================================================================
+FORMATOS_NARRACION = [
+    {
+        "nombre": "primera_persona",
+        "instruccion": (
+            "Relato en PRIMERA PERSONA directa. El narrador vivió los hechos. "
+            "Tiempo pasado. Comienza en medio de la acción, sin presentación. "
+            "Ejemplo de apertura: 'Esa noche yo estaba solo cuando escuché...'"
+        ),
+    },
+    {
+        "nombre": "confesion",
+        "instruccion": (
+            "Formato CONFESIÓN. El narrador revela algo que cargó en silencio por años. "
+            "Tono urgente, como si necesitara soltar un secreto. "
+            "Apertura posible: 'Nunca debí contarle esto a nadie, pero ya no puedo más.' "
+            "Genera culpa y tensión desde la primera línea."
+        ),
+    },
+    {
+        "nombre": "carta_mensaje",
+        "instruccion": (
+            "Formato CARTA o MENSAJE DE VOZ. El narrador escribe o graba para alguien "
+            "específico: un familiar, un amigo, 'quien encuentre esto'. "
+            "Apertura posible: 'Te escribo esto porque nadie me creyó cuando lo conté.' "
+            "El destinatario nunca responde; el miedo crece sin testigos."
+        ),
+    },
+    {
+        "nombre": "diario",
+        "instruccion": (
+            "Formato DIARIO o BITÁCORA. Entradas cortas con días o fechas ('Día 1', "
+            "'Semana 2', 'Martes por la noche'). La tensión sube entrada a entrada. "
+            "La última entrada es la más perturbadora y queda sin resolución. "
+            "No todos los días tienen algo; el silencio entre entradas también da miedo."
+        ),
+    },
+    {
+        "nombre": "testigo",
+        "instruccion": (
+            "El narrador cuenta lo que le pasó a ALGUIEN CERCANO que ya no está "
+            "(familiar, vecino, amigo). 'Mi tío me lo contó la última vez que lo vi.' "
+            "Da distancia al terror pero lo hace más creíble. El narrador no sabe todo "
+            "y esa incertidumbre es parte del horror."
+        ),
+    },
+]
+
+PERFILES_NARRADOR = [
+    "velador de una fábrica o bodega abandonada",
+    "conductor de camión de carga en carretera nocturna",
+    "médico o enfermero de guardia nocturna en hospital viejo",
+    "ama de casa que heredó una propiedad de un familiar",
+    "turista que visitó un pueblo del interior",
+    "jornalero o trabajador del campo en temporada de cosecha",
+    "estudiante que rentó un cuarto en casa de familia",
+    "taxista o chofer nocturno en ciudad pequeña",
+    "mecánico que trabajó en un taller viejo heredado",
+    "maestro rural asignado a un pueblo aislado",
+    "obrero de construcción en edificio o casa antigua",
+    "fotógrafo aficionado de lugares abandonados",
+    "cuidador de un adulto mayor en casa grande",
+    "comerciante de un tianguis o mercado antiguo",
+    "bombero voluntario de un pueblo pequeño",
 ]
 
 # =================================================================
@@ -1527,15 +1648,21 @@ def main():
         sys.exit(0)
 
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.1")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.2")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
-    print(f"📚 Temas disponibles: {len(TEMAS)}")
+    print(f"📚 Temas: {len(TEMAS)} | Formatos: {len(FORMATOS_NARRACION)} | Perfiles: {len(PERFILES_NARRADOR)}")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
     tema       = elegir_tema(estado, youtube)
     contexto   = random.choice(tema["contextos"])
     estado_mx  = random.choice(ESTADOS_MEXICO)
+
+    # Seleccionar formato y perfil aleatorios para este video
+    formato    = random.choice(FORMATOS_NARRACION)
+    perfil     = random.choice(PERFILES_NARRADOR)
+    print(f"🎭 Formato: {formato['nombre']} | Narrador: {perfil}")
+
     sugerencias = list(dict.fromkeys(
         sugerencias_youtube(tema["seed"]) +
         sugerencias_youtube("relato de terror " + tema["keywords"][0])
@@ -1547,12 +1674,17 @@ def main():
     plan = titulo = None
     for intento in range(4):
         try:
-            plan = generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos)
+            plan = generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos,
+                                formato_narracion=formato, perfil_narrador=perfil)
             if plan.get("palabras_clave") and tema_ya_usado(" ".join(map(str, plan["palabras_clave"]))):
                 raise ValueError("tema repetido")
             titulo = elegir_titulo(plan["titulos"])
             if not titulo:
                 raise ValueError("sin título válido")
+            # Guardar formato y perfil en el plan para que generar_capitulos los use
+            plan["_formato_instruccion"] = formato["instruccion"]
+            plan["_perfil_narrador"]     = perfil
+            plan["_nombre_formato"]      = formato["nombre"]
             break
         except Exception as e:
             print(f"⚠️ Plan intento {intento+1}/4: {e}")
