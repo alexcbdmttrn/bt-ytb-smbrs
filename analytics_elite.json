@@ -318,6 +318,23 @@
       "score_titulo": 66,
       "voz": "es-CL-LorenzoNeural",
       "voz_estilo": "suspenso"
+    },
+    {
+      "video_id": "lPz_hgxjdis",
+      "titulo": "Encontré algo en la casa heredada 🗿 #Objetomaldito #ObjetoMaldito #Coleccionista #Terror #Misterio",
+      "tema": "objeto_maldito",
+      "estado": "Puebla",
+      "fecha": "2026-11-04T01:24:17.905214-06:00",
+      "prediccion": {
+        "vistas_predichas": 506880,
+        "ctr_predicho": 6.34,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "ESPEJO MALDITO",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo"
     }
   ],
   "mejores_horarios": {},
