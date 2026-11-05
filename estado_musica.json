@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Ash and Marrow.mp3",
     "Black Maw.mp3",
     "The Deep Rot.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "Black Maw.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-04",
+  "ultima_publicacion_exitosa": "2026-11-05",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-04T12:02:54.393492-06:00",
+  "ultima_publicacion": "2026-11-05T08:40:39.853840-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -256,14 +256,20 @@
       "titulo": "¿Por qué el perro de mi vecino desaparece cada luna llena?",
       "tema": "nahual",
       "fecha": "2026-11-04T12:02:54.393492-06:00"
+    },
+    {
+      "id": "1-uRAsCmKZE",
+      "titulo": "¿Por qué el fuego de Zacatecas no quema igual desde 2014?",
+      "tema": "leyenda_mexicana",
+      "fecha": "2026-11-05T08:40:39.853840-06:00"
     }
   ],
   "temas_recientes": [
-    "payaso_maldito",
     "fantasmas",
     "objeto_maldito",
     "encuentro_cercano",
     "poltergeist",
-    "nahual"
+    "nahual",
+    "leyenda_mexicana"
   ]
 }
