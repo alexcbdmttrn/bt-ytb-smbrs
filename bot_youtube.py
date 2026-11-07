@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v6.2
-v6.2 - Variedad narrativa anti-plantilla (evitar penalización YouTube):
+SOMBRAS DE MEDIANOCHE - Bot v6.3
+v6.3 - Mejoras basadas en datos reales del canal:
+  - Tags ultra-específicos del relato (DeepSeek genera tags del elemento/mecánica/pregunta)
+  - Duración máxima 10 min (sweet spot del canal, 8-10 min gana vs 15-30 min)
+  - Score título +6 para patrón "Si... NUNCA/NO" (domina top 5 del canal)
+  - Penalización -8 para "3:33" en títulos (sobre-explotado, baja CTR)
+  - Miniatura más oscura y contrastada (gradiente más agresivo, 4 colores de acento)
+  - Nuevo fondo musical: Dark Techno 2026.mp3
+v6.2 - 5 formatos narrativos + 15 perfiles de narrador
+v6.1 - Tags ASCII puro, hashtags al final, estado_mx en tags
+v6.0 - 38 temas paranormales
+"""
   - 5 formatos de narración rotativos: primera persona, confesión, carta/mensaje,
     diario, testigo indirecto
   - 15 perfiles de narrador distintos: velador, camionero, médico, turista, etc.
@@ -68,8 +78,8 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
-DURACION_MINIMA_SEGUNDOS = 480
-DURACION_MAXIMA_SEGUNDOS = 900
+DURACION_MINIMA_SEGUNDOS = 480   # 8 min mínimo
+DURACION_MAXIMA_SEGUNDOS = 600   # 10 min máximo — datos del canal muestran 8-10 min como sweet spot
 MAX_INTENTOS_EXPANSION = 1
 NUM_CAPITULOS = 4
 
@@ -98,6 +108,7 @@ FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anto
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
+    "Dark Techno 2026.mp3",   # ← renombra el archivo antes de subirlo al repo
 ]
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Campeche", "Chiapas", "Chihuahua", "Coahuila",
@@ -592,8 +603,21 @@ def puntuar_titulo(t):
     if re.search(r"\d", t):
         s += 2
     s += min(3, sum(1 for g in GANCHOS if g in tl))
-    if re.search(r"\b([012]?[0-9]):[0-5][0-9]\s*(am|pm|a\.m\.|p\.m\.)?\b", tl, re.I):
+
+    # ★ BONUS: patrón ganador "Si... NUNCA/NO" — domina el top 5 del canal
+    if re.search(r'\bsi\b.{1,60}(nunca|no\s)', tl, re.I | re.S):
+        s += 6
+    # ★ BONUS: tiene número específico (667, 404, 2:14 — no solo la hora abusada)
+    if re.search(r'\b\d{3,}\b', t):
+        s += 3
+
+    # Penalizar 3:33 AM — sobre-explotado, baja CTR
+    if re.search(r'3[:\s]33', tl):
+        s -= 8
+    # Penalizar cualquier hora fija genérica
+    elif re.search(r"\b([012]?[0-9]):[0-5][0-9]\s*(am|pm|a\.m\.|p\.m\.)?\b", tl, re.I):
         s -= 3
+
     caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
     s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
     if any(p in tl for p in PROHIBIDAS):
@@ -640,18 +664,18 @@ def elegir_texto_portada(opciones, titulo):
 # HISTORIA
 # =================================================================
 ESQUEMA_PLAN = """{
- "titulos": ["6 títulos candidatos de 45-68 caracteres, cada uno con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'"],
+ "titulos": ["6 títulos de 45-68 caracteres con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'. Prioriza: 'Si [situación cotidiana], NUNCA [acción]' — ese patrón domina el CTR del canal"],
  "anio_suceso": 2014,
  "protagonista": "nombre de pila del narrador",
- "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de lo más inquietante, en primera persona",
+ "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de la acción más perturbadora, en primera persona",
  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
  "palabras_clave": ["5 keywords SEO en español"],
- "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que provoquen curiosidad"],
- "miniatura_escena": "4-6 palabras en inglés para buscar la foto de portada en un banco de stock (ej: dark hallway door)",
+ "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que causen impacto visual en miniatura"],
+ "miniatura_escena": "4-6 palabras en inglés para buscar foto en Pexels (ej: dark hallway door, candle skull altar)",
  "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
- "pregunta_comentario": "pregunta corta que invite a comentar (¿tú qué habrías hecho?)",
- "tags": ["15 tags SEO"],
+ "pregunta_comentario": "pregunta corta que invite a comentar basada en la mecánica del relato (ej: '¿tú habrías abierto la puerta?')",
+ "tags": ["10 tags ULTRA-ESPECÍFICOS de esta historia — búsquedas reales que alguien teclearía en YouTube. MIX OBLIGATORIO: 2-3 tags del OBJETO o ELEMENTO central del relato (ej: 'santito maldito', 'silbato de barro', 'objeto con reglas'); 2-3 tags de la MECÁNICA del miedo (ej: 'reglas de objeto maldito', 'llamadas siniestras a medianoche', 'teléfono que sabe todo'); 1-2 PREGUNTAS de audiencia (ej: 'que harias si te llaman a medianoche'); 1-2 tags ESTADO más tema (ej: 'terror en chihuahua'); 1-2 'relatos de terror mas el elemento específico'. NO pongas tags genéricos como miedo o horror solos."],
  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
@@ -1253,18 +1277,21 @@ def dividir_lineas(palabras):
 def crear_miniatura(img_path, texto, salida):
     TW, TH = 1280, 720
     try:
-        img = Image.open(img_path).convert("RGB") if img_path else Image.new("RGB", (TW, TH), (14, 14, 24))
+        img = Image.open(img_path).convert("RGB") if img_path else Image.new("RGB", (TW, TH), (10, 10, 20))
         img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
-        img = ImageEnhance.Contrast(img).enhance(1.25)
-        img = ImageEnhance.Color(img).enhance(1.2)
-        img = ImageEnhance.Sharpness(img).enhance(1.6)
+        # Más saturado y contrastado — se ve mejor en miniaturas pequeñas
+        img = ImageEnhance.Contrast(img).enhance(1.45)
+        img = ImageEnhance.Color(img).enhance(1.35)
+        img = ImageEnhance.Sharpness(img).enhance(2.0)
+        img = ImageEnhance.Brightness(img).enhance(0.90)
 
+        # Gradiente izquierda más agresivo para que el texto resalte más
         grad = Image.new("L", (TW, TH), 0)
         gd   = ImageDraw.Draw(grad)
         for x in range(TW):
-            gd.line([(x, 0), (x, TH)], fill=int(215 * max(0, 1 - x / (TW * 0.7)) ** 1.3))
+            gd.line([(x, 0), (x, TH)], fill=int(240 * max(0, 1 - x / (TW * 0.65)) ** 1.6))
         img = Image.composite(Image.new("RGB", (TW, TH), (0, 0, 0)), img, grad)
-        arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.45)
+        arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.55)
         img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
 
         lineas      = dividir_lineas(texto.upper().split()[:4])
@@ -1277,7 +1304,13 @@ def crear_miniatura(img_path, texto, salida):
             if max(b[2] - b[0] for b in cajas) <= max_w and alto <= max_h:
                 break
 
-        acento = random.choice([(255, 214, 0), (255, 45, 45)])
+        # Paleta más brillante — mejor CTR en miniaturas pequeñas
+        acento = random.choice([
+            (255, 220, 0),    # amarillo brillante
+            (255, 50, 50),    # rojo vivo
+            (255, 140, 0),    # naranja impacto
+            (255, 255, 255),  # blanco puro (contrasta máximo en fondo negro)
+        ])
         y      = (TH - alto) // 2 + 10
         pos    = []
         for l, b in zip(lineas, cajas):
@@ -1326,58 +1359,59 @@ def _ascii_tag_yt(t):
 
 def construir_tags(plan, tema, sugerencias, estado_mx=""):
     """
-    Tags SEO en 4 capas — ASCII puro para evitar invalidTags del API.
-    T1: 1 palabra, alto volumen
-    T2: 2-3 palabras, alto volumen
-    T3: Long-tail tema + estado (baja competencia, alta intención)
-    T4: Sugerencias de YouTube + plan IA
+    Tags SEO ultra-específicos — estrategia basada en videos más vistos del canal.
+
+    Los videos ganadores (160-210 vistas) usan tags ESPECÍFICOS a la historia:
+    'llamada a las 2 am', 'santito maldito chihuahua', 'reglas de objeto maldito'.
+    Los videos con pocos vistas tienen solo tags genéricos.
+
+    Orden de prioridad:
+    P1 — Tags ultra-específicos generados por DeepSeek para ESTA historia (máximo valor SEO)
+    P2 — Tags long-tail: relatos de terror + elemento específico
+    P3 — Tags genéricos de alto volumen (siempre presentes)
+    P4 — Tags de estado + tema
+    P5 — Sugerencias de YouTube autocomplete
+
+    ASCII puro — YouTube API rechaza caracteres Unicode/acentos vía API.
     Máx 18 tags, máx 40 chars por tag, máx 450 chars totales.
     """
     nombre_tema  = _ascii_tag_yt(tema["tema"].replace("_", " "))
     estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
 
-    t1 = ["terror", "miedo", "horror", "paranormal", "misterio"]
+    # P1 — Tags ultra-específicos del plan IA (el elemento + mecánica + pregunta)
+    tags_ia = plan.get("tags", [])
+    if isinstance(tags_ia, str):
+        tags_ia = [x.strip() for x in tags_ia.split(",")]
+    p1 = list(tags_ia)  # DeepSeek genera los 10 más específicos
 
-    t2 = [
-        "historias de terror", "relatos de terror", "terror mexicano",
-        "terror latino", "fenomenos paranormales", "historias de miedo",
-        "historia real", "relatos paranormales", "audio relatos de terror",
+    # P2 — Long-tail: relatos de terror + elemento del tema
+    p2 = [f"relatos de terror {nombre_tema}"]
+    if estado_ascii:
+        p2 += [f"terror en {estado_ascii}", f"leyendas {estado_ascii}"]
+
+    # P3 — Genéricos de alto volumen (siempre al final para no desplazar los específicos)
+    p3 = [
+        "relatos de terror", "historias de terror",
+        "terror mexicano", "terror", "miedo",
+        "historias de terror para no dormir",
+        "relatos de terror en primera persona",
     ]
 
-    t3 = []
-    if nombre_tema:
-        t3 += [
-            f"historias de terror {nombre_tema}",
-            f"relatos de terror {nombre_tema}",
-            f"terror {nombre_tema}",
-        ]
-    if estado_ascii:
-        t3 += [
-            f"terror en {estado_ascii}",
-            f"leyendas {estado_ascii}",
-        ]
-    t3 += ["para no dormir", "miedo real", "historias de terror cortas"]
+    # P4 — Keywords del tema y sugerencias de YouTube
+    p4 = list(tema["keywords"]) + list(sugerencias)[:5]
 
-    # T4: keywords del tema + sugerencias YouTube + tags del plan IA
-    extra = plan.get("tags", [])
-    if isinstance(extra, str):
-        extra = [x.strip() for x in extra.split(",")]
-    t4 = list(tema["keywords"]) + list(extra) + list(sugerencias)
-
-    # Sanitizar, deduplicar, filtrar
+    # Sanitizar y deduplicar respetando orden de prioridad
     todos, vistos = [], set()
-    # Orden de prioridad: t1 > t2 > t3 > t4
-    for raw in t1 + t2 + t3 + t4:
+    for raw in p1 + p2 + p3 + p4:
         tag = _ascii_tag_yt(raw)
         if not tag or len(tag) < 2 or len(tag) > 40 or tag in vistos:
             continue
-        # Excluir solo los realmente problemáticos
-        if any(x in tag for x in ("100 real", "veridico", "testimonio real", "caso real")):
+        if any(x in tag for x in ("100 real", "veridico", "caso real")):
             continue
         vistos.add(tag)
         todos.append(tag)
 
-    # Aplicar límites finales
+    # Aplicar límites finales: máx 18 tags, máx 450 chars
     resultado, total_chars = [], 0
     for tag in todos:
         costo = len(tag) + 1
@@ -1385,6 +1419,8 @@ def construir_tags(plan, tema, sugerencias, estado_mx=""):
             break
         resultado.append(tag)
         total_chars += costo
+
+    print(f"🏷️  Tags ({len(resultado)}): {', '.join(resultado[:5])}...")
     return resultado
 
 def construir_hashtags(tema):
