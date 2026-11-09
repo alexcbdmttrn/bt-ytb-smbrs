@@ -352,6 +352,25 @@
       "score_titulo": 76,
       "voz": "es-ES-AlvaroNeural",
       "voz_estilo": "dramatico"
+    },
+    {
+      "video_id": "PQ_0PuLB1dk",
+      "titulo": "Lo que hay debajo de el río 🌙 #Leyendamexicana #LeyendasMexicanas #TerrorMexicano #Terror #Misterio",
+      "tema": "leyenda_mexicana",
+      "estado": "Hidalgo",
+      "fecha": "2026-11-09T01:46:58.063056-06:00",
+      "prediccion": {
+        "vistas_predichas": 528000,
+        "ctr_predicho": 6.6,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "BALCÓN MALDITO",
+      "score_titulo": 66,
+      "voz": "es-ES-AlvaroNeural",
+      "voz_estilo": "dramatico",
+      "formato": "testigo",
+      "perfil": "comerciante de tianguis o mercado"
     }
   ],
   "mejores_horarios": {},
