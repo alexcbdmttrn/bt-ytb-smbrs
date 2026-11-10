@@ -390,6 +390,25 @@
       "voz_estilo": "suspenso",
       "formato": "testigo",
       "perfil": "jornalero o trabajador del campo"
+    },
+    {
+      "video_id": "yYLXp6y0U5Y",
+      "titulo": "NUNCA: El la casa familiar de Puebla donde pasan cosas 🩸 #Maldicion #Maldición #TerrorFamiliar #T...",
+      "tema": "maldicion",
+      "estado": "Puebla",
+      "fecha": "2026-11-10T17:01:08.596127-06:00",
+      "prediccion": {
+        "vistas_predichas": 550560,
+        "ctr_predicho": 6.88,
+        "retencion_predicha": 77.4,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "HERENCIA MALDITA",
+      "score_titulo": 74,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional",
+      "formato": "primera_persona",
+      "perfil": "cuidador de adulto mayor en casa grande"
     }
   ],
   "mejores_horarios": {},
