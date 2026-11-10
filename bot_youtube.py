@@ -8,19 +8,9 @@ v6.3 - Mejoras basadas en datos reales del canal:
   - Penalización -8 para "3:33" en títulos (sobre-explotado, baja CTR)
   - Miniatura más oscura y contrastada (gradiente más agresivo, 4 colores de acento)
   - Nuevo fondo musical: Dark Techno 2026.mp3
-v6.2 - 5 formatos narrativos + 15 perfiles de narrador
+v6.2 - 5 formatos narrativos rotativos + 15 perfiles de narrador distintos
 v6.1 - Tags ASCII puro, hashtags al final, estado_mx en tags
 v6.0 - 38 temas paranormales
-"""
-  - 5 formatos de narración rotativos: primera persona, confesión, carta/mensaje,
-    diario, testigo indirecto
-  - 15 perfiles de narrador distintos: velador, camionero, médico, turista, etc.
-  - Prompt de historia actualizado con formato + perfil por run
-  - Ayuda a que cada video suene y se estructure distinto (YouTube prioriza
-    contenido original vs. plantilla repetida)
-v6.1 - 3 fixes SEO: tags ASCII puro (fix invalidTags API), hashtags al final,
-       estado_mx en tags long-tail
-v6.0 - 38 temas paranormales, sin temas tecnológicos
 v5.3 - Validación tolerante de token YouTube
 """
 import asyncio
