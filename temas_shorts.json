@@ -1,6 +1,5 @@
 {
   "temas": [
-    "objeto maldito",
     "velador terror",
     "hospital embrujado",
     "ritual cueva",
@@ -19,6 +18,7 @@
     "encuentro_cercano",
     "poltergeist",
     "leyenda_mexicana",
-    "duendes"
+    "duendes",
+    "muneca_poseida"
   ]
 }

@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "The Deep Rot.mp3",
     "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Hollow Marrow.mp3",
     "Black Maw.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Sunken Dread.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-06",
+  "ultima_publicacion_exitosa": "2026-11-10",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-06T06:08:04.065837-06:00",
+  "ultima_publicacion": "2026-11-10T03:39:00.513943-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -268,14 +268,20 @@
       "titulo": "¿Por qué desaparecen las cosas en el rancho de mi abuela?",
       "tema": "duendes",
       "fecha": "2026-11-06T06:08:04.065837-06:00"
+    },
+    {
+      "id": "4WY2F7Hr6w8",
+      "titulo": "Si la muñeca de tu abuela cambia de lugar, NUNCA duermas",
+      "tema": "muneca_poseida",
+      "fecha": "2026-11-10T03:39:00.513943-06:00"
     }
   ],
   "temas_recientes": [
-    "objeto_maldito",
     "encuentro_cercano",
     "poltergeist",
     "nahual",
     "leyenda_mexicana",
-    "duendes"
+    "duendes",
+    "muneca_poseida"
   ]
 }
