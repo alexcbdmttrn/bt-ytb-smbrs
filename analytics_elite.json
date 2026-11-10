@@ -371,6 +371,25 @@
       "voz_estilo": "dramatico",
       "formato": "testigo",
       "perfil": "comerciante de tianguis o mercado"
+    },
+    {
+      "video_id": "J0oEipoWla8",
+      "titulo": "No vuelvas a el camino de tierra 🌲 #Bosquemaldito #BosqueMaldito #Criaturas #Terror #Misterio",
+      "tema": "bosque_maldito",
+      "estado": "Michoacán",
+      "fecha": "2026-11-09T19:22:27.217976-06:00",
+      "prediccion": {
+        "vistas_predichas": 480480,
+        "ctr_predicho": 6.01,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "CABANA MALDITA",
+      "score_titulo": 66,
+      "voz": "es-CL-LorenzoNeural",
+      "voz_estilo": "suspenso",
+      "formato": "testigo",
+      "perfil": "jornalero o trabajador del campo"
     }
   ],
   "mejores_horarios": {},
