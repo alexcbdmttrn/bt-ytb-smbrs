@@ -409,6 +409,25 @@
       "voz_estilo": "conversacional",
       "formato": "primera_persona",
       "perfil": "cuidador de adulto mayor en casa grande"
+    },
+    {
+      "video_id": "U8zZG8NSoes",
+      "titulo": "Después de lo que seguí en la sierra, nada fue igual 👁️ #Skinwalker #CriaturasDeLaNoche #Terror #...",
+      "tema": "skinwalker",
+      "estado": "Chiapas",
+      "fecha": "2026-11-11T01:38:46.153974-06:00",
+      "prediccion": {
+        "vistas_predichas": 475200,
+        "ctr_predicho": 5.94,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "NOMBRE PROHIBIDO",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo",
+      "formato": "testigo",
+      "perfil": "maestro rural en pueblo aislado"
     }
   ],
   "mejores_horarios": {},
