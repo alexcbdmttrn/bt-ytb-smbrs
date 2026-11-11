@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
@@ -9,13 +8,14 @@
     "Hollow Marrow.mp3",
     "Black Maw.mp3",
     "Cold Hollow.mp3",
-    "Sunken Dread.mp3"
+    "Sunken Dread.mp3",
+    "Sunless Vault.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-10",
+  "ultima_publicacion_exitosa": "2026-11-11",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-10T03:39:00.513943-06:00",
+  "ultima_publicacion": "2026-11-11T15:20:39.163892-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -274,14 +274,20 @@
       "titulo": "Si la muñeca de tu abuela cambia de lugar, NUNCA duermas",
       "tema": "muneca_poseida",
       "fecha": "2026-11-10T03:39:00.513943-06:00"
+    },
+    {
+      "id": "gZPM8g_-k5U",
+      "titulo": "Si heredas una cabaña en Tamaulipas, NUNCA duermas sin luz",
+      "tema": "bosque_maldito",
+      "fecha": "2026-11-11T15:20:39.163892-06:00"
     }
   ],
   "temas_recientes": [
-    "encuentro_cercano",
     "poltergeist",
     "nahual",
     "leyenda_mexicana",
     "duendes",
-    "muneca_poseida"
+    "muneca_poseida",
+    "bosque_maldito"
   ]
 }
