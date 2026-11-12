@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v6.3
-v6.3 - Mejoras basadas en datos reales del canal:
-  - Tags ultra-específicos del relato (DeepSeek genera tags del elemento/mecánica/pregunta)
-  - Duración máxima 10 min (sweet spot del canal, 8-10 min gana vs 15-30 min)
-  - Score título +6 para patrón "Si... NUNCA/NO" (domina top 5 del canal)
-  - Penalización -8 para "3:33" en títulos (sobre-explotado, baja CTR)
-  - Miniatura más oscura y contrastada (gradiente más agresivo, 4 colores de acento)
-  - Nuevo fondo musical: Dark Techno 2026.mp3
-v6.2 - 5 formatos narrativos rotativos + 15 perfiles de narrador distintos
+SOMBRAS DE MEDIANOCHE - Bot v6.4
+v6.4 - Diversidad de temas + elemento imposible en títulos:
+  - 4 temas nuevos: vampiro, hombre lobo, zona secreta, implante alien (42 temas)
+  - Campo "elemento_imposible" obligatorio en el plan (detalle memorable que rompe expectativa)
+  - Prompt de título exige elemento imposible en 3+ de 6 títulos
+  - Score +5 por elemento imposible ("era mi voz", "nadie lo contrató", "pero yo estaba solo")
+  - ELIMINADA penalización -8 a "3:33" — datos del canal demuestran que SÍ funciona
+  - ELIMINADA penalización genérica a horas fijas — correlaciona con top views
+  - Prompt de historia mejorado: momento de máximo terror por capítulo + detalle imposible
+v6.3 - Tags ultra-específicos, duración máx 10 min, bonus "Si...NUNCA", miniatura mejorada
+v6.2 - 5 formatos narrativos + 15 perfiles de narrador distintos
 v6.1 - Tags ASCII puro, hashtags al final, estado_mx en tags
-v6.0 - 38 temas paranormales
-v5.3 - Validación tolerante de token YouTube
 """
 import asyncio
 import bisect
@@ -69,7 +69,7 @@ TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 
 DURACION_MINIMA_SEGUNDOS = 480   # 8 min mínimo
-DURACION_MAXIMA_SEGUNDOS = 600   # 10 min máximo — datos del canal muestran 8-10 min como sweet spot
+DURACION_MAXIMA_SEGUNDOS = 600   # 10 min máximo — sweet spot del canal
 MAX_INTENTOS_EXPANSION = 1
 NUM_CAPITULOS = 4
 
@@ -98,7 +98,6 @@ FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anto
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
-    "Dark Techno 2026.mp3",   # ← renombra el archivo antes de subirlo al repo
 ]
 ESTADOS_MEXICO = [
     "Aguascalientes", "Baja California", "Campeche", "Chiapas", "Chihuahua", "Coahuila",
@@ -109,10 +108,10 @@ ESTADOS_MEXICO = [
 ]
 
 # =================================================================
-# TEMAS — 38 CATEGORÍAS PARANORMALES
+# TEMAS — 42 CATEGORÍAS PARANORMALES (v6.4: +4 nuevos)
 # =================================================================
 TEMAS = [
-    # ========== CRIATURAS Y SERES LEGENDARIOS (7) ==========
+    # ========== CRIATURAS Y SERES LEGENDARIOS (9 — v6.4: +vampiro +hombre_lobo) ==========
     {"tema": "skinwalker", "seed": "skinwalker relatos", "angulo": "Algo imita voces humanas y te sigue por el bosque; cada noche se acerca más.",
      "keywords": ["skinwalker", "criatura", "persecución", "bosque"],
      "contextos": ["carretera solitaria", "bosque profundo", "sierra aislada", "desierto de noche"],
@@ -154,6 +153,18 @@ TEMAS = [
      "contextos": ["camino de terracería", "carretera solitaria", "pueblo", "encrucijada", "puente viejo"],
      "visuales": ["dark horseman silhouette", "dusty road night", "black horse night fog", "crossroads night mexico", "old bridge night fog"],
      "hashtags": ["#CharroNegro", "#LeyendasMexicanas"]},
+
+    {"tema": "vampiro", "seed": "vampiro historia terror", "angulo": "Un vecino nunca sale de día, no come en las reuniones, y las noches del pueblo hay gente que amanece pálida y sin recordar nada.",
+     "keywords": ["vampiro", "colmillos", "sangre", "noche", "vecino"],
+     "contextos": ["casa del pueblo", "hacienda vieja", "casona abandonada", "bosque al anochecer", "cementerio"],
+     "visuales": ["castle night fog", "dark coffin candle", "bat silhouette moon", "pale figure window night", "old mansion night fog"],
+     "hashtags": ["#Vampiros", "#CriaturasDeLaNoche"]},
+
+    {"tema": "hombre_lobo", "seed": "hombre lobo historia real", "angulo": "En cada luna llena el cerro aúlla, el ganado aparece destrozado, y un vecino del pueblo desaparece por tres días.",
+     "keywords": ["hombre lobo", "licántropo", "luna llena", "cerro", "ganado"],
+     "contextos": ["rancho", "cerro", "bosque profundo", "sierra", "camino de tierra"],
+     "visuales": ["full moon forest night", "wolf silhouette dark", "torn livestock field night", "mountain night fog", "moonlit dirt road"],
+     "hashtags": ["#HombreLobo", "#Licántropo"]},
 
     # ========== SERES Y ENTIDADES PARANORMALES (7) ==========
     {"tema": "fantasmas", "seed": "fantasmas casa historia", "angulo": "En la casa hay alguien más: mueve cosas, apaga luces, y a veces se deja ver.",
@@ -198,7 +209,7 @@ TEMAS = [
      "visuales": ["creepy clown dark", "abandoned circus night", "empty carnival night", "clown silhouette fog", "broken carousel night"],
      "hashtags": ["#PayasoMaldito", "#TerrorPsicológico"]},
 
-    # ========== LUGARES EMBRUJADOS (9) ==========
+    # ========== LUGARES EMBRUJADOS (10 — v6.4: +zona_secreta) ==========
     {"tema": "casa_embrujada", "seed": "casa embrujada historia real", "angulo": "La casa nueva tiene historia; los vecinos hablan de la familia anterior y nadie quiere entrar.",
      "keywords": ["casa embrujada", "aparición", "familia", "historia"],
      "contextos": ["casa antigua", "casa de campo", "casa heredada", "casa en venta", "casa del barrio"],
@@ -252,6 +263,12 @@ TEMAS = [
      "contextos": ["hacienda vieja", "ex-hacienda", "rancho heredado", "casa de campo", "casona"],
      "visuales": ["old hacienda night", "colonial house dark", "mexican hacienda night fog", "courtyard night dark", "old wooden doors night"],
      "hashtags": ["#HaciendaEmbrujada", "#Fantasmas"]},
+
+    {"tema": "zona_secreta", "seed": "zona secreta mexico", "angulo": "Hay una zona en el mapa donde el GPS falla, los locales no entran, y quien lo hace regresa distinto o no regresa.",
+     "keywords": ["zona secreta", "área restringida", "desapariciones", "mapas", "prohibida"],
+     "contextos": ["zona militar abandonada", "área natural protegida", "cerro con antenas", "pueblo fantasma", "camino cerrado"],
+     "visuales": ["restricted area sign night", "abandoned military base", "no signal sign rural", "government building dark", "fence warning night"],
+     "hashtags": ["#ZonaSecreta", "#Desapariciones"]},
 
     # ========== OCULTISMO (10) ==========
     {"tema": "ritual", "seed": "ritual prohibido historia", "angulo": "Un ritual hecho por curiosidad abre algo que no se puede cerrar.",
@@ -314,7 +331,7 @@ TEMAS = [
      "visuales": ["herbs hanging dark", "smoke ritual dark", "old mexican healer house", "candles eggs limpia", "temazcal night"],
      "hashtags": ["#Curanderos", "#Limpia"]},
 
-    # ========== EXTRATERRESTRES (3) ==========
+    # ========== EXTRATERRESTRES (4 — v6.4: +implante_alien) ==========
     {"tema": "aliens", "seed": "avistamiento ovni historia", "angulo": "Lo que bajó del cielo no era un avión; la luz se movió como algo vivo.",
      "keywords": ["ovni", "extraterrestre", "avistamiento", "luces"],
      "contextos": ["campo abierto", "carretera solitaria", "sierra", "rancho", "desierto"],
@@ -332,6 +349,12 @@ TEMAS = [
      "contextos": ["camino rural", "campo", "sierra", "mina abandonada", "rancho"],
      "visuales": ["ufo landed field night", "strange silhouette fog", "field crop circle night", "glowing object rural night", "alien figure dark"],
      "hashtags": ["#EncuentroCercano", "#Extraterrestres"]},
+
+    {"tema": "implante_alien", "seed": "implante extraterrestre historia", "angulo": "Tienes una marca que no recuerdas, un implante que los médicos no saben explicar, y algo que se mueve dentro cuando duermes.",
+     "keywords": ["implante", "extraterrestre", "abducción", "marca", "metal"],
+     "contextos": ["casa de campo", "rancho", "hospital rural", "clínica del pueblo", "habitación"],
+     "visuales": ["strange scar skin dark", "medical xray strange", "glowing skin mark", "surgery room dark", "unknown implant xray"],
+     "hashtags": ["#ImplanteAlien", "#Abducción"]},
 
     # ========== LEYENDAS Y CREEPYPASTA (2) ==========
     {"tema": "leyenda_mexicana", "seed": "leyenda mexicana terror", "angulo": "Una leyenda del pueblo cobra vida en versión contemporánea.",
@@ -601,12 +624,25 @@ def puntuar_titulo(t):
     if re.search(r'\b\d{3,}\b', t):
         s += 3
 
-    # Penalizar 3:33 AM — sobre-explotado, baja CTR
-    if re.search(r'3[:\s]33', tl):
-        s -= 8
-    # Penalizar cualquier hora fija genérica
-    elif re.search(r"\b([012]?[0-9]):[0-5][0-9]\s*(am|pm|a\.m\.|p\.m\.)?\b", tl, re.I):
-        s -= 3
+    # ★ BONUS v6.4: elemento imposible/memorable — patrón de los títulos con 900+ vistas
+    # "era mi voz", "nadie lo contrató", "pero yo estaba solo", "lo vi en dos lugares"
+    patrones_imposibles = [
+        r"\by\s+(era|fue|estaba|había|resultó)\b",
+        r"\bpero\s+(yo\s+)?(estaba|era|fue|nadie|solo|nunca|no)",
+        r"\bnadie\s+(lo\s+|la\s+|me\s+)?(contrató|invitó|llamó|vio|creyó|enseñó)",
+        r"\b(era|fue)\s+mi\s+(propia\s+)?(voz|sangre|nombre|cara|reflejo|teléfono)",
+        r"\b(lo\s+vi|la\s+vi)\s+en\s+dos\s+lugares",
+        r"\by\s+(yo\s+)?(estaba|seguía)\s+(ahí|solo|vivo|despierto)",
+    ]
+    for pat in patrones_imposibles:
+        if re.search(pat, tl):
+            s += 5
+            break
+
+    # ⚠️ v6.4: NO se penaliza "3:33 AM" ni horas fijas.
+    # Datos del canal: 2 de los 5 videos más vistos usan "3:33 AM" (129 y 109 vistas)
+    # y 4 de 5 usan hora específica. El penalty anterior estaba alejando al bot
+    # de un patrón que SÍ funciona.
 
     caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
     s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
@@ -654,10 +690,11 @@ def elegir_texto_portada(opciones, titulo):
 # HISTORIA
 # =================================================================
 ESQUEMA_PLAN = """{
- "titulos": ["6 títulos de 45-68 caracteres con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'. Prioriza: 'Si [situación cotidiana], NUNCA [acción]' — ese patrón domina el CTR del canal"],
+ "titulos": ["6 títulos de 45-68 caracteres con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'. AL MENOS 3 de los 6 DEBEN incluir el 'elemento_imposible' del relato para crear tensión memorable ('...y era mi voz', 'nadie lo contrató', 'pero yo estaba solo'). Combina: 'Si [situación cotidiana], NUNCA [acción]' cuando encaje natural"],
  "anio_suceso": 2014,
  "protagonista": "nombre de pila del narrador",
- "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de la acción más perturbadora, en primera persona",
+ "elemento_imposible": "CRÍTICO: el detalle más memorable e imposible del relato en 3-8 palabras. Algo que rompe la lógica y se queda en la cabeza del espectador. Ejemplos que funcionan en el canal: 'era mi propia voz', 'nadie lo contrató', 'lo vi en dos lugares a la vez', 'el teléfono sonó desde el sótano', 'el cadáver seguía respirando'. ESTE detalle debe aparecer en AL MENOS 3 de los 6 títulos",
+ "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de la acción más perturbadora, en primera persona, e INCLUYEN el elemento_imposible",
  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
  "palabras_clave": ["5 keywords SEO en español"],
  "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que causen impacto visual en miniatura"],
@@ -674,7 +711,6 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos,
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug  = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
 
-    # Defaults si no se pasan
     if formato_narracion is None:
         formato_narracion = FORMATOS_NARRACION[0]
     if perfil_narrador is None:
@@ -700,34 +736,47 @@ BÚSQUEDAS REALES EN YOUTUBE:
 TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
 {prev}
 
+━━━ REGLA CRÍTICA: ELEMENTO IMPOSIBLE ━━━
+El campo 'elemento_imposible' es el corazón del CTR del video. Debe ser un detalle
+que ROMPE la lógica y se queda grabado en la cabeza del espectador. Ejemplos reales
+del canal que han funcionado (900+ vistas):
+  • "era mi propia voz"           (el teléfono sonó y era la voz del narrador)
+  • "nadie lo contrató"            (payaso aparece solo)
+  • "lo vi en dos lugares a la vez" (imposible físico)
+  • "el teléfono sonó desde el sótano" (origen imposible)
+  • "el cadáver seguía respirando" (subvierte lo establecido)
+
 REGLAS DE TÍTULO (CLAVE PARA CTR):
 1. NUNCA termines el título con "| Relato de Terror".
-2. Cada uno de los 6 títulos DEBE usar una estructura DISTINTA. Alterna:
+2. AL MENOS 3 de los 6 títulos DEBEN incluir el elemento_imposible literal o parafraseado.
+3. Cada uno de los 6 títulos DEBE usar una estructura DISTINTA:
    - Advertencia: "Nunca [verbo] en [lugar]"
    - Confesión: "Lo que [verbo] en [lugar] no me dejó dormir"
    - Testimonio: "La noche que [algo] en [lugar]"
    - Pregunta: "¿Por qué [algo] en [lugar]?"
    - Descubrimiento: "Encontré [algo] en [lugar]"
-   - Ubicación: "El [lugar] de [estado] donde [algo] pasa"
-3. ⚠️ NO fijes hora concreta: 3:33 AM, 3:00 AM, 4:44 AM. Patrón sobre-explotado.
-4. Usa mayúsculas solo para 1-2 palabras de impacto.
-5. NO empieces los 6 títulos igual.
-6. Los títulos deben reflejar el PERFIL del narrador cuando sume al CTR.
+   - Elemento imposible: "[acción cotidiana] y [elemento imposible]"
+4. Combina con "Si [situación], NUNCA [acción]" cuando encaje natural (patrón top del canal).
+5. Usa mayúsculas solo para 1-2 palabras de impacto.
+6. NO empieces los 6 títulos igual.
 
 REGLAS DE CONTENIDO:
 1. Prioriza escenarios cotidianos y relacionables al perfil del narrador.
 2. El disclosure va en la descripción, NO en la narración.
-3. El gancho debe ser lo más perturbador del relato.
+3. El gancho debe ser lo más perturbador del relato e INCLUIR el elemento_imposible.
 4. Cada capítulo termina en cliffhanger, excepto el último.
 5. El relato completo: estrictamente 1100-1400 palabras.
+6. Cada capítulo debe tener UN "momento de máximo terror" específico
+   (no solo atmósfera: un evento concreto que el lector recuerde).
 
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
-    txt  = llm(prompt, temperature=0.9, max_tokens=2200, json_mode=True)
+    txt  = llm(prompt, temperature=0.9, max_tokens=2400, json_mode=True)
     plan = parsear_json(txt)
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3
             and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS
-            and plan.get("gancho") and plan.get("palabras_portada")):
+            and plan.get("gancho") and plan.get("palabras_portada")
+            and plan.get("elemento_imposible")):
         raise ValueError("plan incompleto")
     return plan
 
@@ -743,21 +792,26 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
     indice  = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos  = []
 
-    # Recuperar formato y perfil guardados en el plan
     formato_instruccion = plan.get("_formato_instruccion", "Relato en primera persona directa.")
     perfil_narrador     = plan.get("_perfil_narrador", "persona común")
     nombre_formato      = plan.get("_nombre_formato", "primera_persona")
+    elemento_imposible  = plan.get("elemento_imposible", "un detalle perturbador")
 
     for i, cap in enumerate(caps):
         previo = textos[-1][-700:] if textos else ""
         if i == 0:
-            extra = f"Empieza EXACTAMENTE con esta frase de gancho: \"{plan['gancho']}\" y luego retrocede para dar contexto sin bajar la tensión."
+            extra = (f"Empieza EXACTAMENTE con esta frase de gancho: \"{plan['gancho']}\" "
+                     f"e inmediatamente después INTEGRA el elemento imposible '{elemento_imposible}' "
+                     f"como el detalle que dispara el horror.")
         elif i == len(caps) - 1:
-            extra = "Cierra con un final abierto e inquietante que deje una duda, sin explicar todo."
+            extra = ("Cierra con un final abierto e inquietante que deje una duda. "
+                     "Antes de cerrar, vuelve a mencionar el elemento imposible de forma que "
+                     "reencuadre algo que ya habías contado antes — el lector debe sentir que "
+                     "ese detalle siempre estuvo ahí, acechando.")
         else:
-            extra = "Termina con un cliffhanger."
+            extra = (f"Termina con un cliffhanger y asegúrate de que el elemento imposible "
+                     f"'{elemento_imposible}' aparezca al menos una vez en este capítulo.")
 
-        # Instrucción de formato específica para diario (cada capítulo = entrada)
         if nombre_formato == "diario":
             formato_cap = f"Este capítulo es una o varias ENTRADAS DE DIARIO. Incluye una 'fecha' o 'día' al inicio de cada entrada (ej: 'Día {i*3+1}'). Termina la última entrada a mitad de frase si es el cliffhanger."
         else:
@@ -772,6 +826,7 @@ FORMATO NARRATIVO: {nombre_formato.upper()}
 NARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}
 AÑO: {plan.get('anio_suceso', '2015')} | LUGAR: {contexto}, {estado_mx}, México
 ÁNGULO: {tema['angulo']}
+ELEMENTO IMPOSIBLE DEL RELATO: "{elemento_imposible}"
 SINOPSIS: {plan.get('resumen', '')}
 ÍNDICE: {indice}
 ESTE CAPÍTULO: {cap.get('titulo', '')} → {cap.get('resumen', '')}
@@ -781,8 +836,15 @@ ESTE CAPÍTULO: {cap.get('titulo', '')} → {cap.get('resumen', '')}
 REGLAS:
 - 250-350 palabras exactas
 - Español mexicano coloquial, detalles sensoriales del trabajo/oficio del narrador
+- ⚠️ CADA CAPÍTULO debe tener UN MOMENTO DE MÁXIMO TERROR CONCRETO — no solo
+  atmósfera. Un evento específico (la puerta que se abre sola, el teléfono que suena,
+  la voz que no debería estar). El lector debe poder resumir "en este capítulo pasó X".
+- SHOWING not telling: muestra el miedo con acciones y objetos, no con adjetivos
+  ("se me heló la sangre" > "tuve mucho miedo")
+- El elemento imposible debe sentirse ORGÁNICO, no forzado. Aparece cuando menos
+  se espera, no lo subrayes con "qué raro" o "qué extraño".
 - Sin listas, emojis, títulos de sección ni acotaciones entre corchetes
-- ⚠️ Si mencionas hora VARÍALA — jamás "3:33 AM"
+- ⚠️ Si mencionas hora VARÍALA — evita repetir la misma hora en todos los capítulos
 - El narrador percibe el terror desde su oficio: un velador nota las cámaras,
   un médico nota síntomas, un camionero nota el odómetro, etc.
 Devuelve SOLO el texto del capítulo."""
@@ -815,9 +877,7 @@ OUTROS = [
 ]
 
 # =================================================================
-# VARIEDAD NARRATIVA — evitar penalización YouTube por "plantilla"
-# YouTube prioriza contenido que aporta perspectiva propia vs. mismo
-# molde repetido. Rotamos formato y perfil por cada video.
+# VARIEDAD NARRATIVA
 # =================================================================
 FORMATOS_NARRACION = [
     {
@@ -1269,13 +1329,11 @@ def crear_miniatura(img_path, texto, salida):
     try:
         img = Image.open(img_path).convert("RGB") if img_path else Image.new("RGB", (TW, TH), (10, 10, 20))
         img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
-        # Más saturado y contrastado — se ve mejor en miniaturas pequeñas
         img = ImageEnhance.Contrast(img).enhance(1.45)
         img = ImageEnhance.Color(img).enhance(1.35)
         img = ImageEnhance.Sharpness(img).enhance(2.0)
         img = ImageEnhance.Brightness(img).enhance(0.90)
 
-        # Gradiente izquierda más agresivo para que el texto resalte más
         grad = Image.new("L", (TW, TH), 0)
         gd   = ImageDraw.Draw(grad)
         for x in range(TW):
@@ -1294,12 +1352,11 @@ def crear_miniatura(img_path, texto, salida):
             if max(b[2] - b[0] for b in cajas) <= max_w and alto <= max_h:
                 break
 
-        # Paleta más brillante — mejor CTR en miniaturas pequeñas
         acento = random.choice([
             (255, 220, 0),    # amarillo brillante
             (255, 50, 50),    # rojo vivo
             (255, 140, 0),    # naranja impacto
-            (255, 255, 255),  # blanco puro (contrasta máximo en fondo negro)
+            (255, 255, 255),  # blanco puro
         ])
         y      = (TH - alto) // 2 + 10
         pos    = []
@@ -1333,53 +1390,27 @@ def crear_miniatura(img_path, texto, salida):
         return False
 
 # =================================================================
-# SEO  ← FIX 1 y FIX 2 aquí
+# SEO
 # =================================================================
 def _ascii_tag_yt(t):
-    """
-    Convierte texto a ASCII puro para YouTube Data API.
-    Elimina acentos (á→a, é→e, ñ→n...) y chars especiales.
-    YouTube API rechaza tags con Unicode no-ASCII aunque Studio los acepte.
-    """
     nfd = unicodedata.normalize('NFD', str(t))
     sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
     limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower())
     return re.sub(r'\s+', ' ', limpio).strip()
 
-
 def construir_tags(plan, tema, sugerencias, estado_mx=""):
-    """
-    Tags SEO ultra-específicos — estrategia basada en videos más vistos del canal.
-
-    Los videos ganadores (160-210 vistas) usan tags ESPECÍFICOS a la historia:
-    'llamada a las 2 am', 'santito maldito chihuahua', 'reglas de objeto maldito'.
-    Los videos con pocos vistas tienen solo tags genéricos.
-
-    Orden de prioridad:
-    P1 — Tags ultra-específicos generados por DeepSeek para ESTA historia (máximo valor SEO)
-    P2 — Tags long-tail: relatos de terror + elemento específico
-    P3 — Tags genéricos de alto volumen (siempre presentes)
-    P4 — Tags de estado + tema
-    P5 — Sugerencias de YouTube autocomplete
-
-    ASCII puro — YouTube API rechaza caracteres Unicode/acentos vía API.
-    Máx 18 tags, máx 40 chars por tag, máx 450 chars totales.
-    """
     nombre_tema  = _ascii_tag_yt(tema["tema"].replace("_", " "))
     estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
 
-    # P1 — Tags ultra-específicos del plan IA (el elemento + mecánica + pregunta)
     tags_ia = plan.get("tags", [])
     if isinstance(tags_ia, str):
         tags_ia = [x.strip() for x in tags_ia.split(",")]
-    p1 = list(tags_ia)  # DeepSeek genera los 10 más específicos
+    p1 = list(tags_ia)
 
-    # P2 — Long-tail: relatos de terror + elemento del tema
     p2 = [f"relatos de terror {nombre_tema}"]
     if estado_ascii:
         p2 += [f"terror en {estado_ascii}", f"leyendas {estado_ascii}"]
 
-    # P3 — Genéricos de alto volumen (siempre al final para no desplazar los específicos)
     p3 = [
         "relatos de terror", "historias de terror",
         "terror mexicano", "terror", "miedo",
@@ -1387,10 +1418,8 @@ def construir_tags(plan, tema, sugerencias, estado_mx=""):
         "relatos de terror en primera persona",
     ]
 
-    # P4 — Keywords del tema y sugerencias de YouTube
     p4 = list(tema["keywords"]) + list(sugerencias)[:5]
 
-    # Sanitizar y deduplicar respetando orden de prioridad
     todos, vistos = [], set()
     for raw in p1 + p2 + p3 + p4:
         tag = _ascii_tag_yt(raw)
@@ -1401,7 +1430,6 @@ def construir_tags(plan, tema, sugerencias, estado_mx=""):
         vistos.add(tag)
         todos.append(tag)
 
-    # Aplicar límites finales: máx 18 tags, máx 450 chars
     resultado, total_chars = [], 0
     for tag in todos:
         costo = len(tag) + 1
@@ -1418,12 +1446,6 @@ def construir_hashtags(tema):
     return " ".join(hs[:6])
 
 def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
-    """
-    FIX 2 v6.1:
-    Hashtags SIEMPRE al final absoluto de la descripción.
-    YouTube muestra los primeros 3 hashtags encima del título — enterrarlos
-    en medio del disclosure los desperdiciaba.
-    """
     gancho = plan.get("descripcion_gancho", " ").strip() or plan["gancho"]
     if "relato de terror" not in gancho.lower()[:220]:
         gancho = "Relato de terror: " + gancho
@@ -1443,7 +1465,6 @@ def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
     if ACTIVAR_DISCLOSURE_IA:
         partes.append(DISCLOSURE_TEXT.strip())
 
-    # Hashtags van SIEMPRE al final
     partes.append(hashtags)
 
     desc = "\n\n".join(p for p in partes if p and p.strip())
@@ -1661,7 +1682,7 @@ def verificar_envs():
     return yt
 
 # =================================================================
-# MAIN  ← FIX 3: pasa estado_mx a construir_tags
+# MAIN
 # =================================================================
 def main():
     youtube = verificar_envs()
@@ -1674,7 +1695,7 @@ def main():
         sys.exit(0)
 
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.2")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.4")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | Formatos: {len(FORMATOS_NARRACION)} | Perfiles: {len(PERFILES_NARRADOR)}")
     print("=" * 70)
@@ -1684,7 +1705,6 @@ def main():
     contexto   = random.choice(tema["contextos"])
     estado_mx  = random.choice(ESTADOS_MEXICO)
 
-    # Seleccionar formato y perfil aleatorios para este video
     formato    = random.choice(FORMATOS_NARRACION)
     perfil     = random.choice(PERFILES_NARRADOR)
     print(f"🎭 Formato: {formato['nombre']} | Narrador: {perfil}")
@@ -1707,7 +1727,6 @@ def main():
             titulo = elegir_titulo(plan["titulos"])
             if not titulo:
                 raise ValueError("sin título válido")
-            # Guardar formato y perfil en el plan para que generar_capitulos los use
             plan["_formato_instruccion"] = formato["instruccion"]
             plan["_perfil_narrador"]     = perfil
             plan["_nombre_formato"]      = formato["nombre"]
@@ -1725,6 +1744,7 @@ def main():
     except (TypeError, ValueError):
         anio = None
     print(f"📌 Título: {titulo}")
+    print(f"🎯 Elemento imposible: {plan.get('elemento_imposible', 'N/A')}")
     print(f"📍 Estado: {estado_mx}")
 
     capitulos_txt = generar_capitulos(plan, tema, contexto, estado_mx)
@@ -1783,7 +1803,6 @@ def main():
 
     hashtags    = construir_hashtags(tema)
     descripcion = construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags)
-    # FIX 3: pasa estado_mx para tags long-tail de estado
     tags        = construir_tags(plan, tema, sugerencias, estado_mx)
     srt         = generar_srt(segs, "subtitulos.srt")
 
@@ -1824,7 +1843,9 @@ def main():
     ahora = datetime.now(TZ).isoformat()
     guardar_titulo_largo(titulo)
     guardar_tema(tema["tema"])
-    estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"], "fecha": ahora})
+    estado["videos"].append({"id": vid, "titulo": titulo, "tema": tema["tema"],
+                             "formato": formato["nombre"], "perfil": perfil,
+                             "elemento_imposible": plan.get("elemento_imposible"), "fecha": ahora})
     estado["videos"]         = estado["videos"][-60:]
     estado["temas_recientes"] = (estado["temas_recientes"] + [tema["tema"]])[-6:]
     estado["ultima_publicacion"]          = ahora
