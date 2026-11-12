@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "Ash and Marrow.mp3",
     "Black Maw.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "The Deep Rot.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-11",
+  "ultima_publicacion_exitosa": "2026-11-12",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-11T15:20:39.163892-06:00",
+  "ultima_publicacion": "2026-11-12T15:34:17.823801-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -280,14 +280,23 @@
       "titulo": "Si heredas una cabaña en Tamaulipas, NUNCA duermas sin luz",
       "tema": "bosque_maldito",
       "fecha": "2026-11-11T15:20:39.163892-06:00"
+    },
+    {
+      "id": "BpIIAEh8UAs",
+      "titulo": "Si la maestra del pueblo te dice 'no mires la cueva', NUNCA vayas",
+      "tema": "brujas",
+      "formato": "testigo",
+      "perfil": "maestro rural asignado a un pueblo aislado",
+      "elemento_imposible": "mi propia voz salió de la cueva",
+      "fecha": "2026-11-12T15:34:17.823801-06:00"
     }
   ],
   "temas_recientes": [
-    "poltergeist",
     "nahual",
     "leyenda_mexicana",
     "duendes",
     "muneca_poseida",
-    "bosque_maldito"
+    "bosque_maldito",
+    "brujas"
   ]
 }
