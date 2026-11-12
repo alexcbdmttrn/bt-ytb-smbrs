@@ -428,6 +428,25 @@
       "voz_estilo": "narrativo",
       "formato": "testigo",
       "perfil": "maestro rural en pueblo aislado"
+    },
+    {
+      "video_id": "0JNFveBAWx8",
+      "titulo": "Cuidado con la morgue 🏥 #Hospital #HospitalEmbrujado #TerrorNocturno #Terror #Misterio",
+      "tema": "hospital",
+      "estado": "Veracruz",
+      "fecha": "2026-11-11T18:18:26.686810-06:00",
+      "prediccion": {
+        "vistas_predichas": 587400,
+        "ctr_predicho": 5.87,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "TURNO MALDITO",
+      "score_titulo": 66,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional",
+      "formato": "primera_persona",
+      "perfil": "jornalero o trabajador del campo"
     }
   ],
   "mejores_horarios": {},
