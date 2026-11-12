@@ -466,6 +466,25 @@
       "voz_estilo": "dramatico",
       "formato": "primera_persona",
       "perfil": "jornalero o trabajador del campo"
+    },
+    {
+      "video_id": "7BiffYH9dCw",
+      "titulo": "SOLO: No te quedes en el circo abandonado 🤡 #Payasomaldito #PayasoMaldito #TerrorPsicológico #Ter...",
+      "tema": "payaso_maldito",
+      "estado": "San Luis Potosí",
+      "fecha": "2026-11-12T17:23:59.081974-06:00",
+      "prediccion": {
+        "vistas_predichas": 556480,
+        "ctr_predicho": 6.96,
+        "retencion_predicha": 77.4,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "PAYASO MALDITO",
+      "score_titulo": 74,
+      "voz": "es-AR-ElenaNeural",
+      "voz_estilo": "femenino_misterio",
+      "formato": "mensaje_urgente",
+      "perfil": "ama de casa que heredó una propiedad"
     }
   ],
   "mejores_horarios": {},
