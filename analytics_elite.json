@@ -504,6 +504,25 @@
       "voz_estilo": "narrativo",
       "formato": "primera_persona",
       "perfil": "obrero en construcción de edificio viejo"
+    },
+    {
+      "video_id": "WSgDhHIwZrM",
+      "titulo": "SOLO: Encontré algo en la carretera 🛸 #Abduccion #Abducción #Extraterrestres #Terror #Misterio",
+      "tema": "abduccion",
+      "estado": "Coahuila",
+      "fecha": "2026-11-13T17:26:04.177477-06:00",
+      "prediccion": {
+        "vistas_predichas": 550560,
+        "ctr_predicho": 6.88,
+        "retencion_predicha": 77.4,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "MARCA PÁLIDA",
+      "score_titulo": 74,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional",
+      "formato": "diario",
+      "perfil": "fotógrafo de lugares abandonados"
     }
   ],
   "mejores_horarios": {},
