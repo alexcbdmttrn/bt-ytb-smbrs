@@ -485,6 +485,25 @@
       "voz_estilo": "femenino_misterio",
       "formato": "mensaje_urgente",
       "perfil": "ama de casa que heredó una propiedad"
+    },
+    {
+      "video_id": "Rt3mvSmVH6Y",
+      "titulo": "Cuidado con la casa del curandero 🌿 #Curandero #Curanderos #Limpia #Terror #Misterio",
+      "tema": "curandero",
+      "estado": "Sonora",
+      "fecha": "2026-11-13T01:43:36.688166-06:00",
+      "prediccion": {
+        "vistas_predichas": 475200,
+        "ctr_predicho": 5.94,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "YESO VIVO",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo",
+      "formato": "primera_persona",
+      "perfil": "obrero en construcción de edificio viejo"
     }
   ],
   "mejores_horarios": {},

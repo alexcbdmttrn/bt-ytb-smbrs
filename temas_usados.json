@@ -1,6 +1,5 @@
 {
   "temas": [
-    "carretera",
     "hospital",
     "velador",
     "leyenda_mexicana",
@@ -19,6 +18,7 @@
     "maldicion",
     "skinwalker",
     "duendes",
-    "payaso_maldito"
+    "payaso_maldito",
+    "curandero"
   ]
 }
