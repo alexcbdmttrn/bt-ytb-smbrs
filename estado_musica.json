@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Ash and Marrow.mp3",
     "Black Maw.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
     "Sunless Vault.mp3",
-    "The Deep Rot.mp3"
+    "The Deep Rot.mp3",
+    "Black Maw.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-12",
+  "ultima_publicacion_exitosa": "2026-11-13",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-12T15:34:17.823801-06:00",
+  "ultima_publicacion": "2026-11-13T13:46:50.645923-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -289,14 +289,23 @@
       "perfil": "maestro rural asignado a un pueblo aislado",
       "elemento_imposible": "mi propia voz salió de la cueva",
       "fecha": "2026-11-12T15:34:17.823801-06:00"
+    },
+    {
+      "id": "73vIxeXEWcw",
+      "titulo": "¿Por qué el altar de Sonora sigue llamando a mi nombre?",
+      "tema": "ritual",
+      "formato": "testigo",
+      "perfil": "turista que visitó un pueblo del interior",
+      "elemento_imposible": "el muerto habló con mi voz",
+      "fecha": "2026-11-13T13:46:50.645923-06:00"
     }
   ],
   "temas_recientes": [
-    "nahual",
     "leyenda_mexicana",
     "duendes",
     "muneca_poseida",
     "bosque_maldito",
-    "brujas"
+    "brujas",
+    "ritual"
   ]
 }
