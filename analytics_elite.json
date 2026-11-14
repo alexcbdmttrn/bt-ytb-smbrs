@@ -542,6 +542,25 @@
       "voz_estilo": "femenino_misterio",
       "formato": "confesion",
       "perfil": "fotógrafo de lugares abandonados"
+    },
+    {
+      "video_id": "GB-IGxXuYwc",
+      "titulo": "Desde que seguí en el panteón no soy el mismo 💧 #Llorona #LaLlorona #LeyendasMexicanas #Terror #M...",
+      "tema": "llorona",
+      "estado": "Coahuila",
+      "fecha": "2026-11-14T16:09:35.530832-06:00",
+      "prediccion": {
+        "vistas_predichas": 538560,
+        "ctr_predicho": 6.73,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "NO CRUCES",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo",
+      "formato": "primera_persona",
+      "perfil": "maestro rural en pueblo aislado"
     }
   ],
   "mejores_horarios": {},
