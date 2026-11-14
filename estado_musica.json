@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Black Maw.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
     "Hollow Marrow.mp3",
@@ -9,13 +8,14 @@
     "Sunken Dread.mp3",
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Ash and Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-13",
+  "ultima_publicacion_exitosa": "2026-11-14",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-13T13:46:50.645923-06:00",
+  "ultima_publicacion": "2026-11-14T10:40:05.406451-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -298,14 +298,23 @@
       "perfil": "turista que visitó un pueblo del interior",
       "elemento_imposible": "el muerto habló con mi voz",
       "fecha": "2026-11-13T13:46:50.645923-06:00"
+    },
+    {
+      "id": "W1ndYaAaaBo",
+      "titulo": "Si ves una puerta sin número en el hotel, NUNCA la abras",
+      "tema": "hotel_embrujado",
+      "formato": "diario",
+      "perfil": "fotógrafo aficionado de lugares abandonados",
+      "elemento_imposible": "la llave decía mi nombre",
+      "fecha": "2026-11-14T10:40:05.406451-06:00"
     }
   ],
   "temas_recientes": [
-    "leyenda_mexicana",
     "duendes",
     "muneca_poseida",
     "bosque_maldito",
     "brujas",
-    "ritual"
+    "ritual",
+    "hotel_embrujado"
   ]
 }
