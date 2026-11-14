@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v7.3
-v7.3 - Variedad narrativa anti-plantilla:
-  - 5 formatos de narración rotativos adaptados a 45-55s
-    (primera persona, confesión, testigo, diario, mensaje urgente)
-  - 15 perfiles de narrador distintos por run
-  - Prompt actualizado con formato + perfil
-  - Tags ASCII puro (fix invalidTags YouTube API)
-v7.2 - acciones simples en pasado, fórmulas NARRATIVAS/NEUTRAS separadas,
-       score penaliza 3:33/TESTIMONIO, ASCII tags
-v7.1 - 35 temas paranormales, sin prefijos rígidos
-v6.3 - Validación tolerante de token
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v8.0 (ELITE VIRAL MISTERIO)
+v8.0 - Estrategia Viral Misterio Local (Estilo LeoggerMX)
+  - Nuevas fórmulas de título: "Por qué NADIE sube a", "El SECRETO de", "Lo que OCULTAN"
+  - Score de título otorga +15 puntos a estas fórmulas (CTR Brutal)
+  - Prompt de historia: Enfoque de documental de investigación (rumores de vecinos)
+  - Miniaturas forzadas a palabras de alto impacto (SECRETO, PELIGRO, NO SUBAS)
+  - Tags SEO geolocalizados (misterio en [Estado])
+v7.3 - Variedad narrativa anti-plantilla
 """
 import asyncio
 import json
@@ -73,8 +70,6 @@ MAX_SHORTS_DIA = 2
 
 # ================================================================
 # 35 TEMAS PARANORMALES
-# acciones = verbos simples en pasado 1ª persona (sin frases).
-# lugares_t = lugares con artículo (el/la/los/las...).
 # ================================================================
 TEMAS_VIRALES_2024 = [
     # === CRIATURAS Y SERES (9) ===
@@ -482,10 +477,7 @@ TEMAS_VIRALES_2024 = [
 ]
 
 # ================================================================
-# FÓRMULAS DE TÍTULO (v7.2)
-# NARRATIVAS usan {pasado} — verbo simple en pasado 1ª persona.
-# NEUTRAS usan solo {lugar}, {Lugar}, {estado}.
-# Se proveen todas las claves en .format(); las no usadas se ignoran.
+# FÓRMULAS DE TÍTULO (v8.0 ELITE VIRAL)
 # ================================================================
 FORMULAS_NARRATIVAS = [
     "Lo que {pasado} en {lugar} no me dejó dormir",
@@ -495,10 +487,10 @@ FORMULAS_NARRATIVAS = [
     "Desde que {pasado} en {lugar} no soy el mismo",
 ]
 
-# Verbos que NO funcionan en fórmulas narrativas — se usan solo en neutras
 _VERBOS_NO_NARRATIVOS = {"encontré", "compré", "heredé", "guardé", "usé", "quemé",
                           "escondí", "firmé", "acepté", "rompí", "pagué", "recibí"}
 
+# ⚡ NUEVAS FÓRMULAS VIRALES ESTILO LEOGGERMX (CTR BRUTAL)
 FORMULAS_NEUTRAS = [
     "Cuidado con {lugar}",
     "Nunca más solo en {lugar}",
@@ -514,6 +506,14 @@ FORMULAS_NEUTRAS = [
     "Así empezó todo en {lugar}",
     "No te quedes en {lugar}",
     "Me advirtieron sobre {lugar}",
+    # ⚡ FÓRMULAS VIRALES MISTERIO LOCAL
+    "Por qué NADIE sube a {lugar}",
+    "El SECRETO de {lugar}",
+    "Lo que OCULTAN en {lugar}",
+    "La VERDAD de {lugar}",
+    "PROHIBIDO entrar a {lugar}",
+    "Nadie sobrevive en {lugar}",
+    "¿Qué pasa si duermes en {lugar}?"
 ]
 
 PSICOLOGIA_COLOR = {
@@ -547,7 +547,7 @@ ESTADO_HISTORIA_SHORTS = random.choice(ESTADOS_MEXICO)
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3",
-    "Dark Techno 2026.mp3",   # ← renombra el archivo antes de subirlo al repo
+    "Dark Techno 2026.mp3",   
 ]
 
 OUTLIERS_TERROR = [
@@ -559,10 +559,7 @@ OUTLIERS_TERROR = [
 ]
 
 # =================================================================
-# VARIEDAD NARRATIVA — anti-plantilla para Shorts
-# YouTube penaliza el "mismo molde". Rotamos formato y perfil
-# en cada run para que cada short suene estructuralmente distinto.
-# Adaptados a 110-130 palabras (45-55 segundos de audio).
+# VARIEDAD NARRATIVA
 # =================================================================
 FORMATOS_NARRACION_SHORT = [
     {
@@ -672,15 +669,15 @@ def calcular_puntuacion_viralidad(tema):
     }
 
 # ================================================================
-# TÍTULOS
+# TÍTULOS Y SCORE
 # ================================================================
 def generar_titulo_variado(tema, estado_mx):
-    """Genera título coherente con verbos simples en pasado."""
+    """Genera título coherente con verbos simples en pasado, priorizando viralidad."""
     pasado = random.choice(tema["acciones"])
     lugar  = random.choice(tema["lugares_t"])
 
-    # Si el verbo no encaja en narrativas, forzar fórmula neutra
-    usar_narrativa = random.random() < 0.45 and pasado not in _VERBOS_NO_NARRATIVOS
+    # Si el verbo no encaja en narrativas, forzar fórmula neutra/viral
+    usar_narrativa = random.random() < 0.35 and pasado not in _VERBOS_NO_NARRATIVOS
     formula = random.choice(FORMULAS_NARRATIVAS) if usar_narrativa else random.choice(FORMULAS_NEUTRAS)
 
     try:
@@ -693,9 +690,9 @@ def generar_titulo_variado(tema, estado_mx):
     except KeyError:
         titulo = f"Cuidado con {lugar}"
 
-    # Palabra de impacto opcional (35 % de las veces)
-    if random.random() < 0.35:
-        impacto = random.choice(["NUNCA", "NADIE", "PELIGRO", "SOLO"])
+    # Palabra de impacto opcional (50 % de las veces para viralidad)
+    if random.random() < 0.50:
+        impacto = random.choice(["NUNCA", "NADIE", "PELIGRO", "SOLO", "SECRETO"])
         if not titulo.upper().startswith(impacto):
             titulo = f"{impacto}: {titulo}"
 
@@ -711,30 +708,23 @@ def generar_titulo_variado(tema, estado_mx):
 
 def calcular_score_titulo(titulo):
     """
-    Score basado en datos reales del canal:
-    - TESTIMONIO y 3:33 AM funcionan cuando la PREMISA es específica (top 5 del canal)
-    - Lo que falla es la fórmula rota/genérica, no la palabra ni la hora
-    - Bonus para premisas con elemento imposible/memorable
+    Score base + bonus masivo para fórmulas de Misterio Local (LeoggerMX).
     """
     score = 50
     tl = titulo.upper()
 
     if 35 <= len(titulo) <= 100: score += 10
-
-    # Bonus: palabras de impacto
     if any(p in tl for p in ["NUNCA","NADIE","SOLO","PELIGRO","PROHIBIDO"]): score += 8
-
-    # Bonus: pregunta (genera curiosidad)
     if "?" in titulo: score += 6
-
-    # Bonus: tiene emoji
     if any(ord(c) > 127743 for c in titulo): score += 3
-
-    # Bonus: tiene hashtag
     if "#" in titulo: score += 3
 
-    # ★ Bonus: premisa con elemento específico/memorable (lo que diferencia top 5)
-    # "era mi voz", "nadie lo contrató", "que nadie menciona", "pero yo estaba solo"
+    # ⚡ NUEVO BONUS MASIVO v8.0: Fórmula Misterio Local Viral (+15 pts)
+    patrones_virales = ["por que nadie", "nadie sube", "el secreto de", "lo que ocultan", "la verdad de", "prohibido entrar"]
+    if any(p in titulo.lower() for p in patrones_virales):
+        score += 15
+
+    # ★ Bonus: premisa con elemento específico/memorable
     palabras_especificas = [
         "era mi voz", "nadie lo contrató", "nadie menciona", "pero yo estaba solo",
         "sin mover la boca", "nadie contrató", "y era mi", "cobró de vuelta",
@@ -742,11 +732,9 @@ def calcular_score_titulo(titulo):
     ]
     if any(p in titulo.lower() for p in palabras_especificas): score += 10
 
-    # ★ Penalizar SOLO los títulos con fórmulas semánticamente rotas
-    # (ej: "conduje en la casa", "patrullé en el desierto" — acción incoherente con lugar)
-    # NO penalizar TESTIMONIO, ADVERTENCIA, ni horas — esos SÍ funcionan en shorts
+    # Penalizar fórmulas rotas
     if re.search(r'\b(conduje|manejé|viajé)\s+en\s+(la\s+)?(casa|habitación|cuarto|baño)\b', titulo.lower()):
-        score -= 15  # fórmula semánticamente rota
+        score -= 15
 
     return min(max(score, 0), 100)
 
@@ -864,7 +852,6 @@ def deberia_publicar_ahora(estado):
     tz   = pytz.timezone("America/Mexico_City")
     hoy  = datetime.now(tz).date().isoformat()
 
-    # Reiniciar contador si es un día nuevo
     if estado.get("fecha") != hoy:
         estado["fecha"] = hoy
         estado["publicaciones_hoy"] = 0
@@ -932,7 +919,7 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         return None
 
 # ================================================================
-# MINIATURA ÉLITE (estilo MrBeast)
+# MINIATURA ÉLITE (estilo MrBeast / Viral)
 # ================================================================
 def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
     if any(p in tema_viral for p in ["miedo", "terror", "peligro"]):
@@ -1144,7 +1131,6 @@ def generar_historia_completa():
     contexto   = random.choice(tema_viral["contextos"])
     keywords   = tema_viral["keywords"]
 
-    # Seleccionar formato y perfil aleatorios para este short
     formato = random.choice(FORMATOS_NARRACION_SHORT)
     perfil  = random.choice(PERFILES_NARRADOR_SHORT)
 
@@ -1160,8 +1146,8 @@ def generar_historia_completa():
     outliers    = "\n".join(f"  • {t}" for t in random.sample(OUTLIERS_TERROR, 3))
     score_viral = calcular_puntuacion_viralidad(tema_viral)
 
-    prompt = f"""Eres un curador de relatos de terror que la comunidad comparte en foros de internet.
-Tu especialidad es adaptar estas historias para hacerlas extremadamente inmersivas y escalofriantes.
+    prompt = f"""Eres el investigador principal de un canal de DOCUMENTALES DE MISTERIO Y LEYENDAS LOCALES de México.
+Tu objetivo es escribir un guion (~110-130 palabras, 50 segundos) sobre un caso real o leyenda urbana de la región.
 
 🔥 TEMA: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
@@ -1175,21 +1161,18 @@ FORMATO NARRATIVO OBLIGATORIO: {formato['nombre'].upper()}
 PERFIL DEL NARRADOR: {perfil}
 El narrador NO es genérico. Es: {perfil}.
 Su oficio define qué detalles sensoriales nota y cómo percibe el terror.
-Ejemplo: un velador nota las cámaras; un médico nota síntomas; un taxista nota el odómetro.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📚 OUTLIERS DE REFERENCIA (estructura, no copiar):
 {outliers}
 
 🚨 REGLAS DE ORO:
-1. Relato personal real. NUNCA menciones IA, ficción o invención.
-2. 110-130 palabras EXACTAS (45-55 segundos de audio).
-3. Gancho en los primeros 3 segundos — lo más perturbador primero.
-4. Detalles sensoriales propios del oficio del narrador.
+1. Haz que suene como un documental de investigación, no un cuento de hadas. 
+2. Menciona los rumores de los "vecinos del pueblo" o "gente local".
+3. 110-130 palabras EXACTAS (45-55 segundos de audio).
+4. Gancho en los primeros 3 segundos — lo más perturbador primero.
 5. ⚠️ SI mencionas hora, VARÍALA. NO uses "3:33 AM", "3:00 AM" ni "4:44 AM".
-   En la MAYORÍA de relatos NO pongas hora.
-6. NO empieces con "TESTIMONIO:" ni "ADVERTENCIA:".
-7. El final queda ABIERTO — sin resolución, sin explicación.
+6. El final queda ABIERTO — sin resolución, sin explicación.
 
 🚫 TÍTULOS YA PUBLICADOS:
 {tit_ref}
@@ -1198,7 +1181,7 @@ Ejemplo: un velador nota las cámaras; un médico nota síntomas; un taxista not
 Devuelve ESTRICTAMENTE este JSON:
 {{
     "texto_completo": "El relato de 110-130 palabras en el formato indicado.",
-    "palabras_portada": "2 palabras EN MAYÚSCULAS de alto impacto visual",
+    "palabras_portada": "2 palabras EN MAYÚSCULAS (ej: SECRETO, PROHIBIDO, NO SUBAS, PELIGRO, OCULTAN)",
     "tags": ["tag1","tag2","tag3","tag4","tag5"]
 }}"""
 
@@ -1237,7 +1220,6 @@ Devuelve ESTRICTAMENTE este JSON:
             data["estado"]  = ESTADO_HISTORIA_SHORTS
             data["contexto"] = contexto
             data["titulo"]  = generar_titulo_variado(tema_viral, ESTADO_HISTORIA_SHORTS)
-            # Guardar formato y perfil para logging en main()
             data["_formato_usado"] = formato["nombre"]
             data["_perfil_usado"]  = perfil
 
@@ -1371,7 +1353,6 @@ def buscar_miniatura_pexels(query, intentos=5):
             print(f"⚠️ Error: {e}")
         if intento < intentos - 1:
             time.sleep(3)
-    # Fallback simple
     try:
         r = requests.get(url, headers=headers,
                          params={"query": query, "orientation": "portrait", "per_page": 5}, timeout=25)
@@ -1471,7 +1452,6 @@ def seleccionar_fondo_disponible(estado):
 # GENERACIÓN DE AUDIO
 # ================================================================
 async def _intentar_voz(texto_limpio, output_path, voz):
-    """Intenta generar audio con una voz específica. Devuelve True si el archivo tiene contenido."""
     communicate = edge_tts.Communicate(
         text=texto_limpio,
         voice=voz["voz"],
@@ -1482,9 +1462,7 @@ async def _intentar_voz(texto_limpio, output_path, voz):
     return os.path.exists(output_path) and os.path.getsize(output_path) > 2000
 
 async def generar_audio_edge_tts_con_retry(texto, output_path):
-    """Prueba las 5 voces de Edge TTS en orden antes de rendirse."""
     texto_limpio = limpiar_texto_para_audio(texto)
-    # La voz actual va primero; el resto en orden aleatorio como fallbacks
     voces_orden = [CONFIG_VOZ_ACTUAL] + [
         v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]
     ]
@@ -1499,7 +1477,6 @@ async def generar_audio_edge_tts_con_retry(texto, output_path):
             except Exception as e:
                 print(f"⚠️ {voz['voz']} intento {intento+1}: {e}")
             await asyncio.sleep(2)
-        # Limpiar archivo fallido antes de intentar la siguiente voz
         if os.path.exists(output_path):
             os.remove(output_path)
     return False, None
@@ -1548,7 +1525,6 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
             try:
                 clip = ImageClip(img_path, duration=dur_img).set_fps(30)
 
-                # Zoom Ken Burns suave
                 def make_zoom(dur=dur_img):
                     def zoom(t):
                         return 1.0 + 0.05 * (t / dur)
@@ -1565,7 +1541,6 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
 
         video_final = concatenate_videoclips(clips_video, method="compose").set_duration(duracion_total)
 
-        # Música de fondo
         if musica_path and os.path.exists(musica_path):
             try:
                 musica     = AudioFileClip(musica_path)
@@ -1609,26 +1584,12 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
 # SEO — TAGS Y DESCRIPCIÓN
 # ================================================================
 def _ascii_tag(t):
-    """
-    Convierte texto a ASCII puro para YouTube API.
-    Elimina acentos (á→a, é→e, ñ→n, ó→o...) y cualquier char especial.
-    'aparición' → 'aparicion' | 'Michoacán' → 'michoacan'
-    YouTube rechaza tags con caracteres Unicode no ASCII vía API.
-    """
-    # NFD descompone: 'á' → 'a' + combining accent; luego quitamos Mn (marks)
     nfd = unicodedata.normalize('NFD', str(t))
     sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
-    # Solo letras a-z, dígitos 0-9 y espacios
     limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower())
     return re.sub(r'\s+', ' ', limpio).strip()
 
-
 def generar_tags_seo(tema_obj, estado_mx):
-    """
-    Tags SEO en ASCII puro — máx 15 tags, máx 30 chars por tag,
-    máx 400 chars totales. YouTube API rechaza cualquier char Unicode
-    fuera del rango ASCII básico aunque el Studio los acepte.
-    """
     nombre_tema = _ascii_tag(tema_obj["tema"].replace("_", " "))
     estado_ascii = _ascii_tag(estado_mx)
 
@@ -1640,15 +1601,13 @@ def generar_tags_seo(tema_obj, estado_mx):
         "fenomenos paranormales", "historias de miedo",
     ]
 
-    # T3 — keywords y hashtags del tema convertidos a ASCII
     t3  = [k for k in tema_obj["keywords"]]
     t3 += [h.lstrip("#") for h in tema_obj["hashtags"]]
 
-    # T4 — Long-tail (4-6 palabras): baja competencia, alta intención
     t4 = [
-        f"historias de terror {nombre_tema}",   # ancla título + tema
+        f"historias de terror {nombre_tema}",   
         f"relatos de terror {nombre_tema}",
-        f"terror en {estado_ascii}",             # geolocalizado
+        f"misterio en {estado_ascii}",             
         f"relatos paranormales {nombre_tema}",
         f"{nombre_tema} paranormal",
         "historias de terror cortas",
@@ -1658,17 +1617,14 @@ def generar_tags_seo(tema_obj, estado_mx):
 
     t5 = ["shorts"]
 
-    # Sanitizar, deduplicar y filtrar
     todos, vistos = [], set()
     for raw in t1 + t2 + t3 + t4 + t5:
         tag = _ascii_tag(raw)
-        # ASCII puro: 40 chars por tag es seguro
         if not tag or len(tag) < 2 or len(tag) > 40 or tag in vistos:
             continue
         vistos.add(tag)
         todos.append(tag)
 
-    # Máx 18 tags, máx 450 chars totales
     resultado, total_chars = [], 0
     for tag in todos:
         costo = len(tag) + 1
@@ -1679,14 +1635,7 @@ def generar_tags_seo(tema_obj, estado_mx):
 
     return resultado
 
-
-def generar_descripcion_seo(gancho, contexto_desc, tema_obj, estado_mx,
-                             hashtags_desc, fuente_relato):
-    """
-    Descripción corta estilo embudo — los shorts más virales del canal
-    tienen descripciones mínimas y de acción directa.
-    Los embudo shorts (Historia completa 👉) tienen 62% engagement.
-    """
+def generar_descripcion_seo(gancho, contexto_desc, tema_obj, estado_mx, hashtags_desc, fuente_relato):
     nombre_tema = tema_obj["tema"].replace("_", " ").capitalize()
 
     hashtags = " ".join([
@@ -1706,8 +1655,7 @@ def generar_descripcion_seo(gancho, contexto_desc, tema_obj, estado_mx,
         "",
         hashtags,
     ]
-    return "\n".join(partes)[:2000]  # Corta y directa, como los mejores embudo
-
+    return "\n".join(partes)[:2000]
 
 # ================================================================
 # YOUTUBE
@@ -1734,7 +1682,6 @@ def validar_token_youtube():
         return None
 
 def subir_a_youtube(video_path, miniatura_path, titulo, tags_seo, descripcion_seo):
-    """Sube el short a YouTube con AI disclosure, tags SEO y descripción optimizada."""
     youtube = validar_token_youtube()
     if not youtube:
         return None
@@ -1753,7 +1700,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, tags_seo, descripcion_se
             "privacyStatus":           "public",
             "selfDeclaredMadeForKids": False,
             "madeForKids":             False,
-            "containsSyntheticMedia":  True,   # ✅ Declara contenido generado con IA
+            "containsSyntheticMedia":  True,   
         },
     }
 
@@ -1790,8 +1737,6 @@ def subir_a_youtube(video_path, miniatura_path, titulo, tags_seo, descripcion_se
         traceback.print_exc()
         return None
 
-
-
 # ================================================================
 # LIMPIEZA
 # ================================================================
@@ -1809,7 +1754,7 @@ def limpiar_archivos_temporales(archivos):
 # ================================================================
 def main():
     print("=" * 65)
-    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v7.2")
+    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v8.0 (VIRAL)")
     print("=" * 65)
 
     estado = cargar_estado()
@@ -1828,7 +1773,7 @@ def main():
         tema          = datos["tema"]
         titulo        = datos["titulo"]
         texto         = datos["texto_completo"]
-        palabras_portada = datos.get("palabras_portada", "TERROR REAL").upper()
+        palabras_portada = datos.get("palabras_portada", "PELIGRO").upper()
         tags          = datos.get("tags", ["#Terror","#Shorts","#Misterio"])
         gancho        = datos.get("gancho_descripcion",   titulo)
         ctx_desc      = datos.get("contexto_descripcion", "")
@@ -1846,7 +1791,6 @@ def main():
         print(f"📊 Score título: {calcular_score_titulo(titulo)}")
         print(f"📖 Texto ({len(texto.split())} palabras): {texto[:180]}...")
 
-        # Detectar época si el relato menciona un año
         anio_match = re.search(r'\b(19[5-9]\d|20[0-2]\d)\b', texto)
         if anio_match:
             actualizar_epoca(int(anio_match.group()))
