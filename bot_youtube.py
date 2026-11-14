@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v6.4
-v6.4 - Diversidad de temas + elemento imposible en títulos:
-  - 4 temas nuevos: vampiro, hombre lobo, zona secreta, implante alien (42 temas)
-  - Campo "elemento_imposible" obligatorio en el plan (detalle memorable que rompe expectativa)
-  - Prompt de título exige elemento imposible en 3+ de 6 títulos
-  - Score +5 por elemento imposible ("era mi voz", "nadie lo contrató", "pero yo estaba solo")
-  - ELIMINADA penalización -8 a "3:33" — datos del canal demuestran que SÍ funciona
-  - ELIMINADA penalización genérica a horas fijas — correlaciona con top views
-  - Prompt de historia mejorado: momento de máximo terror por capítulo + detalle imposible
-v6.3 - Tags ultra-específicos, duración máx 10 min, bonus "Si...NUNCA", miniatura mejorada
-v6.2 - 5 formatos narrativos + 15 perfiles de narrador distintos
-v6.1 - Tags ASCII puro, hashtags al final, estado_mx en tags
+SOMBRAS DE MEDIANOCHE - Bot v6.5
+v6.5 - Estrategia de Títulos Virales (Misterio Local / Documental):
+  - Nuevos ganchos en lista GANCHOS: "por qué nadie", "nadie sube a", "el secreto de", "lo que ocultan"
+  - Score +10 en puntuar_titulo si usa estructura de pregunta/tabú local
+  - Prompt de historia cambiado a "Investigador de misterios locales" (estilo documental)
+  - Miniatura: bonus para palabras de alto impacto (SECRETO, PROHIBIDO, OCULTAN)
+v6.4 - Diversidad de temas + elemento imposible en títulos
 """
 import asyncio
 import bisect
@@ -108,10 +103,10 @@ ESTADOS_MEXICO = [
 ]
 
 # =================================================================
-# TEMAS — 42 CATEGORÍAS PARANORMALES (v6.4: +4 nuevos)
+# TEMAS — 42 CATEGORÍAS PARANORMALES
 # =================================================================
 TEMAS = [
-    # ========== CRIATURAS Y SERES LEGENDARIOS (9 — v6.4: +vampiro +hombre_lobo) ==========
+    # ========== CRIATURAS Y SERES LEGENDARIOS (9) ==========
     {"tema": "skinwalker", "seed": "skinwalker relatos", "angulo": "Algo imita voces humanas y te sigue por el bosque; cada noche se acerca más.",
      "keywords": ["skinwalker", "criatura", "persecución", "bosque"],
      "contextos": ["carretera solitaria", "bosque profundo", "sierra aislada", "desierto de noche"],
@@ -209,7 +204,7 @@ TEMAS = [
      "visuales": ["creepy clown dark", "abandoned circus night", "empty carnival night", "clown silhouette fog", "broken carousel night"],
      "hashtags": ["#PayasoMaldito", "#TerrorPsicológico"]},
 
-    # ========== LUGARES EMBRUJADOS (10 — v6.4: +zona_secreta) ==========
+    # ========== LUGARES EMBRUJADOS (10) ==========
     {"tema": "casa_embrujada", "seed": "casa embrujada historia real", "angulo": "La casa nueva tiene historia; los vecinos hablan de la familia anterior y nadie quiere entrar.",
      "keywords": ["casa embrujada", "aparición", "familia", "historia"],
      "contextos": ["casa antigua", "casa de campo", "casa heredada", "casa en venta", "casa del barrio"],
@@ -331,7 +326,7 @@ TEMAS = [
      "visuales": ["herbs hanging dark", "smoke ritual dark", "old mexican healer house", "candles eggs limpia", "temazcal night"],
      "hashtags": ["#Curanderos", "#Limpia"]},
 
-    # ========== EXTRATERRESTRES (4 — v6.4: +implante_alien) ==========
+    # ========== EXTRATERRESTRES (4) ==========
     {"tema": "aliens", "seed": "avistamiento ovni historia", "angulo": "Lo que bajó del cielo no era un avión; la luz se movió como algo vivo.",
      "keywords": ["ovni", "extraterrestre", "avistamiento", "luces"],
      "contextos": ["campo abierto", "carretera solitaria", "sierra", "rancho", "desierto"],
@@ -577,7 +572,7 @@ def elegir_tema(estado, youtube):
     return elegido
 
 # =================================================================
-# TÍTULOS
+# TÍTULOS Y MINIATURAS (ESTRATEGIA VIRAL v6.5)
 # =================================================================
 GANCHOS = [
     "nunca", "nadie", "jamás", "solo", "prohibido", "prohibieron",
@@ -588,6 +583,9 @@ GANCHOS = [
     "desapareció", "apareció", "cambió", "volvió", "se fue",
     "qué", "por qué", "cómo", "?", "si ", "cuando",
     "noche", "madrugada", "oscuridad",
+    # ⚡ NUEVOS GANCHOS VIRALES (Estilo LeoggerMX)
+    "por qué nadie", "nadie sube a", "el secreto de", "lo que ocultan", 
+    "lo que encontraron", "la verdad de", "el misterio de", "prohibido entrar",
 ]
 PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidencia", "pruebas", "autoridades",
               "filtrado", "es real", "historia real", "hechos reales"]
@@ -617,15 +615,18 @@ def puntuar_titulo(t):
         s += 2
     s += min(3, sum(1 for g in GANCHOS if g in tl))
 
-    # ★ BONUS: patrón ganador "Si... NUNCA/NO" — domina el top 5 del canal
+    # ★ BONUS: patrón ganador "Si... NUNCA/NO"
     if re.search(r'\bsi\b.{1,60}(nunca|no\s)', tl, re.I | re.S):
         s += 6
-    # ★ BONUS: tiene número específico (667, 404, 2:14 — no solo la hora abusada)
     if re.search(r'\b\d{3,}\b', t):
         s += 3
 
-    # ★ BONUS v6.4: elemento imposible/memorable — patrón de los títulos con 900+ vistas
-    # "era mi voz", "nadie lo contrató", "pero yo estaba solo", "lo vi en dos lugares"
+    # ⚡ NUEVO BONUS MASIVO v6.5: Fórmula "Misterio Local Viral" (LeoggerMX)
+    # Títulos como "Por qué nadie sube a...", "El secreto de...", "Lo que ocultan en..."
+    if re.search(r'\b(por qué nadie|nadie sube|el secreto de|lo que ocultan|lo que encontraron|la verdad de)\b', tl):
+        s += 10  # Recompensa enorme para priorizar este estilo
+
+    # ★ BONUS: elemento imposible/memorable
     patrones_imposibles = [
         r"\by\s+(era|fue|estaba|había|resultó)\b",
         r"\bpero\s+(yo\s+)?(estaba|era|fue|nadie|solo|nunca|no)",
@@ -638,11 +639,6 @@ def puntuar_titulo(t):
         if re.search(pat, tl):
             s += 5
             break
-
-    # ⚠️ v6.4: NO se penaliza "3:33 AM" ni horas fijas.
-    # Datos del canal: 2 de los 5 videos más vistos usan "3:33 AM" (129 y 109 vistas)
-    # y 4 de 5 usan hora específica. El penalty anterior estaba alejando al bot
-    # de un patrón que SÍ funciona.
 
     caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
     s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
@@ -673,6 +669,10 @@ def elegir_titulo(candidatos):
 def elegir_texto_portada(opciones, titulo):
     pt = set(re.findall(r"\w+", titulo.lower()))
     mejor = None
+    
+    # ⚡ Forzar palabras de alto impacto si la IA falla
+    fallbacks_virales = ["NO SUBAS", "PROHIBIDO", "EL SECRETO", "NO ENTRES", "QUÉ HAY AQUÍ", "REAL"]
+    
     for o in opciones or []:
         if not isinstance(o, str):
             continue
@@ -682,27 +682,37 @@ def elegir_texto_portada(opciones, titulo):
             continue
         solape = len({x.lower() for x in w} & pt) / len(w)
         sc = (3 if len(w) in (2, 3) else 1) - 2 * solape + (1 if "?" in o else 0)
+        
+        # ⚡ BONUS v6.5 si usa palabras de misterio local en la miniatura
+        if any(x in o for x in ["SECRETO", "PROHIBIDO", "NADIE", "NO SUBAS", "OCULTAN", "VERDAD"]):
+            sc += 5
+            
         if mejor is None or sc > mejor[0]:
             mejor = (sc, o)
-    return mejor[1] if mejor else "NO ENTRES"
+            
+    # Si la IA no dio buenas opciones, usar un fallback viral
+    if not mejor:
+        return random.choice(fallbacks_virales)
+        
+    return mejor[1]
 
 # =================================================================
 # HISTORIA
 # =================================================================
 ESQUEMA_PLAN = """{
- "titulos": ["6 títulos de 45-68 caracteres con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'. AL MENOS 3 de los 6 DEBEN incluir el 'elemento_imposible' del relato para crear tensión memorable ('...y era mi voz', 'nadie lo contrató', 'pero yo estaba solo'). Combina: 'Si [situación cotidiana], NUNCA [acción]' cuando encaje natural"],
+ "titulos": ["6 títulos de 45-68 caracteres con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'. AL MENOS 3 de los 6 DEBEN usar la fórmula de Misterio Local ('Por qué NADIE sube a [Lugar]', 'El SECRETO de [Lugar]', 'Lo que OCULTAN en [Lugar]'). Combina con el elemento_imposible"],
  "anio_suceso": 2014,
  "protagonista": "nombre de pila del narrador",
- "elemento_imposible": "CRÍTICO: el detalle más memorable e imposible del relato en 3-8 palabras. Algo que rompe la lógica y se queda en la cabeza del espectador. Ejemplos que funcionan en el canal: 'era mi propia voz', 'nadie lo contrató', 'lo vi en dos lugares a la vez', 'el teléfono sonó desde el sótano', 'el cadáver seguía respirando'. ESTE detalle debe aparecer en AL MENOS 3 de los 6 títulos",
+ "elemento_imposible": "CRÍTICO: el detalle más memorable e imposible del relato en 3-8 palabras. Algo que rompe la lógica y se queda en la cabeza del espectador. Ejemplos: 'era mi propia voz', 'nadie lo contrató', 'lo vi en dos lugares a la vez', 'el teléfono sonó desde el sótano', 'el cadáver seguía respirando'. ESTE detalle debe aparecer en AL MENOS 3 de los 6 títulos",
  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de la acción más perturbadora, en primera persona, e INCLUYEN el elemento_imposible",
  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
  "palabras_clave": ["5 keywords SEO en español"],
- "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS, distintas al título, que causen impacto visual en miniatura"],
+ "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS (ej: NO SUBAS, PROHIBIDO, EL SECRETO, QUÉ HAY AQUÍ)"],
  "miniatura_escena": "4-6 palabras en inglés para buscar foto en Pexels (ej: dark hallway door, candle skull altar)",
  "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
  "pregunta_comentario": "pregunta corta que invite a comentar basada en la mecánica del relato (ej: '¿tú habrías abierto la puerta?')",
- "tags": ["10 tags ULTRA-ESPECÍFICOS de esta historia — búsquedas reales que alguien teclearía en YouTube. MIX OBLIGATORIO: 2-3 tags del OBJETO o ELEMENTO central del relato (ej: 'santito maldito', 'silbato de barro', 'objeto con reglas'); 2-3 tags de la MECÁNICA del miedo (ej: 'reglas de objeto maldito', 'llamadas siniestras a medianoche', 'teléfono que sabe todo'); 1-2 PREGUNTAS de audiencia (ej: 'que harias si te llaman a medianoche'); 1-2 tags ESTADO más tema (ej: 'terror en chihuahua'); 1-2 'relatos de terror mas el elemento específico'. NO pongas tags genéricos como miedo o horror solos."],
+ "tags": ["10 tags ULTRA-ESPECÍFICOS de esta historia. MIX OBLIGATORIO: 2-3 del OBJETO o ELEMENTO central, 2-3 de la MECÁNICA del miedo, 1-2 PREGUNTAS de audiencia, 1-2 tags ESTADO más tema (ej: 'terror en chihuahua'), 1-2 'relatos de terror mas el elemento específico'. NO pongas tags genéricos."],
  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
@@ -716,11 +726,11 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos,
     if perfil_narrador is None:
         perfil_narrador = "persona común del pueblo"
 
-    prompt = f"""Eres showrunner de un canal de relatos de terror en español (México/Latam) con millones de vistas.
-Diseña el PLAN de un relato de terror (~8-12 minutos, {NUM_CAPITULOS} capítulos).
+    prompt = f"""Eres el investigador principal de un canal de DOCUMENTALES DE MISTERIO Y LEYENDAS LOCALES de México.
+Tu objetivo es escribir un guion de TERROR (~8-12 minutos, {NUM_CAPITULOS} capítulos) sobre un caso real o leyenda urbana de la región.
 
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
-LUGAR: {contexto}, en {estado_mx}, México
+LUGAR ESPECÍFICO: {contexto}, en {estado_mx}, México.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FORMATO NARRATIVO OBLIGATORIO: {formato_narracion['nombre'].upper()}
@@ -736,38 +746,24 @@ BÚSQUEDAS REALES EN YOUTUBE:
 TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
 {prev}
 
-━━━ REGLA CRÍTICA: ELEMENTO IMPOSIBLE ━━━
-El campo 'elemento_imposible' es el corazón del CTR del video. Debe ser un detalle
-que ROMPE la lógica y se queda grabado en la cabeza del espectador. Ejemplos reales
-del canal que han funcionado (900+ vistas):
-  • "era mi propia voz"           (el teléfono sonó y era la voz del narrador)
-  • "nadie lo contrató"            (payaso aparece solo)
-  • "lo vi en dos lugares a la vez" (imposible físico)
-  • "el teléfono sonó desde el sótano" (origen imposible)
-  • "el cadáver seguía respirando" (subvierte lo establecido)
+━━━ REGLA CRÍTICA: TÍTULO ESTILO "MISTERIO LOCAL" ━━━
+El canal que domina este nicho usa títulos como:
+  • "Por qué NADIE sube a [Lugar]"
+  • "El SECRETO de [Lugar]"
+  • "Lo que OCULTAN en [Lugar]"
+  • "La VERDAD de [Lugar]"
+El campo 'titulos' debe contener 6 opciones. AL MENOS 3 de ellas DEBEN usar esta estructura de pregunta/tabú local usando el estado o ciudad.
 
-REGLAS DE TÍTULO (CLAVE PARA CTR):
-1. NUNCA termines el título con "| Relato de Terror".
-2. AL MENOS 3 de los 6 títulos DEBEN incluir el elemento_imposible literal o parafraseado.
-3. Cada uno de los 6 títulos DEBE usar una estructura DISTINTA:
-   - Advertencia: "Nunca [verbo] en [lugar]"
-   - Confesión: "Lo que [verbo] en [lugar] no me dejó dormir"
-   - Testimonio: "La noche que [algo] en [lugar]"
-   - Pregunta: "¿Por qué [algo] en [lugar]?"
-   - Descubrimiento: "Encontré [algo] en [lugar]"
-   - Elemento imposible: "[acción cotidiana] y [elemento imposible]"
-4. Combina con "Si [situación], NUNCA [acción]" cuando encaje natural (patrón top del canal).
-5. Usa mayúsculas solo para 1-2 palabras de impacto.
-6. NO empieces los 6 títulos igual.
+━━━ REGLA CRÍTICA: ELEMENTO IMPOSIBLE ━━━
+El campo 'elemento_imposible' debe ser un detalle que ROMPE la lógica (ej: 'era mi propia voz', 'el cadáver respiraba', 'nadie lo contrató').
+ESTE detalle debe aparecer en AL MENOS 3 de los 6 títulos.
 
 REGLAS DE CONTENIDO:
-1. Prioriza escenarios cotidianos y relacionables al perfil del narrador.
-2. El disclosure va en la descripción, NO en la narración.
-3. El gancho debe ser lo más perturbador del relato e INCLUIR el elemento_imposible.
-4. Cada capítulo termina en cliffhanger, excepto el último.
-5. El relato completo: estrictamente 1100-1400 palabras.
-6. Cada capítulo debe tener UN "momento de máximo terror" específico
-   (no solo atmósfera: un evento concreto que el lector recuerde).
+1. Haz que suene como un documental de investigación, no un cuento de hadas. Menciona rumores de los "vecinos del pueblo".
+2. El gancho debe ser lo más perturbador del relato e INCLUIR el elemento_imposible.
+3. Cada capítulo termina en cliffhanger (excepto el último).
+4. El relato completo: estrictamente 1100-1400 palabras.
+5. Cada capítulo debe tener UN "momento de máximo terror" específico (un evento concreto).
 
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
@@ -817,7 +813,7 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
         else:
             formato_cap = f"Mantén el formato {nombre_formato} establecido en el capítulo anterior."
 
-        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un relato de terror.
+        prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un documental de terror.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FORMATO NARRATIVO: {nombre_formato.upper()}
 {formato_instruccion}
@@ -840,13 +836,9 @@ REGLAS:
   atmósfera. Un evento específico (la puerta que se abre sola, el teléfono que suena,
   la voz que no debería estar). El lector debe poder resumir "en este capítulo pasó X".
 - SHOWING not telling: muestra el miedo con acciones y objetos, no con adjetivos
-  ("se me heló la sangre" > "tuve mucho miedo")
-- El elemento imposible debe sentirse ORGÁNICO, no forzado. Aparece cuando menos
-  se espera, no lo subrayes con "qué raro" o "qué extraño".
+- El elemento imposible debe sentirse ORGÁNICO, no forzado.
 - Sin listas, emojis, títulos de sección ni acotaciones entre corchetes
-- ⚠️ Si mencionas hora VARÍALA — evita repetir la misma hora en todos los capítulos
-- El narrador percibe el terror desde su oficio: un velador nota las cámaras,
-  un médico nota síntomas, un camionero nota el odómetro, etc.
+- El narrador percibe el terror desde su oficio.
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
@@ -1695,7 +1687,7 @@ def main():
         sys.exit(0)
 
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.4")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.5 (VIRAL MISTERIO LOCAL)")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | Formatos: {len(FORMATOS_NARRACION)} | Perfiles: {len(PERFILES_NARRADOR)}")
     print("=" * 70)
