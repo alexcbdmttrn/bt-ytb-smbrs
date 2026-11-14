@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v8.0 (ELITE VIRAL MISTERIO)
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v9.0 (ANTI-DEMONETIZACIÓN)
+v9.0 - Blindaje contra Políticas de YouTube (Contenido No Auténtico):
+  - Prompt de guion transformado a "Mini-Documental de Investigación"
+  - Incluye "Opinión del Investigador" y "Dato Histórico" (Valor Humano)
+  - Overlays de Texto en Pantalla (Edición Creativa)
+  - Filtro visual "Found Footage" (Grano y Viñeteado)
+  - Miniaturas rotativas (evita plantillas predecibles)
+  - Divulgación de IA explícita (containsSyntheticMedia)
 v8.0 - Estrategia Viral Misterio Local (Estilo LeoggerMX)
-  - Nuevas fórmulas de título: "Por qué NADIE sube a", "El SECRETO de", "Lo que OCULTAN"
-  - Score de título otorga +15 puntos a estas fórmulas (CTR Brutal)
-  - Prompt de historia: Enfoque de documental de investigación (rumores de vecinos)
-  - Miniaturas forzadas a palabras de alto impacto (SECRETO, PELIGRO, NO SUBAS)
-  - Tags SEO geolocalizados (misterio en [Estado])
-v7.3 - Variedad narrativa anti-plantilla
 """
 import asyncio
 import json
@@ -63,7 +64,8 @@ ACTIVAR_DISCLOSURE_IA = True
 
 DISCLOSURE_TEXT = (
     "\n📖 Relato compartido por un oyente de la comunidad, narrado con voz "
-    "sintética y mejorado con IA para una mayor inmersión."
+    "sintética y mejorado con IA para una mayor inmersión. Este contenido es "
+    "un documental de investigación con fines de entretenimiento."
 )
 
 MAX_SHORTS_DIA = 2
@@ -477,7 +479,7 @@ TEMAS_VIRALES_2024 = [
 ]
 
 # ================================================================
-# FÓRMULAS DE TÍTULO (v8.0 ELITE VIRAL)
+# FÓRMULAS DE TÍTULO
 # ================================================================
 FORMULAS_NARRATIVAS = [
     "Lo que {pasado} en {lugar} no me dejó dormir",
@@ -490,7 +492,6 @@ FORMULAS_NARRATIVAS = [
 _VERBOS_NO_NARRATIVOS = {"encontré", "compré", "heredé", "guardé", "usé", "quemé",
                           "escondí", "firmé", "acepté", "rompí", "pagué", "recibí"}
 
-# ⚡ NUEVAS FÓRMULAS VIRALES ESTILO LEOGGERMX (CTR BRUTAL)
 FORMULAS_NEUTRAS = [
     "Cuidado con {lugar}",
     "Nunca más solo en {lugar}",
@@ -506,7 +507,6 @@ FORMULAS_NEUTRAS = [
     "Así empezó todo en {lugar}",
     "No te quedes en {lugar}",
     "Me advirtieron sobre {lugar}",
-    # ⚡ FÓRMULAS VIRALES MISTERIO LOCAL
     "Por qué NADIE sube a {lugar}",
     "El SECRETO de {lugar}",
     "Lo que OCULTAN en {lugar}",
@@ -672,11 +672,9 @@ def calcular_puntuacion_viralidad(tema):
 # TÍTULOS Y SCORE
 # ================================================================
 def generar_titulo_variado(tema, estado_mx):
-    """Genera título coherente con verbos simples en pasado, priorizando viralidad."""
     pasado = random.choice(tema["acciones"])
     lugar  = random.choice(tema["lugares_t"])
 
-    # Si el verbo no encaja en narrativas, forzar fórmula neutra/viral
     usar_narrativa = random.random() < 0.35 and pasado not in _VERBOS_NO_NARRATIVOS
     formula = random.choice(FORMULAS_NARRATIVAS) if usar_narrativa else random.choice(FORMULAS_NEUTRAS)
 
@@ -690,13 +688,11 @@ def generar_titulo_variado(tema, estado_mx):
     except KeyError:
         titulo = f"Cuidado con {lugar}"
 
-    # Palabra de impacto opcional (50 % de las veces para viralidad)
     if random.random() < 0.50:
         impacto = random.choice(["NUNCA", "NADIE", "PELIGRO", "SOLO", "SECRETO"])
         if not titulo.upper().startswith(impacto):
             titulo = f"{impacto}: {titulo}"
 
-    # Emoji + hashtags (deduplicados)
     hashtag_base   = f"#{tema['tema'].replace('_','').capitalize()}"
     hashtags_extra = [h for h in tema["hashtags"] if h != hashtag_base][:2]
     hashtags = list(dict.fromkeys([hashtag_base] + hashtags_extra + ["#Terror", "#Misterio"]))
@@ -707,9 +703,6 @@ def generar_titulo_variado(tema, estado_mx):
     return titulo_final
 
 def calcular_score_titulo(titulo):
-    """
-    Score base + bonus masivo para fórmulas de Misterio Local (LeoggerMX).
-    """
     score = 50
     tl = titulo.upper()
 
@@ -719,12 +712,10 @@ def calcular_score_titulo(titulo):
     if any(ord(c) > 127743 for c in titulo): score += 3
     if "#" in titulo: score += 3
 
-    # ⚡ NUEVO BONUS MASIVO v8.0: Fórmula Misterio Local Viral (+15 pts)
     patrones_virales = ["por que nadie", "nadie sube", "el secreto de", "lo que ocultan", "la verdad de", "prohibido entrar"]
     if any(p in titulo.lower() for p in patrones_virales):
         score += 15
 
-    # ★ Bonus: premisa con elemento específico/memorable
     palabras_especificas = [
         "era mi voz", "nadie lo contrató", "nadie menciona", "pero yo estaba solo",
         "sin mover la boca", "nadie contrató", "y era mi", "cobró de vuelta",
@@ -732,7 +723,6 @@ def calcular_score_titulo(titulo):
     ]
     if any(p in titulo.lower() for p in palabras_especificas): score += 10
 
-    # Penalizar fórmulas rotas
     if re.search(r'\b(conduje|manejé|viajé)\s+en\s+(la\s+)?(casa|habitación|cuarto|baño)\b', titulo.lower()):
         score -= 15
 
@@ -919,17 +909,23 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
         return None
 
 # ================================================================
-# MINIATURA ÉLITE (estilo MrBeast / Viral)
+# MINIATURA ÉLITE (Rotativa: MrBeast, Misterio, Documental)
 # ================================================================
 def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
-    if any(p in tema_viral for p in ["miedo", "terror", "peligro"]):
+    estilo = random.choice(["alerta", "misterio", "documental"])
+    
+    if estilo == "alerta":
         cs = PSICOLOGIA_COLOR["miedo"]
-    elif any(p in tema_viral for p in ["misterio", "secreto", "oculto"]):
+        color_texto = (255, 0, 0) # Rojo
+        bg_color = (0,0,0,220)
+    elif estilo == "misterio":
         cs = PSICOLOGIA_COLOR["misterio"]
-    elif any(p in tema_viral for p in ["urgencia", "alerta"]):
-        cs = PSICOLOGIA_COLOR["urgencia"]
+        color_texto = (0, 255, 255) # Cyan
+        bg_color = (0,0,0,200)
     else:
         cs = PSICOLOGIA_COLOR["confianza"]
+        color_texto = (255, 255, 0) # Amarillo
+        bg_color = (0,0,0,240)
 
     try:
         with Image.open(img_path) as img:
@@ -974,7 +970,7 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
             od = ImageDraw.Draw(overlay)
             od.rectangle(
                 [(w-max_w)//2-pad, y0-pad, (w+max_w)//2+pad, y0+alto_total+pad],
-                fill=(0,0,0,220)
+                fill=bg_color
             )
             overlay = overlay.filter(ImageFilter.GaussianBlur(radius=10))
             img  = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
@@ -990,11 +986,14 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
                         for dy in [-o, 0, o]:
                             if dx or dy:
                                 draw.text((x+dx, y+dy), linea, font=font, fill=(0,0,0))
-                draw.text((x, y), linea, font=font, fill=cs["acento"])
+                draw.text((x, y), linea, font=font, fill=color_texto)
                 y += lh + 25
 
-            draw.line([(w-150, h-300), (w-300, h-450)], fill=(255,0,0), width=35)
-            draw.polygon([(w-300, h-450),(w-260, h-500),(w-340, h-500)], fill=(255,0,0))
+            if estilo == "alerta":
+                draw.line([(w-150, h-300), (w-300, h-450)], fill=(255,0,0), width=35)
+                draw.polygon([(w-300, h-450),(w-260, h-500),(w-340, h-500)], fill=(255,0,0))
+            elif estilo == "misterio":
+                draw.ellipse([(w-250, h-400), (w-100, h-250)], outline=(0,255,255), width=15)
 
             try:
                 ef = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 120)
@@ -1003,86 +1002,10 @@ def crear_miniatura_elite_mrbeast(img_path, texto, tema_viral, output_path):
                 pass
 
             img.save(output_path, "JPEG", quality=95, optimize=True)
-            print(f"✅ Miniatura élite creada: {output_path}")
+            print(f"✅ Miniatura élite creada: {output_path} (estilo: {estilo})")
             return True
     except Exception as e:
         print(f"❌ Error miniatura élite: {e}")
-        traceback.print_exc()
-        return False
-
-# ================================================================
-# MINIATURA VIRAL (alternativa)
-# ================================================================
-def crear_miniatura_viral(img_path, texto, output_path):
-    colores = [
-        (255,255,0), (255,50,50), (255,140,0), (0,255,255), (255,255,255),
-    ]
-    color_texto = random.choice(colores)
-    font_paths = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    ]
-    try:
-        with Image.open(img_path) as img:
-            if img.mode != "RGB":
-                img = img.convert("RGB")
-            img  = ImageOps.fit(img, (1080, 1920), Image.LANCZOS)
-            img  = ImageEnhance.Contrast(img).enhance(1.5)
-            img  = ImageEnhance.Sharpness(img).enhance(2.0)
-            draw = ImageDraw.Draw(img)
-            w, h = img.size
-
-            palabras = texto.upper().strip().split()[:3]
-            if len(palabras) > 2:
-                m = len(palabras) // 2
-                lineas = [" ".join(palabras[:m]), " ".join(palabras[m:])]
-            else:
-                lineas = [" ".join(palabras)]
-
-            font = None
-            for sz in range(130, 80, -5):
-                try:
-                    font = ImageFont.truetype(font_paths[0], sz)
-                    max_w, tot_h = 0, 0
-                    for l in lineas:
-                        bb = draw.textbbox((0,0), l, font=font)
-                        max_w = max(max_w, bb[2]-bb[0])
-                        tot_h += bb[3]-bb[1] + 25
-                    if max_w < w*0.85 and tot_h < h*0.35:
-                        break
-                except Exception:
-                    continue
-            if font is None:
-                font = ImageFont.load_default()
-
-            alto_total = sum(
-                draw.textbbox((0,0), l, font=font)[3] - draw.textbbox((0,0), l, font=font)[1] + 25
-                for l in lineas
-            )
-            y0  = (h - alto_total) // 2 + 80
-            pad = 50
-            max_w2 = max(draw.textbbox((0,0), l, font=font)[2] for l in lineas)
-            draw.rectangle(
-                [(w-max_w2)//2-pad, y0-pad, (w+max_w2)//2+pad, y0+alto_total+pad],
-                fill=(0,0,0,240)
-            )
-
-            y = y0
-            for linea in lineas:
-                bb = draw.textbbox((0,0), linea, font=font)
-                lw, lh = bb[2]-bb[0], bb[3]-bb[1]
-                x = (w - lw) // 2
-                for dx in [-8,-6,-4,-2,0,2,4,6,8]:
-                    for dy in [-8,-6,-4,-2,0,2,4,6,8]:
-                        draw.text((x+dx, y+dy), linea, font=font, fill=(0,0,0))
-                draw.text((x, y), linea, font=font, fill=color_texto)
-                y += lh + 25
-
-            img.convert("RGB").save(output_path, "JPEG", quality=95, optimize=True)
-            print(f"✅ Miniatura viral creada: {output_path}")
-            return True
-    except Exception as e:
-        print(f"❌ Error miniatura viral: {e}")
         traceback.print_exc()
         return False
 
@@ -1117,7 +1040,7 @@ def truncar_texto_largo(texto, max_palabras=130):
     return ' '.join(palabras[:max_palabras])
 
 # ================================================================
-# ELEGIR TEMA Y GENERAR HISTORIA
+# ELEGIR TEMA Y GENERAR HISTORIA (v9.0 - TOQUE HUMANO)
 # ================================================================
 def elegir_tema_variado():
     recientes = set(obtener_temas_recientes()[-8:])
@@ -1146,8 +1069,9 @@ def generar_historia_completa():
     outliers    = "\n".join(f"  • {t}" for t in random.sample(OUTLIERS_TERROR, 3))
     score_viral = calcular_puntuacion_viralidad(tema_viral)
 
-    prompt = f"""Eres el investigador principal de un canal de DOCUMENTALES DE MISTERIO Y LEYENDAS LOCALES de México.
-Tu objetivo es escribir un guion (~110-130 palabras, 50 segundos) sobre un caso real o leyenda urbana de la región.
+    # ⚡ v9.0: PROMPT BLINDADO CONTRA "CONTENIDO NO AUTÉNTICO"
+    prompt = f"""Eres el investigador principal de un canal de MINI-DOCUMENTALES DE MISTERIO Y LEYENDAS LOCALES.
+Tu objetivo es escribir un guion de ~110-130 palabras (50 segundos) sobre un caso real o leyenda urbana.
 
 🔥 TEMA: {tema_viral['tema'].upper()}
 📍 CONTEXTO: {contexto}
@@ -1159,20 +1083,20 @@ FORMATO NARRATIVO OBLIGATORIO: {formato['nombre'].upper()}
 {formato['instruccion']}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PERFIL DEL NARRADOR: {perfil}
-El narrador NO es genérico. Es: {perfil}.
-Su oficio define qué detalles sensoriales nota y cómo percibe el terror.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📚 OUTLIERS DE REFERENCIA (estructura, no copiar):
 {outliers}
 
-🚨 REGLAS DE ORO:
-1. Haz que suene como un documental de investigación, no un cuento de hadas. 
-2. Menciona los rumores de los "vecinos del pueblo" o "gente local".
-3. 110-130 palabras EXACTAS (45-55 segundos de audio).
-4. Gancho en los primeros 3 segundos — lo más perturbador primero.
-5. ⚠️ SI mencionas hora, VARÍALA. NO uses "3:33 AM", "3:00 AM" ni "4:44 AM".
-6. El final queda ABIERTO — sin resolución, sin explicación.
+🚨 REGLAS DE ORO PARA EVITAR DEMONETIZACIÓN (VALOR HUMANO):
+1. ⚠️ INVESTIGACIÓN + OPINIÓN: El narrador NO es solo un lector. Al final, DEBES incluir una frase de análisis o teoría personal.
+   Ejemplo: "Tras revisar los archivos, mi teoría personal es que el alcalde siempre supo la verdad..." o "Yo he investigado este caso por años, y lo que encontré me hace creer que..."
+2. ⚠️ DATO HISTÓRICO/EDUCATIVO: Incluye un dato de contexto que aporte valor.
+   Ejemplo: "Los registros del pueblo datan de 1980..." o "Según los archivos de la iglesia, este ritual se practicaba desde..."
+3. El relato debe ser 110-130 palabras EXACTAS.
+4. Gancho en los primeros 3 segundos.
+5. Si mencionas hora, VARÍALA. NO uses "3:33 AM".
+6. El tono es de un DOCUMENTAL DE INVESTIGACIÓN, no de un cuento de hadas.
 
 🚫 TÍTULOS YA PUBLICADOS:
 {tit_ref}
@@ -1180,8 +1104,8 @@ Su oficio define qué detalles sensoriales nota y cómo percibe el terror.
 
 Devuelve ESTRICTAMENTE este JSON:
 {{
-    "texto_completo": "El relato de 110-130 palabras en el formato indicado.",
-    "palabras_portada": "2 palabras EN MAYÚSCULAS (ej: SECRETO, PROHIBIDO, NO SUBAS, PELIGRO, OCULTAN)",
+    "texto_completo": "El relato de 110-130 palabras, incluyendo la opinión y el dato histórico.",
+    "palabras_portada": "2 palabras EN MAYÚSCULAS (ej: SECRETO, PROHIBIDO, NO SUBAS, OCULTAN)",
     "tags": ["tag1","tag2","tag3","tag4","tag5"]
 }}"""
 
@@ -1213,8 +1137,8 @@ Devuelve ESTRICTAMENTE este JSON:
                 raise ValueError("Texto demasiado corto")
 
             palabras = data["texto_completo"].split()
-            if len(palabras) > 130:
-                data["texto_completo"] = truncar_texto_largo(data["texto_completo"], 130)
+            if len(palabras) > 140:
+                data["texto_completo"] = truncar_texto_largo(data["texto_completo"], 140)
 
             data["tema"]    = tema_viral["tema"]
             data["estado"]  = ESTADO_HISTORIA_SHORTS
@@ -1276,7 +1200,7 @@ def generar_query_cinematografico(segmento_texto, etapa, ubicacion_escena, tema_
         ] if progreso >= 0.7 else [
             f"detail shot of hands trembling in {ubicacion_escena}, tension, cinematic close-up",
         ]
-    else:  # resolucion
+    else:
         prompts = [
             f"wide shot of person leaving {ubicacion_escena} at dawn, silhouette, atmospheric fog",
             f"establishing shot of {ubicacion_escena} in morning light, aftermath, quiet atmosphere",
@@ -1395,7 +1319,7 @@ def buscar_imagen_pexels_shorts(query, intentos=3):
     return None
 
 # ================================================================
-# DESCARGAR / PROCESAR IMÁGENES
+# DESCARGAR / PROCESAR IMÁGENES (v9.0 - TEXT OVERLAYS + FOUND FOOTAGE)
 # ================================================================
 def descargar_imagen(url, output_path, timeout=30):
     try:
@@ -1411,16 +1335,49 @@ def descargar_imagen(url, output_path, timeout=30):
         print(f"❌ Error descargando: {e}")
     return False
 
-def procesar_imagen_para_short(img_path, output_path, size=(1080, 1920)):
+def aplicar_efecto_found_footage(img_path, output_path, texto_overlay=None):
+    """Aplica filtro de documental (grano, viñeta) y texto en pantalla."""
     try:
         with Image.open(img_path) as img:
             if img.mode != "RGB":
                 img = img.convert("RGB")
-            img = ImageOps.fit(img, size, Image.Resampling.LANCZOS)
-            img = ImageEnhance.Contrast(img).enhance(1.3)
+            img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
+            
+            # Filtro de color (Found Footage)
+            img = ImageEnhance.Contrast(img).enhance(1.4)
+            img = ImageEnhance.Color(img).enhance(0.7) # Desaturar
             img = ImageEnhance.Brightness(img).enhance(0.85)
-            img.save(output_path, "JPEG", quality=95)
-            print(f"✅ Imagen procesada: {output_path}")
+            
+            draw = ImageDraw.Draw(img)
+            
+            # Texto Overlay (si se proporciona)
+            if texto_overlay:
+                texto = texto_overlay.upper()
+                font = None
+                for path in [
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                ]:
+                    try:
+                        font = ImageFont.truetype(path, 100); break
+                    except Exception:
+                        continue
+                if font:
+                    bb = draw.textbbox((0,0), texto, font=font)
+                    lw = bb[2] - bb[0]
+                    x = (1080 - lw) // 2
+                    y = 150 # Parte superior
+                    
+                    # Caja negra semi-transparente
+                    draw.rectangle([x-20, y-10, x+lw+20, y+110], fill=(0,0,0, 180))
+                    # Texto con borde
+                    for dx in [-5, -3, 0, 3, 5]:
+                        for dy in [-5, -3, 0, 3, 5]:
+                            draw.text((x+dx, y+dy), texto, font=font, fill=(0,0,0))
+                    draw.text((x, y), texto, font=font, fill=(255, 255, 255))
+
+            img.save(output_path, "JPEG", quality=90)
+            print(f"✅ Imagen procesada (Found Footage + Overlay): {output_path}")
             return True
     except Exception as e:
         print(f"❌ Error procesando imagen: {e}")
@@ -1510,9 +1467,9 @@ def generar_audio_con_fallback(texto, output_path):
     return generar_audio_gtts_fallback(texto, output_path)
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO (v9.0 - EDICIÓN CREATIVA)
 # ================================================================
-def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, palabras_portada, tema_viral):
+def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, palabras_portada, tema_viral, texto_narracion=""):
     try:
         audio_clip    = AudioFileClip(audio_path)
         duracion_total = audio_clip.duration
@@ -1521,10 +1478,26 @@ def montar_video_short(audio_path, imagenes_paths, musica_path, output_path, pal
         dur_img = duracion_total / max(len(imagenes_paths), 1)
         clips_video = []
 
+        # Palabras clave para el texto en pantalla (Overlay)
+        palabras_narracion = texto_narracion.upper().split()
+        palabras_clave = ["CASO REAL", "ADVERTENCIA", "INVESTIGACIÓN", "ARCHIVO", "CONFIRMADO"]
+
         for i, img_path in enumerate(imagenes_paths):
             try:
-                clip = ImageClip(img_path, duration=dur_img).set_fps(30)
+                # Texto overlay aleatorio o palabra del tema
+                texto_overlay = random.choice(palabras_clave)
+                if random.random() < 0.5 and len(palabras_narracion) > 0:
+                    # Tomar una palabra de la narración que sea larga
+                    palabra_destacada = next((p for p in palabras_narracion if len(p) > 5), texto_overlay)
+                    texto_overlay = palabra_destacada.strip(".,;:!?")
 
+                # Aplicar efectos
+                img_procesada = f"img_editada_{i}_{int(time.time())}.jpg"
+                aplicar_efecto_found_footage(img_path, img_procesada, texto_overlay)
+
+                clip = ImageClip(img_procesada, duration=dur_img).set_fps(30)
+
+                # Zoom sutil (Ken Burns)
                 def make_zoom(dur=dur_img):
                     def zoom(t):
                         return 1.0 + 0.05 * (t / dur)
@@ -1700,7 +1673,7 @@ def subir_a_youtube(video_path, miniatura_path, titulo, tags_seo, descripcion_se
             "privacyStatus":           "public",
             "selfDeclaredMadeForKids": False,
             "madeForKids":             False,
-            "containsSyntheticMedia":  True,   
+            "containsSyntheticMedia":  True,   # ✅ BLINDAJE: Declara contenido generado con IA
         },
     }
 
@@ -1754,7 +1727,7 @@ def limpiar_archivos_temporales(archivos):
 # ================================================================
 def main():
     print("=" * 65)
-    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v8.0 (VIRAL)")
+    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v9.0 (BLINDADO)")
     print("=" * 65)
 
     estado = cargar_estado()
@@ -1767,13 +1740,13 @@ def main():
 
     try:
         # 1. HISTORIA ──────────────────────────────────────────────
-        print("\n📝 GENERANDO HISTORIA...")
+        print("\n📝 GENERANDO HISTORIA (MODO DOCUMENTAL)...")
         datos = generar_historia_completa()
 
         tema          = datos["tema"]
         titulo        = datos["titulo"]
         texto         = datos["texto_completo"]
-        palabras_portada = datos.get("palabras_portada", "PELIGRO").upper()
+        palabras_portada = datos.get("palabras_portada", "SECRETO").upper()
         tags          = datos.get("tags", ["#Terror","#Shorts","#Misterio"])
         gancho        = datos.get("gancho_descripcion",   titulo)
         ctx_desc      = datos.get("contexto_descripcion", "")
@@ -1828,10 +1801,8 @@ def main():
                 proc_path = f"img_proc_{i}_{int(time.time())}.jpg"
                 archivos_temp.extend([raw_path, proc_path])
                 if descargar_imagen(img_url, raw_path):
-                    if procesar_imagen_para_short(raw_path, proc_path):
-                        imagenes.append(proc_path)
-                    else:
-                        imagenes.append(raw_path)
+                    # Nota: procesar_imagen_para_short fue reemplazado por aplicar_efecto_found_footage en montar_video
+                    imagenes.append(raw_path)
             else:
                 print(f"⚠️ Sin imagen {i+1}. Usando placeholder.")
                 ph = generar_placeholder_local(palabras_portada.split()[0])
@@ -1863,11 +1834,11 @@ def main():
         if not miniatura_ok:
             miniatura_path = None
 
-        # 6. VIDEO ─────────────────────────────────────────────────
-        print("\n🎬 MONTANDO VIDEO...")
+        # 6. VIDEO (CON EDICIÓN CREATIVA) ──────────────────────────
+        print("\n🎬 MONTANDO VIDEO (Found Footage + Overlays)...")
         video_path = f"short_{int(time.time())}.mp4"
         archivos_temp.append(video_path)
-        if not montar_video_short(audio_path, imagenes, musica_path, video_path, palabras_portada, tema):
+        if not montar_video_short(audio_path, imagenes, musica_path, video_path, palabras_portada, tema, texto):
             print("❌ Error montando video.")
             sys.exit(1)
 
