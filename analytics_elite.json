@@ -580,6 +580,25 @@
       "voz_estilo": "narrativo",
       "formato": "confesion",
       "perfil": "obrero en construcción de edificio viejo"
+    },
+    {
+      "video_id": "neUczf21e6k",
+      "titulo": "NUNCA: Nadie sabe lo que vi en el panteón 💧 #Llorona #LaLlorona #LeyendasMexicanas #Terror #Misterio",
+      "tema": "llorona",
+      "estado": "Oaxaca",
+      "fecha": "2026-11-15T16:40:16.053793-06:00",
+      "prediccion": {
+        "vistas_predichas": 603840,
+        "ctr_predicho": 7.55,
+        "retencion_predicha": 77.4,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "LLANTO REAL",
+      "score_titulo": 74,
+      "voz": "es-CL-LorenzoNeural",
+      "voz_estilo": "suspenso",
+      "formato": "primera_persona",
+      "perfil": "médico o enfermero de guardia"
     }
   ],
   "mejores_horarios": {},
