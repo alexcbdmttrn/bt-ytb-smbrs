@@ -561,6 +561,25 @@
       "voz_estilo": "narrativo",
       "formato": "primera_persona",
       "perfil": "maestro rural en pueblo aislado"
+    },
+    {
+      "video_id": "lV64vH37hLs",
+      "titulo": "Después de lo que entré en el motel, nada fue igual 🏨 #Hotelembrujado #HotelEmbrujado #Fantasmas ...",
+      "tema": "hotel_embrujado",
+      "estado": "Chiapas",
+      "fecha": "2026-11-15T01:43:13.804886-06:00",
+      "prediccion": {
+        "vistas_predichas": 485760,
+        "ctr_predicho": 6.07,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "NO ENTRES",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo",
+      "formato": "confesion",
+      "perfil": "obrero en construcción de edificio viejo"
     }
   ],
   "mejores_horarios": {},

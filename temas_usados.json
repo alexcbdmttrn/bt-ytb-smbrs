@@ -1,6 +1,5 @@
 {
   "temas": [
-    "hospital",
     "velador",
     "leyenda_mexicana",
     "bosque_maldito",
@@ -19,6 +18,7 @@
     "skinwalker",
     "duendes",
     "payaso_maldito",
-    "curandero"
+    "curandero",
+    "hotel_embrujado"
   ]
 }
