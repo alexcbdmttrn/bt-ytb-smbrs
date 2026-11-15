@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Cold Hollow.mp3",
     "Sunken Dread.mp3",
     "Hollow Marrow.mp3",
     "Black Maw.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
     "Black Maw.mp3",
-    "Ash and Marrow.mp3"
+    "Ash and Marrow.mp3",
+    "Hollow Marrow.mp3"
   ],
-  "ultima_publicacion_exitosa": "2026-11-14",
+  "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-14T10:40:05.406451-06:00",
+  "ultima_publicacion": "2026-11-15T07:58:12.084064-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -307,14 +307,23 @@
       "perfil": "fotógrafo aficionado de lugares abandonados",
       "elemento_imposible": "la llave decía mi nombre",
       "fecha": "2026-11-14T10:40:05.406451-06:00"
+    },
+    {
+      "id": "_RF0s-k1Sfk",
+      "titulo": "Por qué NADIE compra la casa nueva en Sinaloa: el susurro era mi voz",
+      "tema": "casa_embrujada",
+      "formato": "diario",
+      "perfil": "turista que visitó un pueblo del interior",
+      "elemento_imposible": "era mi propia voz",
+      "fecha": "2026-11-15T07:58:12.084064-06:00"
     }
   ],
   "temas_recientes": [
-    "duendes",
     "muneca_poseida",
     "bosque_maldito",
     "brujas",
     "ritual",
-    "hotel_embrujado"
+    "hotel_embrujado",
+    "casa_embrujada"
   ]
 }
