@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v6.7 (SEG_ESCENA=18s)
-v6.7 - SEG_ESCENA pasa de 9.0 → 18.0 segundos (video más cinematográfico, -50% llamadas a Pexels)
-v6.6 - SEO Elite + Curiosity Gap + Títulos Virales + Miniaturas Actualizadas
-v6.5 - Estrategia de Títulos Virales (Misterio Local / Documental)
-v6.4 - Diversidad de temas + elemento imposible en títulos
+SOMBRAS DE MEDIANOCHE - Bot v6.8 SAYAYIN
+v6.8 - MINIATURAS ÉLITE: Rostro humano con miedo/shock + texto + composición profesional
+  - Sistema de 5 estilos de terror (Miedo, Shock, Revelación, Advertencia, Misterio)
+  - Rostro real de Pexels (60% izquierda) + texto (40% derecha)
+  - Paleta agresiva de terror con stroke negro grueso + glow neón
+  - Elemento de urgencia (flecha roja, círculo, X, exclamaciones)
+  - Prioriza palabras de alto impacto: NO SUBAS, PROHIBIDO, OCULTAN, EL SECRETO
+v6.7 - SEG_ESCENA=18s (video más cinematográfico, -50% llamadas Pexels)
+v6.6 - SEO élite + Curiosity Gap + títulos virales + miniaturas actualizadas
 """
 import asyncio
 import bisect
@@ -67,8 +71,6 @@ MAX_INTENTOS_EXPANSION = 1
 NUM_CAPITULOS = 4
 
 SEG_MAX_PALABRAS = 55
-
-# ⚡ v6.7: 18 segundos por imagen (antes 9) → -50% llamadas a Pexels + video más cinematográfico
 SEG_ESCENA = 18.0
 
 W, H, FPS = 1920, 1080, 24
@@ -526,7 +528,7 @@ def elegir_tema(estado, youtube):
     return elegido
 
 # =================================================================
-# TÍTULOS (ESTRATEGIA VIRAL v6.6)
+# TÍTULOS (ESTRATEGIA VIRAL v6.8)
 # =================================================================
 GANCHOS = [
     "nunca", "nadie", "jamás", "solo", "prohibido", "prohibieron",
@@ -537,7 +539,7 @@ GANCHOS = [
     "desapareció", "apareció", "cambió", "volvió", "se fue",
     "qué", "por qué", "cómo", "?", "si ", "cuando",
     "noche", "madrugada", "oscuridad",
-    "por qué nadie", "nadie sube a", "el secreto de", "lo que ocultan", 
+    "por qué nadie", "nadie sube a", "el secreto de", "lo que ocultan",
     "lo que encontraron", "la verdad de", "el misterio de", "prohibido entrar",
 ]
 PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidencia", "pruebas", "autoridades",
@@ -559,18 +561,22 @@ def limpiar_titulo(t):
 def puntuar_titulo(t):
     s, n, tl = 0, len(t), t.lower()
     if 45 <= n <= 68:
+        s += 6
+    elif 40 <= n < 45 or 68 < n <= 75:
         s += 4
-    elif 30 <= n < 45 or 68 < n <= 80:
+    elif 30 <= n < 40 or 75 < n <= 80:
         s += 2
     elif n > 95 or n < 25:
-        s -= 6
-    if re.search(r"\d", t):
-        s += 2
-    s += min(3, sum(1 for g in GANCHOS if g in tl))
+        s -= 8
+    else:
+        s -= 2
 
-    if re.search(r'\bsi\b.{1,60}(nunca|no\s)', tl, re.I | re.S):
-        s += 6
-    if re.search(r'\b\d{3,}\b', t):
+    ganchos_encontrados = sum(1 for g in GANCHOS if g in tl)
+    s += min(8, ganchos_encontrados * 2)
+
+    if re.search(r"\d", t):
+        s += 3
+    if re.search(r"\b\d{3,}\b", t):
         s += 3
 
     if re.search(r'\b(por qué nadie|nadie sube|el secreto de|lo que ocultan|lo que encontraron|la verdad de)\b', tl):
@@ -616,9 +622,11 @@ def elegir_titulo(candidatos):
     return puntuados[0][1][:100]
 
 def elegir_texto_portada(opciones, titulo):
+    """v6.8: Prioriza palabras de terror de alto impacto."""
     pt = set(re.findall(r"\w+", titulo.lower()))
     mejor = None
-    fallbacks_virales = ["NO SUBAS", "PROHIBIDO", "EL SECRETO", "NO ENTRES", "QUÉ HAY AQUÍ", "REAL"]
+    fallbacks_virales = ["NO SUBAS", "PROHIBIDO", "EL SECRETO", "NO ENTRES",
+                         "OCULTAN", "NO MIRES", "PELIGRO", "NO VAYAS"]
     for o in opciones or []:
         if not isinstance(o, str):
             continue
@@ -628,7 +636,8 @@ def elegir_texto_portada(opciones, titulo):
             continue
         solape = len({x.lower() for x in w} & pt) / len(w)
         sc = (3 if len(w) in (2, 3) else 1) - 2 * solape + (1 if "?" in o else 0)
-        if any(x in o for x in ["SECRETO", "PROHIBIDO", "NADIE", "NO SUBAS", "OCULTAN", "VERDAD"]):
+        if any(x in o for x in ["SECRETO", "PROHIBIDO", "NADIE", "NO SUBAS",
+                                 "OCULTAN", "VERDAD", "NO ENTRES", "PELIGRO"]):
             sc += 5
         if mejor is None or sc > mejor[0]:
             mejor = (sc, o)
@@ -1179,7 +1188,7 @@ def renderizar(escenas, total, audio, size, salida):
     return salida
 
 # =================================================================
-# MINIATURA
+# MINIATURAS ÉLITE v6.8 (ROSTRO + TEXTO + COMPOSICIÓN)
 # =================================================================
 def obtener_fuente(size):
     os.makedirs("fonts", exist_ok=True)
@@ -1200,30 +1209,136 @@ def obtener_fuente(size):
             continue
     return ImageFont.load_default()
 
-def puntuar_miniatura(ruta):
-    try:
-        a = np.asarray(Image.open(ruta).convert("L").resize((320, 180)), dtype=np.float32)
-        w = a.shape[1]
-        return a.std() + 0.5 * a[:, w // 2:].std() - 0.3 * a[:, :w // 2].std() - 0.4 * abs(a.mean() - 90)
-    except Exception:
-        return -999
+def buscar_rostro_terror_pexels(query_base=""):
+    """v6.8: Busca rostro con expresión de miedo/shock/terror."""
+    if not PEXELS_API_KEY:
+        return None
 
-def elegir_base_miniatura(query):
-    urls = []
-    for q in (query, query + " dark", "dark horror night"):
-        data  = pexels_get("https://api.pexels.com/v1/search",
-                           {"query": q, "orientation": "landscape", "size": "large", "per_page": 8, "page": 1})
-        urls += [f["src"]["large2x"] for f in (data or {}).get("photos", [])[:6] if f["src"]["large2x"] not in urls]
-        if len(urls) >= 6:
-            break
-    mejor = (-999, None)
-    for i, u in enumerate(urls[:6]):
-        ruta = f"temp_thumb_{i}.jpg"
-        if descargar(u, ruta, 15 * 1024 * 1024):
-            sc = puntuar_miniatura(ruta)
-            if sc > mejor[0]:
-                mejor = (sc, ruta)
-    return mejor[1]
+    queries = [
+        "terrified man face dark",
+        "scared woman portrait dark",
+        "horrified man face closeup",
+        "shocked face dark horror",
+        "frightened person portrait",
+        "screaming man dark face",
+        "crying woman scared dark",
+        "shocked man horror portrait",
+    ]
+    if query_base:
+        queries = [query_base + " scared face portrait dark"] + queries
+
+    random.shuffle(queries)
+    for q in queries[:6]:
+        try:
+            data = pexels_get(
+                "https://api.pexels.com/v1/search",
+                {"query": q, "orientation": "portrait", "size": "large",
+                 "per_page": 8, "page": 1}
+            )
+            fotos = (data or {}).get("photos", [])
+            if not fotos:
+                continue
+            candidatas = [
+                f for f in fotos
+                if f["src"]["large2x"] not in USADOS
+                and f.get("width", 0) > 1000
+            ]
+            if not candidatas:
+                continue
+            foto = random.choice(candidatas[:4])
+            url = foto["src"]["large2x"]
+            ruta = f"temp_thumb_rostro_{random.randint(1000,9999)}.jpg"
+            if descargar(url, ruta, 15 * 1024 * 1024):
+                USADOS.add(url)
+                print(f"   👤 Rostro de terror encontrado: {q}")
+                return ruta
+        except Exception as e:
+            print(f"   ⚠️ Query '{q}': {e}")
+            continue
+    return None
+
+def buscar_cuerpo_terror_pexels(query_base=""):
+    """v6.8: Fallback si no hay rostros — busca cuerpo/manos con tensión."""
+    if not PEXELS_API_KEY:
+        return None
+
+    queries = [
+        "hands covering face dark",
+        "silhouette person scared night",
+        "hand reaching dark door",
+        "person hiding dark",
+        "human hands trembling fear",
+        "person alone window night",
+    ]
+    if query_base:
+        queries = [query_base + " person dark"] + queries
+
+    random.shuffle(queries)
+    for q in queries[:5]:
+        try:
+            data = pexels_get(
+                "https://api.pexels.com/v1/search",
+                {"query": q, "orientation": "landscape", "size": "large",
+                 "per_page": 8, "page": 1}
+            )
+            fotos = (data or {}).get("photos", [])
+            if not fotos:
+                continue
+            candidatas = [f for f in fotos if f["src"]["large2x"] not in USADOS]
+            if not candidatas:
+                continue
+            foto = random.choice(candidatas[:4])
+            url = foto["src"]["large2x"]
+            ruta = f"temp_thumb_cuerpo_{random.randint(1000,9999)}.jpg"
+            if descargar(url, ruta, 15 * 1024 * 1024):
+                USADOS.add(url)
+                print(f"   🖐️ Cuerpo en tensión encontrado: {q}")
+                return ruta
+        except Exception as e:
+            print(f"   ⚠️ Query '{q}': {e}")
+            continue
+    return None
+
+def elegir_estilo_miniatura():
+    """v6.8: 5 estilos rotativos de terror."""
+    estilos = [
+        {
+            "nombre": "miedo_rojo",
+            "color_texto": (255, 255, 255),
+            "color_acento": (255, 20, 20),
+            "stroke": (0, 0, 0),
+            "elemento": "flecha_roja",
+        },
+        {
+            "nombre": "advertencia_amarillo",
+            "color_texto": (255, 220, 0),
+            "color_acento": (255, 255, 255),
+            "stroke": (0, 0, 0),
+            "elemento": "triangulo_peligro",
+        },
+        {
+            "nombre": "shock_cyan",
+            "color_texto": (0, 255, 255),
+            "color_acento": (255, 255, 255),
+            "stroke": (0, 0, 0),
+            "elemento": "ninguno",
+        },
+        {
+            "nombre": "misterio_blanco",
+            "color_texto": (255, 255, 255),
+            "color_acento": (255, 30, 30),
+            "stroke": (0, 0, 0),
+            "elemento": "x_roja",
+        },
+        {
+            "nombre": "secreto_naranja",
+            "color_texto": (255, 140, 0),
+            "color_acento": (255, 220, 0),
+            "stroke": (0, 0, 0),
+            "elemento": "exclamacion",
+        },
+    ]
+    return random.choice(estilos)
 
 def dividir_lineas(palabras):
     if len(palabras) <= 2:
@@ -1236,57 +1351,136 @@ def dividir_lineas(palabras):
             mejor = (m, [a, b])
     return mejor[1]
 
-def crear_miniatura(img_path, texto, salida):
+def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None):
+    """v6.8: Composición rostro izquierda + texto derecha + elementos urgencia."""
     TW, TH = 1280, 720
+    estilo = estilo or elegir_estilo_miniatura()
+
     try:
-        img = Image.open(img_path).convert("RGB") if img_path else Image.new("RGB", (TW, TH), (10, 10, 20))
-        img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
-        img = ImageEnhance.Contrast(img).enhance(1.45)
-        img = ImageEnhance.Color(img).enhance(1.35)
-        img = ImageEnhance.Sharpness(img).enhance(2.0)
-        img = ImageEnhance.Brightness(img).enhance(0.90)
+        if img_rostro_path and os.path.exists(img_rostro_path):
+            img = Image.open(img_rostro_path).convert("RGB")
+            if img.width < img.height:
+                img_rostro = ImageOps.fit(
+                    img,
+                    (int(TW * 0.60), TH),
+                    Image.LANCZOS,
+                    centering=(0.5, 0.3)
+                )
+                img = Image.new("RGB", (TW, TH), (5, 5, 15))
+                img.paste(img_rostro, (0, 0))
+            else:
+                img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
+        else:
+            img = Image.new("RGB", (TW, TH), (8, 10, 20))
+            for y in range(TH):
+                c = (int(5 + 20 * y / TH), int(10 + 25 * y / TH), int(20 + 35 * y / TH))
+                ImageDraw.Draw(img).line([(0, y), (TW, y)], fill=c)
+
+        img = ImageEnhance.Contrast(img).enhance(1.55)
+        img = ImageEnhance.Color(img).enhance(1.25)
+        img = ImageEnhance.Sharpness(img).enhance(2.3)
+        img = ImageEnhance.Brightness(img).enhance(0.92)
 
         grad = Image.new("L", (TW, TH), 0)
-        gd   = ImageDraw.Draw(grad)
+        gd = ImageDraw.Draw(grad)
         for x in range(TW):
-            gd.line([(x, 0), (x, TH)], fill=int(240 * max(0, 1 - x / (TW * 0.65)) ** 1.6))
+            alpha = int(255 * max(0, min(1, (x / TW - 0.35) / 0.40)))
+            gd.line([(x, 0), (x, TH)], fill=alpha)
         img = Image.composite(Image.new("RGB", (TW, TH), (0, 0, 0)), img, grad)
+
         arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.55)
         img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
 
-        lineas      = dividir_lineas(texto.upper().split()[:4])
-        max_w, max_h = int(TW * 0.58), int(TH * 0.78)
+        texto_upper = texto.upper()
+        palabras = texto_upper.split()[:4]
+        lineas = dividir_lineas(palabras)
 
-        for size in range(150, 60, -6):
-            font  = obtener_fuente(size)
+        x_inicio = int(TW * 0.55)
+        max_w_texto = TW - x_inicio - 40
+        max_h_texto = int(TH * 0.75)
+
+        size_final = 60
+        for size in range(140, 55, -6):
+            font = obtener_fuente(size)
             cajas = [font.getbbox(l) for l in lineas]
-            alto  = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
-            if max(b[2] - b[0] for b in cajas) <= max_w and alto <= max_h:
+            ancho_max = max(b[2] - b[0] for b in cajas)
+            alto_total = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
+            if ancho_max <= max_w_texto and alto_total <= max_h_texto:
+                size_final = size
                 break
 
-        acento = random.choice([
-            (255, 220, 0),
-            (255, 50, 50),
-            (255, 140, 0),
-            (255, 255, 255),
-        ])
-        y      = (TH - alto) // 2 + 10
-        pos    = []
+        font = obtener_fuente(size_final)
+        cajas = [font.getbbox(l) for l in lineas]
+        alto_total = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
+
+        y = (TH - alto_total) // 2
+        pos_lineas = []
         for l, b in zip(lineas, cajas):
-            pos.append((l, 60, y - b[1]))
+            ancho_l = b[2] - b[0]
+            x = x_inicio + (max_w_texto - ancho_l) // 2
+            pos_lineas.append((l, x, y - b[1]))
             y += (b[3] - b[1]) + 18
 
-        glow  = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+        glow = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
         gdraw = ImageDraw.Draw(glow)
-        for l, x, yy in pos:
-            gdraw.text((x, yy), l, font=font, fill=acento + (255,), stroke_width=10, stroke_fill=acento + (255,))
+        for l, x, yy in pos_lineas:
+            gdraw.text((x, yy), l, font=font,
+                       fill=estilo["color_acento"] + (255,),
+                       stroke_width=14,
+                       stroke_fill=estilo["color_acento"] + (255,))
         img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(24)))
 
-        draw  = ImageDraw.Draw(img)
-        borde = max(7, size // 20)
-        for i, (l, x, yy) in enumerate(pos):
-            color = acento if (i == len(pos) - 1) else (255, 255, 255)
-            draw.text((x, yy), l, font=font, fill=color + (255,), stroke_width=borde, stroke_fill=(0, 0, 0, 255))
+        draw = ImageDraw.Draw(img)
+        borde = max(8, size_final // 14)
+        for i, (l, x, yy) in enumerate(pos_lineas):
+            color = estilo["color_acento"] if (i == len(pos_lineas) - 1) else estilo["color_texto"]
+            draw.text(
+                (x, yy), l, font=font,
+                fill=color + (255,),
+                stroke_width=borde,
+                stroke_fill=estilo["stroke"] + (255,)
+            )
+
+        elem = estilo.get("elemento", "ninguno")
+        if elem == "flecha_roja":
+            ax, ay = int(TW * 0.52), int(TH * 0.85)
+            draw.polygon([
+                (ax, ay),
+                (ax + 80, ay - 40),
+                (ax + 80, ay - 20),
+                (ax + 140, ay - 20),
+                (ax + 140, ay + 20),
+                (ax + 80, ay + 20),
+                (ax + 80, ay + 40),
+            ], fill=(255, 20, 20, 255))
+        elif elem == "triangulo_peligro":
+            cx, cy = int(TW * 0.30), int(TH * 0.55)
+            size_t = 90
+            draw.polygon([
+                (cx, cy - size_t),
+                (cx - size_t, cy + size_t // 2),
+                (cx + size_t, cy + size_t // 2),
+            ], fill=(255, 220, 0, 255), outline=(0, 0, 0, 255))
+            font_t = obtener_fuente(int(size_t * 1.2))
+            draw.text((cx - 15, cy - 20), "!",
+                      font=font_t, fill=(0, 0, 0, 255))
+        elif elem == "x_roja":
+            cx, cy = int(TW * 0.28), int(TH * 0.5)
+            r = 100
+            draw.line([(cx - r, cy - r), (cx + r, cy + r)],
+                      fill=(255, 20, 20, 255), width=22)
+            draw.line([(cx + r, cy - r), (cx - r, cy + r)],
+                      fill=(255, 20, 20, 255), width=22)
+        elif elem == "exclamacion":
+            font_exc = obtener_fuente(int(size_final * 1.5))
+            draw.text(
+                (int(TW * 0.48), int(TH * 0.08)),
+                "!!!",
+                font=font_exc,
+                fill=(255, 220, 0, 255),
+                stroke_width=10,
+                stroke_fill=(0, 0, 0, 255)
+            )
 
         rgb = img.convert("RGB")
         for q in (92, 87, 82, 76, 70):
@@ -1294,12 +1488,22 @@ def crear_miniatura(img_path, texto, salida):
             if os.path.getsize(salida) < 1_900_000:
                 break
 
-        print(f"✅ Miniatura: '{' / '.join(lineas)}' ({size}px)")
+        print(f"✅ Miniatura v6.8 [{estilo['nombre']}]: '{' / '.join(lineas)}' ({size_final}px)")
         return True
+
     except Exception as e:
-        print(f"❌ Error miniatura: {e}")
+        print(f"❌ Error miniatura v6.8: {e}")
         traceback.print_exc()
-        return False
+        try:
+            img = Image.new("RGB", (TW, TH), (10, 15, 25))
+            draw = ImageDraw.Draw(img)
+            font = obtener_fuente(120)
+            draw.text((60, TH // 2 - 60), texto.upper()[:20], font=font,
+                     fill=(255, 220, 0), stroke_width=10, stroke_fill=(0, 0, 0))
+            img.save(salida, "JPEG", quality=88)
+            return True
+        except Exception:
+            return False
 
 # =================================================================
 # SEO ELITE (CURIOSITY GAP)
@@ -1617,9 +1821,10 @@ def main():
         sys.exit(0)
 
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.7")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.8 SAYAYIN")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | Formatos: {len(FORMATOS_NARRACION)} | SEG_ESCENA={SEG_ESCENA}s")
+    print(f"🎯 v6.8: MINIATURAS ÉLITE con rostro de terror + composición profesional")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
@@ -1730,11 +1935,42 @@ def main():
 
     print(f"🏷️  Tags ({len(tags)}): {', '.join(tags[:6])}...")
 
-    portada   = elegir_texto_portada(plan.get("palabras_portada"), titulo)
-    base_mini = elegir_base_miniatura(
-        re.sub(r"[^a-zA-Z ]", " ", str(plan.get("miniatura_escena", "dark hallway door"))) or "dark hallway door"
-    )
-    miniatura = "miniatura.jpg" if crear_miniatura(base_mini, portada, "miniatura.jpg") else None
+    # ═══════════════════════════════════════════════════════════════
+    # MINIATURA v6.8: rostro de terror + texto + composición
+    # ═══════════════════════════════════════════════════════════════
+    print("🖼️  Buscando rostro de terror para miniatura...")
+    portada = elegir_texto_portada(plan.get("palabras_portada"), titulo)
+    print(f"   📝 Texto de portada elegido: '{portada}'")
+
+    img_miniatura = None
+    miniatura_ok = False
+
+    # Nivel 1: Rostro de terror
+    img_miniatura = buscar_rostro_terror_pexels(tema["tema"] + " horror face")
+    if img_miniatura:
+        miniatura_ok = crear_miniatura_v68(img_miniatura, portada, "miniatura.jpg")
+        if miniatura_ok:
+            print("   ✅ Miniatura con ROSTRO de terror generada")
+
+    # Nivel 2: Cuerpo/manos en tensión
+    if not miniatura_ok:
+        print("   🔄 Sin rostro. Buscando cuerpo/manos en tensión...")
+        img_miniatura = buscar_cuerpo_terror_pexels(tema["tema"])
+        if img_miniatura:
+            miniatura_ok = crear_miniatura_v68(img_miniatura, portada, "miniatura.jpg")
+            if miniatura_ok:
+                print("   ✅ Miniatura con CUERPO en tensión generada")
+
+    # Nivel 3: Pexels abstracto / Flux
+    if not miniatura_ok:
+        print("   🔄 Pexels sin resultados. Usando escena del relato...")
+        base_mini = elegir_base_miniatura(
+            re.sub(r"[^a-zA-Z ]", " ", str(plan.get("miniatura_escena", "dark hallway door"))) or "dark hallway door"
+        )
+        miniatura_ok = crear_miniatura_v68(base_mini, portada, "miniatura.jpg")
+
+    miniatura = "miniatura.jpg" if miniatura_ok else None
+    # ═══════════════════════════════════════════════════════════════
 
     escenas     = construir_escenas(segs)
     audio, _    = mezclar_audio(segs, total, fondo)
