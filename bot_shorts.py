@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot de Shorts v9.1 SAYAYIN
+SOMBRAS DE MEDIANOCHE - Bot de Shorts v9.2 SAYAYIN
+v9.2 - UN SHORT POR DÍA:
+  - MAX_SHORTS_DIA = 1 (antes 2)
+  - Reconstrucción del final de main() (v9.1 venía truncado en "voz_estilo")
+  - analytics["videos_publicados"] limitado a últimos 100 (evita JSON gigante)
 v9.1 - MINIATURAS ÉLITE: Rostro humano con miedo/shock + composición profesional
   - 5 estilos rotativos: miedo_rojo, advertencia_amarillo, shock_cyan, misterio_blanco, secreto_naranja
   - Rostro real de Pexels (60% izquierda) + texto (40% derecha)
@@ -71,7 +75,9 @@ DISCLOSURE_TEXT = (
     "un documental de investigación con fines de entretenimiento."
 )
 
-MAX_SHORTS_DIA = 2
+# ═══════════════════════════ v9.2 ═══════════════════════════
+MAX_SHORTS_DIA = 1   # ← único cambio funcional (antes era 2)
+# ═══════════════════════════════════════════════════════════
 
 # ================================================================
 # 35 TEMAS PARANORMALES
@@ -909,10 +915,8 @@ def generar_placeholder_local(texto="TERROR", size=(1080, 1920)):
 # MINIATURA ÉLITE v9.1 (ROSTRO + TEXTO + COMPOSICIÓN)
 # ================================================================
 def buscar_rostro_terror_pexels(query_base=""):
-    """v9.1: Busca rostro con expresión de miedo/terror."""
     if not PEXELS_VALIDA:
         return None
-
     queries = [
         "terrified man face dark",
         "scared woman portrait dark",
@@ -956,10 +960,8 @@ def buscar_rostro_terror_pexels(query_base=""):
     return None
 
 def buscar_cuerpo_terror_pexels(query_base=""):
-    """v9.1: Fallback si no hay rostros."""
     if not PEXELS_VALIDA:
         return None
-
     queries = [
         "hands covering face dark",
         "silhouette person scared night",
@@ -997,43 +999,22 @@ def buscar_cuerpo_terror_pexels(query_base=""):
     return None
 
 def elegir_estilo_miniatura():
-    """v9.1: 5 estilos rotativos de terror."""
     estilos = [
-        {
-            "nombre": "miedo_rojo",
-            "color_texto": (255, 255, 255),
-            "color_acento": (255, 20, 20),
-            "stroke": (0, 0, 0),
-            "elemento": "flecha_roja",
-        },
-        {
-            "nombre": "advertencia_amarillo",
-            "color_texto": (255, 220, 0),
-            "color_acento": (255, 255, 255),
-            "stroke": (0, 0, 0),
-            "elemento": "triangulo_peligro",
-        },
-        {
-            "nombre": "shock_cyan",
-            "color_texto": (0, 255, 255),
-            "color_acento": (255, 255, 255),
-            "stroke": (0, 0, 0),
-            "elemento": "ninguno",
-        },
-        {
-            "nombre": "misterio_blanco",
-            "color_texto": (255, 255, 255),
-            "color_acento": (255, 30, 30),
-            "stroke": (0, 0, 0),
-            "elemento": "x_roja",
-        },
-        {
-            "nombre": "secreto_naranja",
-            "color_texto": (255, 140, 0),
-            "color_acento": (255, 220, 0),
-            "stroke": (0, 0, 0),
-            "elemento": "exclamacion",
-        },
+        {"nombre": "miedo_rojo", "color_texto": (255, 255, 255),
+         "color_acento": (255, 20, 20), "stroke": (0, 0, 0),
+         "elemento": "flecha_roja"},
+        {"nombre": "advertencia_amarillo", "color_texto": (255, 220, 0),
+         "color_acento": (255, 255, 255), "stroke": (0, 0, 0),
+         "elemento": "triangulo_peligro"},
+        {"nombre": "shock_cyan", "color_texto": (0, 255, 255),
+         "color_acento": (255, 255, 255), "stroke": (0, 0, 0),
+         "elemento": "ninguno"},
+        {"nombre": "misterio_blanco", "color_texto": (255, 255, 255),
+         "color_acento": (255, 30, 30), "stroke": (0, 0, 0),
+         "elemento": "x_roja"},
+        {"nombre": "secreto_naranja", "color_texto": (255, 140, 0),
+         "color_acento": (255, 220, 0), "stroke": (0, 0, 0),
+         "elemento": "exclamacion"},
     ]
     return random.choice(estilos)
 
@@ -1886,11 +1867,11 @@ def limpiar_archivos_temporales(archivos):
             print(f"⚠️ No se pudo eliminar {archivo}: {e}")
 
 # ================================================================
-# MAIN
+# MAIN (v9.2 — 1 short/día, final reconstruido)
 # ================================================================
 def main():
     print("=" * 65)
-    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v9.1 SAYAYIN")
+    print("🌙  SOMBRAS DE MEDIANOCHE — BOT DE SHORTS v9.2 SAYAYIN")
     print("=" * 65)
 
     estado = cargar_estado()
@@ -2050,34 +2031,32 @@ def main():
             "score_titulo":   calcular_score_titulo(titulo),
             "voz":            CONFIG_VOZ_ACTUAL["voz"],
             "voz_estilo":     CONFIG_VOZ_ACTUAL["estilo"],
-            "formato":        formato_usado,
-            "perfil":         perfil_usado,
         })
         analytics["videos_publicados"] = analytics["videos_publicados"][-100:]
         guardar_analytics_elite(analytics)
 
-        print("\n📊 PREDICCIÓN DE RENDIMIENTO:")
-        print(f"   👁️  Vistas estimadas:  {prediccion['vistas_predichas']:,}")
-        print(f"   📈 CTR predicho:       {prediccion['ctr_predicho']}%")
-        print(f"   ⏱️  Retención predicha: {prediccion['retencion_predicha']}%")
-        print(f"   🎯 Confianza:          {prediccion['confianza']}")
-
-        print("\n" + "=" * 65)
-        print(f"🏆 SHORT #{estado['publicaciones_hoy']}/{MAX_SHORTS_DIA} DEL DÍA COMPLETADO")
-        print(f"🔗 https://youtu.be/{video_id}")
-        print("=" * 65)
-
+    except SystemExit:
+        raise
     except Exception as e:
-        print(f"\n❌ ERROR CRÍTICO: {e}")
+        print(f"\n❌ ERROR FATAL EN MAIN: {type(e).__name__}: {e}")
         traceback.print_exc()
-        sys.exit(1)
-
     finally:
-        print("\n🧹 Limpiando archivos temporales...")
+        print("\n🧹 LIMPIANDO ARCHIVOS TEMPORALES...")
         limpiar_archivos_temporales(archivos_temp)
-
-    print("\n✅ Bot de shorts finalizado exitosamente.")
+        print("\n" + "=" * 65)
+        print("🏁 PROCESO TERMINADO")
+        print("=" * 65)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        print("\n⚠️ Interrumpido por el usuario.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n💥 ERROR NO CAPTURADO: {e}")
+        traceback.print_exc()
+        sys.exit(1)
