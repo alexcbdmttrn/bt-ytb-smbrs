@@ -599,6 +599,23 @@
       "voz_estilo": "suspenso",
       "formato": "primera_persona",
       "perfil": "médico o enfermero de guardia"
+    },
+    {
+      "video_id": "vNCrKB9hAQg",
+      "titulo": "Encontré algo en la morgue 🏥 #Hospital #HospitalEmbrujado #TerrorNocturno #Terror #Misterio",
+      "tema": "hospital",
+      "estado": "Nuevo León",
+      "fecha": "2026-11-16T01:48:28.166448-06:00",
+      "prediccion": {
+        "vistas_predichas": 469920,
+        "ctr_predicho": 5.87,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "ALA PROHIBIDA",
+      "score_titulo": 66,
+      "voz": "es-MX-JorgeNeural",
+      "voz_estilo": "narrativo"
     }
   ],
   "mejores_horarios": {},
