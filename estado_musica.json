@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Hollow Marrow.mp3",
     "Black Maw.mp3",
     "Cold Hollow.mp3",
@@ -9,13 +8,14 @@
     "The Deep Rot.mp3",
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "Sunless Vault.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-15T07:58:12.084064-06:00",
+  "ultima_publicacion": "2026-11-16T09:27:23.283634-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -316,14 +316,51 @@
       "perfil": "turista que visitó un pueblo del interior",
       "elemento_imposible": "era mi propia voz",
       "fecha": "2026-11-15T07:58:12.084064-06:00"
+    },
+    {
+      "id": "Hv6kL6A8YEo",
+      "titulo": "El espejo reflejó mi voz y no era yo #Shorts",
+      "tema": "espejo_maldito",
+      "tipo": "short",
+      "fecha": "2026-11-16T09:27:23.283610-06:00"
+    },
+    {
+      "id": "eBRIVAG_ouM",
+      "titulo": "Por qué NADIE se mira en el espejo del Hotel Cacaxtla",
+      "tema": "espejo_maldito",
+      "formato": "diario",
+      "perfil": "maestro rural asignado a un pueblo aislado",
+      "elemento_imposible": "el reflejo era mi propia voz",
+      "estado_mx": "Tlaxcala",
+      "duracion_min": 9.5,
+      "fecha": "2026-11-16T09:27:23.283634-06:00"
     }
   ],
   "temas_recientes": [
-    "muneca_poseida",
     "bosque_maldito",
     "brujas",
     "ritual",
     "hotel_embrujado",
-    "casa_embrujada"
-  ]
+    "casa_embrujada",
+    "espejo_maldito"
+  ],
+  "avatar_audiencia": {
+    "edad": "18-35",
+    "genero": "ambos",
+    "intereses": [
+      "terror psicológico",
+      "leyendas urbanas",
+      "misterios sobrenaturales",
+      "contenido de creepypasta"
+    ],
+    "dolor": "adrenalina y evasión mediante el morbo de lo inexplicable",
+    "nivel": "casual",
+    "por_que_ve_esto": "Busca una historia corta e inquietante que le provoque escalofríos y ganas de compartirla con amigos."
+  },
+  "perfil_lock": {
+    "formato_nombre": "diario",
+    "perfil": "maestro rural asignado a un pueblo aislado",
+    "video_id_ancla": "eBRIVAG_ouM",
+    "desde": "2026-11-16T09:27:24.593949-06:00"
+  }
 }
