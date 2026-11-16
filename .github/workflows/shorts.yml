@@ -1,8 +1,11 @@
-name: Bot YouTube - Shorts (2 al día)
+name: Bot YouTube - Shorts (1 al día)
 
 on:
   schedule:
-    - cron: '0 18,01 * * *'   # 13:00 y 20:00 CDMX (UTC-5)
+    # 2 crons de fallback. El bot publica SOLO 1/día gracias a MAX_SHORTS_DIA=1
+    # - 18:00 UTC = 12:00 CDMX (UTC-6) → intencion primaria
+    # - 01:00 UTC = 19:00 CDMX (UTC-6) → fallback si el primario falló
+    - cron: '0 18,01 * * *'
   workflow_dispatch:
 
 permissions:
