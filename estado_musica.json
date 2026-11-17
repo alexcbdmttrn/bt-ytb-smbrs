@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "Black Maw.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
@@ -9,13 +8,14 @@
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "The Deep Rot.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-16T09:27:23.283634-06:00",
+  "ultima_publicacion": "2026-11-17T14:50:34.286608-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -334,15 +334,33 @@
       "estado_mx": "Tlaxcala",
       "duracion_min": 9.5,
       "fecha": "2026-11-16T09:27:23.283634-06:00"
+    },
+    {
+      "id": "LxS6meLkn5w",
+      "titulo": "El pasajero que hablaba con mi voz en Hidalgo #Shorts",
+      "tema": "carretera",
+      "tipo": "short",
+      "fecha": "2026-11-17T14:50:34.286590-06:00"
+    },
+    {
+      "id": "ptgL1gYkGZ4",
+      "titulo": "Por qué NADIE conduce de noche en la carretera de Hidalgo",
+      "tema": "carretera",
+      "formato": "diario",
+      "perfil": "ama de casa que heredó una propiedad de un familiar",
+      "elemento_imposible": "era mi propia voz",
+      "estado_mx": "Hidalgo",
+      "duracion_min": 9.8,
+      "fecha": "2026-11-17T14:50:34.286608-06:00"
     }
   ],
   "temas_recientes": [
-    "bosque_maldito",
     "brujas",
     "ritual",
     "hotel_embrujado",
     "casa_embrujada",
-    "espejo_maldito"
+    "espejo_maldito",
+    "carretera"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
@@ -359,8 +377,8 @@
   },
   "perfil_lock": {
     "formato_nombre": "diario",
-    "perfil": "maestro rural asignado a un pueblo aislado",
-    "video_id_ancla": "eBRIVAG_ouM",
-    "desde": "2026-11-16T09:27:24.593949-06:00"
+    "perfil": "ama de casa que heredó una propiedad de un familiar",
+    "video_id_ancla": "ptgL1gYkGZ4",
+    "desde": "2026-11-17T14:50:34.287410-06:00"
   }
 }
