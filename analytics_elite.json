@@ -616,6 +616,23 @@
       "score_titulo": 66,
       "voz": "es-MX-JorgeNeural",
       "voz_estilo": "narrativo"
+    },
+    {
+      "video_id": "ZzwfTilIR7g",
+      "titulo": "'No me esperen': lo que dijo antes de ir a el cementerio 📜 #Pactodemonio #Pacto #TerrorOculto #Te...",
+      "tema": "pacto_demonio",
+      "estado": "Veracruz",
+      "fecha": "2026-11-17T18:46:49.702635-06:00",
+      "prediccion": {
+        "vistas_predichas": 627000,
+        "ctr_predicho": 6.27,
+        "retencion_predicha": 76.6,
+        "confianza": "Alta"
+      },
+      "palabras_portada": "PACTO OCULTO",
+      "score_titulo": 66,
+      "voz": "es-MX-ManuelNeural",
+      "voz_estilo": "conversacional"
     }
   ],
   "mejores_horarios": {},
