@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Black Maw.mp3",
     "Cold Hollow.mp3",
     "Sunken Dread.mp3",
     "Sunless Vault.mp3",
@@ -9,13 +8,14 @@
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
     "Sunless Vault.mp3",
-    "The Deep Rot.mp3"
+    "The Deep Rot.mp3",
+    "Cold Hollow.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-17T14:50:34.286608-06:00",
+  "ultima_publicacion": "2026-11-18T15:56:50.819303-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -352,15 +352,33 @@
       "estado_mx": "Hidalgo",
       "duracion_min": 9.8,
       "fecha": "2026-11-17T14:50:34.286608-06:00"
+    },
+    {
+      "id": "TalLZev7IdI",
+      "titulo": "El payaso que NADIE contrató en Morelos #Shorts",
+      "tema": "payaso_maldito",
+      "tipo": "short",
+      "fecha": "2026-11-18T15:56:50.819278-06:00"
+    },
+    {
+      "id": "xP2s9kY2NlA",
+      "titulo": "Por qué NADIE va a la feria de Morelos de noche",
+      "tema": "payaso_maldito",
+      "formato": "diario",
+      "perfil": "cuidador de un adulto mayor en casa grande",
+      "elemento_imposible": "nadie lo contrató",
+      "estado_mx": "Morelos",
+      "duracion_min": 9.7,
+      "fecha": "2026-11-18T15:56:50.819303-06:00"
     }
   ],
   "temas_recientes": [
-    "brujas",
     "ritual",
     "hotel_embrujado",
     "casa_embrujada",
     "espejo_maldito",
-    "carretera"
+    "carretera",
+    "payaso_maldito"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
@@ -377,8 +395,8 @@
   },
   "perfil_lock": {
     "formato_nombre": "diario",
-    "perfil": "ama de casa que heredó una propiedad de un familiar",
-    "video_id_ancla": "ptgL1gYkGZ4",
-    "desde": "2026-11-17T14:50:34.287410-06:00"
+    "perfil": "cuidador de un adulto mayor en casa grande",
+    "video_id_ancla": "xP2s9kY2NlA",
+    "desde": "2026-11-18T15:56:50.820124-06:00"
   }
 }
