@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-SOMBRAS DE MEDIANOCHE - Bot v6.9 BOLA DE NIEVE
-v6.9 - ESTRATEGIA DE CANAL (integración motor Chispas v1.7):
-  - Detección de OUTLIERS (canal chico + video viral = demanda real en terror)
-  - Cruce de temas ganadores (pool + outlier real de YouTube)
-  - Lock de formato/narrador (bola de nieve)
-  - Avatar de audiencia + validación "¿lo vería la misma persona?"
-  - Detector de "uniforme del nicho" (terror)
-  - Identidad visual fija (rojo terror)
-  - FIX bug YouTube API (id=", ".join → id=",".join)
-  - FIX limpiar_titulo protege siglas
-  - Reconstrucción del final de main() (archivo v6.8 venía truncado)
-v6.8 - MINIATURAS ÉLITE: rostro humano con miedo/shock + texto + composición
+SOMBRAS DE MEDIANOCHE - Bot v7.0 BLINDAJE ANTI-CIERRE
+v7.0 - BLINDAJE:
+  - INTERVALO_MIN_HORAS = 48h con variación ±15% (rompe patrón farm)
+  - GENERAR_SHORT = false por defecto (usar bot_shorts.py)
+  - VOCES_ROTACION: 4 voces alternadas por video (no solo Jorge)
+  - Rotación de estilos de miniatura (3 estilos)
+  - DISCLOSURE_TEXT multi-capa con email de contacto
+  - Comentario fijado con disclosure + pregunta
+  - Overlay visual "Contenido IA" en primeros segundos
+  - _sanitizar_tags() evita invalidTags de YouTube
+  - subir_video() con retry automático si invalidTags
+v6.9 - BOLA DE NIEVE:
+  - Outliers, cruce de temas, lock de perfil, avatar, uniforme
+  - Identidad visual, fix YouTube API, siglas protegidas
+v6.8 - Miniaturas élite con rostro de terror
 v6.7 - SEG_ESCENA=18s
-v6.6 - SEO élite + Curiosity Gap + títulos virales
 """
 import asyncio
 import bisect
@@ -65,6 +67,7 @@ YOUTUBE_USER_TOKEN = json.loads(os.getenv("YOUTUBE_USER_TOKEN") or "{}")
 PLAYLIST_ID = os.getenv("YOUTUBE_PLAYLIST_ID", "")
 FACEBOOK_LINK = "https://www.facebook.com/profile.php?id=61593237382982"
 CANAL_LINK = "https://www.youtube.com/@sombrasdemedianocheoficial"
+EMAIL_CONTACTO = os.getenv("EMAIL_CONTACTO", "sombras.contacto@gmail.com")
 
 MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
@@ -81,36 +84,62 @@ SEG_ESCENA = 18.0
 W, H, FPS = 1920, 1080, 24
 VOL_FONDO = 0.10
 USAR_VIDEOS = os.getenv("USAR_VIDEOS", "true").lower() == "true"
-GENERAR_SHORT = os.getenv("GENERAR_SHORT", "true").lower() == "true"
+GENERAR_SHORT = os.getenv("GENERAR_SHORT", "false").lower() == "true"  # v7.0: false por defecto
 PROGRAMAR_PICO = os.getenv("PROGRAMAR_PICO", "true").lower() == "true"
 HORA_PICO = int(os.getenv("HORA_PICO", "19"))
-INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "20"))
+INTERVALO_MIN_HORAS = float(os.getenv("INTERVALO_MIN_HORAS", "48"))  # v7.0: 48h
 ACTIVAR_DISCLOSURE_IA = True
 
-# ═══════════════════════════ v6.9 BOLA DE NIEVE ═══════════════════════════
+# ═══════════════════════════ v7.0 BOLA DE NIEVE ═══════════════════════════
 OUTLIERS_FILE = "outliers_cache_sombras.json"
 UNIFORME_FILE = "uniforme_cache_sombras.json"
-PERFIL_LOCK_MIN_VISTAS = int(os.getenv("PERFIL_LOCK_MIN_VISTAS", "500"))  # terror tiene baseline más bajo
+PERFIL_LOCK_MIN_VISTAS = int(os.getenv("PERFIL_LOCK_MIN_VISTAS", "500"))
 PERFIL_LOCK_VIDEOS = int(os.getenv("PERFIL_LOCK_VIDEOS", "5"))
 OUTLIER_MAX_SUBS = int(os.getenv("OUTLIER_MAX_SUBS", "50000"))
-OUTLIER_MIN_RATIO = float(os.getenv("OUTLIER_MIN_RATIO", "3.5"))  # nicho más chico, ratio menor
+OUTLIER_MIN_RATIO = float(os.getenv("OUTLIER_MIN_RATIO", "3.5"))
 OUTLIER_CACHE_HORAS = int(os.getenv("OUTLIER_CACHE_HORAS", "24"))
 
 IDENTIDAD_VISUAL = {
-    "color_acento": (200, 20, 30),  # rojo sangre
+    "color_acento": (200, 20, 30),
     "tipografia": "Anton-Regular.ttf",
-    "estilo_thumb": "miedo_rojo",
+    "estilos_rotacion": ["miedo_rojo", "advertencia_amarillo", "misterio_blanco"],
     "watermark": "SOMBRAS",
 }
 # ═══════════════════════════════════════════════════════════════════════════
 
-DISCLOSURE_TEXT = (
-    "\n\n⚠️ Relato compartido por un oyente de nuestra comunidad, narrado con voz "
-    "sintética y mejorado con IA para una mayor inmersión."
-)
+# ═══════════════════════════ v7.0 DISCLOSURE MULTI-CAPA ═══════════════════════════
+DISCLOSURE_TEXT = f"""
 
-VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz"}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📢 CONTENIDO CON ASISTENCIA DE IA
+
+Este relato fue creado con asistencia de Inteligencia Artificial:
+
+• Guion: generado con IA, revisado y editado por el equipo
+• Narración: voz sintética neural
+• Imágenes: material de archivo y recursos libres de regalías
+• Edición: automatizada con supervisión humana
+
+🎯 PROPÓSITO: Entretener y preservar el folclor de terror mexicano.
+⚠️ Este contenido es ficción narrativa con fines de entretenimiento.
+No pretende ser un testimonio real ni sustituir asesoría profesional.
+
+📧 Contacto: {EMAIL_CONTACTO}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+# ═════════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════ v7.0 ROTACIÓN DE VOCES ═══════════════════════════
+VOCES_ROTACION = [
+    {"voz": "es-MX-JorgeNeural",   "tono": "-4Hz", "estilo": "narrativo_masculino"},
+    {"voz": "es-MX-DaliaNeural",   "tono": "-2Hz", "estilo": "narrativo_femenino"},
+    {"voz": "es-ES-AlvaroNeural",  "tono": "-3Hz", "estilo": "dramatico_es"},
+    {"voz": "es-MX-ManuelNeural",  "tono": "-2Hz", "estilo": "conversacional"},
+]
+VOZ_CANAL = dict(VOCES_ROTACION[0])  # default, se sobreescribe en main()
 VOCES_RESPALDO = ["es-MX-JorgeNeural", "es-ES-AlvaroNeural", "es-CO-GonzaloNeural", "es-US-AlonsoNeural"]
+# ══════════════════════════════════════════════════════════════════════════════
+
 RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "-2%", "resolucion": "+2%"}
 PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
@@ -510,7 +539,7 @@ def puntuar_demanda(youtube, consulta):
         ids = [i["id"]["videoId"] for i in r.get("items", [])]
         if not ids:
             return 0
-        s = youtube.videos().list(part="statistics", id=",".join(ids)).execute()  # ═══ v6.9 FIX ═══
+        s = youtube.videos().list(part="statistics", id=",".join(ids)).execute()
         vistas = [int(i["statistics"].get("viewCount", 0)) for i in s.get("items", [])]
         return sum(vistas) / len(vistas) if vistas else 0
     except Exception as e:
@@ -522,7 +551,7 @@ def actualizar_rendimiento(youtube, estado):
     if not ids or youtube is None:
         return
     try:
-        r = youtube.videos().list(part="statistics", id=",".join(ids)).execute()  # ═══ v6.9 FIX ═══
+        r = youtube.videos().list(part="statistics", id=",".join(ids)).execute()
         vistas = {i["id"]: int(i["statistics"].get("viewCount", 0)) for i in r.get("items", [])}
         for v in estado["videos"]:
             if v.get("id") in vistas:
@@ -534,11 +563,6 @@ def actualizar_rendimiento(youtube, estado):
 def detectar_outliers(youtube, keyword, max_subs=OUTLIER_MAX_SUBS,
                       min_ratio=OUTLIER_MIN_RATIO, days=180,
                       cache_h=OUTLIER_CACHE_HORAS):
-    """
-    Outlier = canal chico con video muy visto.
-    ratio = views / subscriberCount. Si subs < 50k y ratio > 3.5,
-    YouTube empujó ese video a gente que NO era suscriptor.
-    """
     if youtube is None:
         return []
     cache = cargar_json(OUTLIERS_FILE, {})
@@ -600,7 +624,6 @@ def detectar_outliers(youtube, keyword, max_subs=OUTLIER_MAX_SUBS,
         return []
 
 def cruzar_temas(tema_original, outlier):
-    """Cruza el tema del pool con un outlier real de YouTube (terror)."""
     prompt = f"""Eres estratega de YouTube. Cruza estos dos temas para crear
 UN video de terror nuevo que herede la demanda de ambos.
 
@@ -633,7 +656,6 @@ Responde SOLO JSON:
     return None
 
 def elegir_formato_perfil(estado):
-    """v6.9: lock del formato/narrador (bola de nieve)."""
     lock = estado.get("perfil_lock")
     if lock:
         ult = next((v for v in reversed(estado["videos"])
@@ -747,18 +769,15 @@ Responde SOLO JSON:
         return None
 
 def elegir_tema(estado, youtube):
-    """v6.9: tema por outliers reales + cruce con uno de ellos."""
     recientes = estado["temas_recientes"][-6:]
     pool = [t for t in TEMAS if t["tema"] not in recientes] or TEMAS[:]
     candidatos = random.sample(pool, min(5, len(pool)))
-
     outliers_map = {}
     scores = {}
     for t in candidatos:
         o = detectar_outliers(youtube, t["seed"])
         outliers_map[t["tema"]] = o
         scores[t["tema"]] = sum(x["ratio"] for x in o)
-
     acum = {}
     for v in estado["videos"]:
         if "vistas" in v:
@@ -774,7 +793,6 @@ def elegir_tema(estado, youtube):
 
     elegido = max(candidatos, key=final_score)
     print(f"🎯 Tema: {elegido['tema']} | outliers={len(outliers_map.get(elegido['tema'], []))}")
-
     outs = outliers_map.get(elegido["tema"], [])
     if outs:
         refinado = cruzar_temas(elegido, outs[0])
@@ -793,7 +811,7 @@ def elegir_tema(estado, youtube):
 # ═══════════════════════════════════════════════════════════════════════════
 
 # =================================================================
-# TÍTULOS (ESTRATEGIA VIRAL v6.9)
+# TÍTULOS
 # =================================================================
 GANCHOS = [
     "nunca", "nadie", "jamás", "solo", "prohibido", "prohibieron",
@@ -811,11 +829,10 @@ PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidenc
               "filtrado", "es real", "historia real", "hechos reales"]
 GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror", "el fantasma de"]
 
-# ═══ v6.9: siglas protegidas (terror y generales) ═══
 SIGLAS_INTOCABLES = {"ADN", "ARN", "NASA", "ONU", "IA", "EEUU", "COVID",
                      "VIH", "SIDA", "OVNI", "PIB", "UE", "OMS", "POV",
                      "TDAH", "OCD", "IQ", "CI", "FGR", "CIA", "FBI", "DEA",
-                     "DNI", "GPS", "CCTV", "USB", "LED", "RIP", "POV"}
+                     "DNI", "GPS", "CCTV", "USB", "LED", "RIP"}
 
 def limpiar_titulo(t):
     t = t.strip().strip('"').strip("'")
@@ -824,7 +841,7 @@ def limpiar_titulo(t):
     t = t.rstrip(".")
     palabras = t.split()
     caps = [w for w in palabras if len(re.sub(r"\W", " ", w)) >= 3 and w.isupper()
-            and w not in SIGLAS_INTOCABLES]  # ═══ v6.9 ═══
+            and w not in SIGLAS_INTOCABLES]
     if len(caps) > 3:
         keep = set(caps[:2]) | SIGLAS_INTOCABLES
         palabras = [w if (not w.isupper() or w in keep or len(w) < 3) else w.capitalize() for w in palabras]
@@ -842,18 +859,14 @@ def puntuar_titulo(t):
         s -= 8
     else:
         s -= 2
-
     ganchos_encontrados = sum(1 for g in GANCHOS if g in tl)
     s += min(8, ganchos_encontrados * 2)
-
     if re.search(r"\d", t):
         s += 3
     if re.search(r"\b\d{3,}\b", t):
         s += 3
-
     if re.search(r'\b(por qué nadie|nadie sube|el secreto de|lo que ocultan|lo que encontraron|la verdad de)\b', tl):
         s += 10
-
     patrones_imposibles = [
         r"\by\s+(era|fue|estaba|había|resultó)\b",
         r"\bpero\s+(yo\s+)?(estaba|era|fue|nadie|solo|nunca|no)",
@@ -866,7 +879,6 @@ def puntuar_titulo(t):
         if re.search(pat, tl):
             s += 5
             break
-
     caps = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", t)
     s += 2 if 1 <= len(caps) <= 2 else (-3 if len(caps) > 3 else 0)
     if any(p in tl for p in PROHIBIDAS):
@@ -923,16 +935,16 @@ ESQUEMA_PLAN = """{
  "titulos": ["6 títulos de 45-68 caracteres con ESTRUCTURA DISTINTA. NUNCA termines con '| Relato de Terror'. AL MENOS 3 de los 6 DEBEN usar la fórmula de Misterio Local ('Por qué NADIE sube a [Lugar]', 'El SECRETO de [Lugar]', 'Lo que OCULTAN en [Lugar]'). Combina con el elemento_imposible"],
  "anio_suceso": 2014,
  "protagonista": "nombre de pila del narrador",
- "elemento_imposible": "CRÍTICO: el detalle más memorable e imposible del relato en 3-8 palabras. Algo que rompe la lógica y se queda en la cabeza del espectador. Ejemplos: 'era mi propia voz', 'nadie lo contrató', 'lo vi en dos lugares a la vez', 'el teléfono sonó desde el sótano', 'el cadáver seguía respirando'. ESTE detalle debe aparecer en AL MENOS 3 de los 6 títulos",
+ "elemento_imposible": "CRÍTICO: el detalle más memorable e imposible del relato en 3-8 palabras.",
  "gancho": "1-2 frases (máx 35 palabras) que abren el relato en medio de la acción más perturbadora, en primera persona, e INCLUYEN el elemento_imposible",
  "resumen": "sinopsis de 2-3 oraciones sin spoilers del final",
  "palabras_clave": ["5 keywords SEO en español"],
- "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS (ej: NO SUBAS, PROHIBIDO, EL SECRETO, QUÉ HAY AQUÍ)"],
- "miniatura_escena": "4-6 palabras en inglés para buscar foto en Pexels (ej: dark hallway door, candle skull altar)",
- "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta; la segunda invita a suscribirse",
+ "palabras_portada": ["3 opciones de 2-3 palabras EN MAYÚSCULAS"],
+ "miniatura_escena": "4-6 palabras en inglés para buscar foto en Pexels",
+ "descripcion_gancho": "2 líneas: la primera con el keyword principal y una promesa concreta",
  "titulo_short": "gancho de máx 55 caracteres para un YouTube Short",
- "pregunta_comentario": "pregunta corta que invite a comentar basada en la mecánica del relato (ej: '¿tú habrías abierto la puerta?')",
- "tags": ["10 tags ULTRA-ESPECÍFICOS de esta historia. MIX OBLIGATORIO: 2-3 del OBJETO o ELEMENTO central, 2-3 de la MECÁNICA del miedo, 1-2 PREGUNTAS de audiencia, 1-2 tags ESTADO más tema (ej: 'terror en chihuahua'), 1-2 'relatos de terror mas el elemento específico'. NO pongas tags genéricos."],
+ "pregunta_comentario": "pregunta corta que invite a comentar",
+ "tags": ["10 tags ULTRA-ESPECÍFICOS"],
  "capitulos": [{"titulo": "2-4 palabras con intriga", "resumen": "qué ocurre y qué cliffhanger deja"}]
 }"""
 
@@ -941,51 +953,35 @@ def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos,
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"
     sug  = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     hint = tema.get("elemento_imposible_hint", "")
-
     if formato_narracion is None:
         formato_narracion = FORMATOS_NARRACION[0]
     if perfil_narrador is None:
         perfil_narrador = "persona común del pueblo"
 
     prompt = f"""Eres el investigador principal de un canal de DOCUMENTALES DE MISTERIO Y LEYENDAS LOCALES de México.
-Tu objetivo es escribir un guion de TERROR (~8-12 minutos, {NUM_CAPITULOS} capítulos) sobre un caso real o leyenda urbana de la región.
+Tu objetivo es escribir un guion de TERROR (~8-12 minutos, {NUM_CAPITULOS} capítulos).
 
 TEMA: {tema['tema']} | ÁNGULO: {tema['angulo']}
 LUGAR ESPECÍFICO: {contexto}, en {estado_mx}, México.
-{('ELEMENTO IMPOSIBLE SUGERIDO (por cruce de outliers): ' + hint) if hint else ''}
+{('ELEMENTO IMPOSIBLE SUGERIDO: ' + hint) if hint else ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FORMATO NARRATIVO OBLIGATORIO: {formato_narracion['nombre'].upper()}
 {formato_narracion['instruccion']}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PERFIL DEL NARRADOR: {perfil_narrador}
-El protagonista NO es genérico. Es específicamente: {perfil_narrador}.
-Su ocupación define cómo percibe el terror y qué detalles sensoriales nota.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 BÚSQUEDAS REALES EN YOUTUBE:
 {sug}
-TÍTULOS YA PUBLICADOS (no repetir estructura ni idea):
+TÍTULOS YA PUBLICADOS:
 {prev}
 
 ━━━ REGLA CRÍTICA: TÍTULO ESTILO "MISTERIO LOCAL" ━━━
-El canal que domina este nicho usa títulos como:
-  • "Por qué NADIE sube a [Lugar]"
-  • "El SECRETO de [Lugar]"
-  • "Lo que OCULTAN en [Lugar]"
-  • "La VERDAD de [Lugar]"
-El campo 'titulos' debe contener 6 opciones. AL MENOS 3 de ellas DEBEN usar esta estructura de pregunta/tabú local usando el estado o ciudad.
+AL MENOS 3 de los 6 títulos DEBEN usar estructura de pregunta/tabú local.
 
 ━━━ REGLA CRÍTICA: ELEMENTO IMPOSIBLE ━━━
-El campo 'elemento_imposible' debe ser un detalle que ROMPE la lógica (ej: 'era mi propia voz', 'el cadáver respiraba', 'nadie lo contrató').
-ESTE detalle debe aparecer en AL MENOS 3 de los 6 títulos.
-
-REGLAS DE CONTENIDO:
-1. Haz que suene como un documental de investigación, no un cuento de hadas. Menciona rumores de los "vecinos del pueblo".
-2. El gancho debe ser lo más perturbador del relato e INCLUIR el elemento_imposible.
-3. Cada capítulo termina en cliffhanger (excepto el último).
-4. El relato completo: estrictamente 1100-1400 palabras.
-5. Cada capítulo debe tener UN "momento de máximo terror" específico (un evento concreto).
+El campo 'elemento_imposible' debe romper la lógica y aparecer en AL MENOS 3 de los 6 títulos.
 
 Responde SOLO con este JSON:
 {ESQUEMA_PLAN}"""
@@ -1009,7 +1005,6 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
     caps    = plan["capitulos"][:NUM_CAPITULOS]
     indice  = "\n".join(f"{i+1}. {c.get('titulo','')}: {c.get('resumen','')}" for i, c in enumerate(caps))
     textos  = []
-
     formato_instruccion = plan.get("_formato_instruccion", "Relato en primera persona directa.")
     perfil_narrador     = plan.get("_perfil_narrador", "persona común")
     nombre_formato      = plan.get("_nombre_formato", "primera_persona")
@@ -1018,49 +1013,43 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
     for i, cap in enumerate(caps):
         previo = textos[-1][-700:] if textos else ""
         if i == 0:
-            extra = (f"Empieza EXACTAMENTE con esta frase de gancho: \"{plan['gancho']}\" "
-                     f"e inmediatamente después INTEGRA el elemento imposible '{elemento_imposible}' "
-                     f"como el detalle que dispara el horror.")
+            extra = (f"Empieza EXACTAMENTE con: \"{plan['gancho']}\" "
+                     f"e INTEGRA el elemento imposible '{elemento_imposible}'.")
         elif i == len(caps) - 1:
-            extra = ("Cierra con un final abierto e inquietante que deje una duda. "
-                     "Antes de cerrar, vuelve a mencionar el elemento imposible de forma que "
-                     "reencuadre algo que ya habías contado antes — el lector debe sentir que "
-                     "ese detalle siempre estuvo ahí, acechando.")
+            extra = ("Cierra con final abierto e inquietante. "
+                     f"Vuelve a mencionar el elemento imposible '{elemento_imposible}' de forma que reencuadre algo previo.")
         else:
-            extra = (f"Termina con un cliffhanger y asegúrate de que el elemento imposible "
-                     f"'{elemento_imposible}' aparezca al menos una vez en este capítulo.")
+            extra = (f"Termina con cliffhanger. El elemento imposible '{elemento_imposible}' "
+                     f"debe aparecer al menos una vez.")
 
         if nombre_formato == "diario":
-            formato_cap = f"Este capítulo es una o varias ENTRADAS DE DIARIO. Incluye una 'fecha' o 'día' al inicio de cada entrada (ej: 'Día {i*3+1}'). Termina la última entrada a mitad de frase si es el cliffhanger."
+            formato_cap = f"Este capítulo es ENTRADA DE DIARIO. Incluye 'Día {i*3+1}'."
         else:
-            formato_cap = f"Mantén el formato {nombre_formato} establecido en el capítulo anterior."
+            formato_cap = f"Mantén el formato {nombre_formato} establecido."
 
         prompt = f"""Escribe el CAPÍTULO {i+1} de {len(caps)} de un documental de terror.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FORMATO NARRATIVO: {nombre_formato.upper()}
+FORMATO: {nombre_formato.upper()}
 {formato_instruccion}
 {formato_cap}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}
 AÑO: {plan.get('anio_suceso', '2015')} | LUGAR: {contexto}, {estado_mx}, México
 ÁNGULO: {tema['angulo']}
-ELEMENTO IMPOSIBLE DEL RELATO: "{elemento_imposible}"
+ELEMENTO IMPOSIBLE: "{elemento_imposible}"
 SINOPSIS: {plan.get('resumen', '')}
 ÍNDICE: {indice}
 ESTE CAPÍTULO: {cap.get('titulo', '')} → {cap.get('resumen', '')}
 {extra}
-{('FINAL DEL CAPÍTULO ANTERIOR (continúa sin repetir): ' + previo) if previo else ''}
+{('FINAL DEL CAPÍTULO ANTERIOR: ' + previo) if previo else ''}
 
 REGLAS:
 - 250-350 palabras exactas
-- Español mexicano coloquial, detalles sensoriales del trabajo/oficio del narrador
-- ⚠️ CADA CAPÍTULO debe tener UN MOMENTO DE MÁXIMO TERROR CONCRETO — no solo
-  atmósfera. Un evento específico (la puerta que se abre sola, el teléfono que suena,
-  la voz que no debería estar). El lector debe poder resumir "en este capítulo pasó X".
-- SHOWING not telling: muestra el miedo con acciones y objetos, no con adjetivos
-- El elemento imposible debe sentirse ORGÁNICO, no forzado.
-- Sin listas, emojis, títulos de sección ni acotaciones entre corchetes
-- El narrador percibe el terror desde su oficio.
+- Español mexicano coloquial
+- UN MOMENTO DE MÁXIMO TERROR CONCRETO
+- SHOWING not telling
+- El elemento imposible debe sentirse ORGÁNICO
+- Sin listas, emojis, acotaciones
 Devuelve SOLO el texto del capítulo."""
         texto = None
         for intento in range(3):
@@ -1069,7 +1058,7 @@ Devuelve SOLO el texto del capítulo."""
             if len(t.split()) >= 200:
                 texto = t
                 break
-            print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.), reintento {intento+1}")
+            print(f"⚠️ Capítulo {i+1} corto ({len(t.split())} pal.)")
         if not texto:
             raise RuntimeError(f"No se pudo generar el capítulo {i+1}")
         textos.append(texto)
@@ -1077,7 +1066,8 @@ Devuelve SOLO el texto del capítulo."""
     return textos
 
 def expandir_texto(titulo, texto_actual):
-    prompt = f"""Relato: "{titulo}". Final actual:\n\"\"\"\n{texto_actual[-500:]}\n\"\"\"\nAñade 200-300 palabras que profundicen el desenlace, mismo tono, sin resolver todo.\nDevuelve SOLO el texto."""
+    prompt = (f'Relato: "{titulo}". Final:\n"""\n{texto_actual[-500:]}\n"""\n'
+              f"Añade 200-300 palabras profundizando el desenlace. Devuelve SOLO el texto.")
     for _ in range(2):
         t = llm(prompt, temperature=0.8, max_tokens=900)
         t = limpiar_texto_narracion(t) if t else ""
@@ -1086,8 +1076,8 @@ def expandir_texto(titulo, texto_actual):
     return ""
 
 OUTROS = [
-    "Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame en los comentarios: ¿tú qué habrías hecho?",
-    "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete para no perderte la próxima. ¿Tú habrías entrado? Te leo en los comentarios.",
+    "Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame: ¿tú qué habrías hecho?",
+    "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete. ¿Tú habrías entrado? Te leo.",
 ]
 
 # =================================================================
@@ -1096,28 +1086,19 @@ OUTROS = [
 FORMATOS_NARRACION = [
     {"nombre": "primera_persona",
      "instruccion": ("Relato en PRIMERA PERSONA directa. El narrador vivió los hechos. "
-                     "Tiempo pasado. Comienza en medio de la acción, sin presentación. "
-                     "Ejemplo de apertura: 'Esa noche yo estaba solo cuando escuché...'")},
+                     "Abre en medio de la acción sin introducción.")},
     {"nombre": "confesion",
-     "instruccion": ("Formato CONFESIÓN. El narrador revela algo que cargó en silencio por años. "
-                     "Tono urgente, como si necesitara soltar un secreto. "
-                     "Apertura posible: 'Nunca debí contarle esto a nadie, pero ya no puedo más.' "
-                     "Genera culpa y tensión desde la primera línea.")},
+     "instruccion": ("Formato CONFESIÓN. Revela algo que cargó en silencio por años. "
+                     "Tono urgente, como si necesitara soltar un secreto.")},
     {"nombre": "carta_mensaje",
-     "instruccion": ("Formato CARTA o MENSAJE DE VOZ. El narrador escribe o graba para alguien "
-                     "específico: un familiar, un amigo, 'quien encuentre esto'. "
-                     "Apertura posible: 'Te escribo esto porque nadie me creyó cuando lo conté.' "
-                     "El destinatario nunca responde; el miedo crece sin testigos.")},
+     "instruccion": ("Formato CARTA o MENSAJE. El narrador escribe para alguien "
+                     "específico. El destinatario nunca responde.")},
     {"nombre": "diario",
-     "instruccion": ("Formato DIARIO o BITÁCORA. Entradas cortas con días o fechas ('Día 1', "
-                     "'Semana 2', 'Martes por la noche'). La tensión sube entrada a entrada. "
-                     "La última entrada es la más perturbadora y queda sin resolución. "
-                     "No todos los días tienen algo; el silencio entre entradas también da miedo.")},
+     "instruccion": ("Formato DIARIO. Entradas cortas con días o fechas. "
+                     "La tensión sube entrada a entrada. La última es la más perturbadora.")},
     {"nombre": "testigo",
-     "instruccion": ("El narrador cuenta lo que le pasó a ALGUIEN CERCANO que ya no está "
-                     "(familiar, vecino, amigo). 'Mi tío me lo contó la última vez que lo vi.' "
-                     "Da distancia al terror pero lo hace más creíble. El narrador no sabe todo "
-                     "y esa incertidumbre es parte del horror.")},
+     "instruccion": ("El narrador cuenta lo que le pasó a ALGUIEN CERCANO. "
+                     "Da distancia al terror pero lo hace más creíble.")},
 ]
 
 PERFILES_NARRADOR = [
@@ -1188,7 +1169,7 @@ def generar_audio(texto, nombre, etapa):
         return None
     ruta   = f"temp_audio_{nombre}.mp3"
     rate   = RATE_ETAPA.get(etapa, "+4%")
-    pitch  = VOZ_CANAL["tono"]
+    pitch  = VOZ_CANAL.get("tono", "-4Hz")
     voces  = [VOZ_CANAL["voz"]] + [v for v in VOCES_RESPALDO if v != VOZ_CANAL["voz"]]
     for voz in voces:
         for intento in range(2):
@@ -1449,7 +1430,44 @@ def mezclar_audio(segs, total, fondo, extras=()):
             print(f"⚠️ Fondo: {e}")
     return CompositeAudioClip(capas).set_duration(total), clips
 
+# ═══════════════════════════ v7.0 OVERLAY DISCLOSURE ═══════════════════════════
+def generar_overlay_disclosure(size=(W, H)):
+    """Genera un PNG con la marca de IA para los primeros segundos del video."""
+    img = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    texto = "CONTENIDO CON ASISTENCIA DE IA"
+    try:
+        font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32
+        )
+    except Exception:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), texto, font=font)
+    ancho = bbox[2] - bbox[0]
+    x = (size[0] - ancho) // 2
+    y = size[1] - 100
+    draw.rectangle([x - 20, y - 10, x + ancho + 20, y + 45],
+                    fill=(0, 0, 0, 180))
+    draw.text((x, y), texto, font=font, fill=(255, 220, 0, 255))
+    ruta = "temp_overlay_ia.png"
+    img.save(ruta)
+    return ruta
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def renderizar(escenas, total, audio, size, salida):
+    # v7.0: overlay IA en primera escena
+    overlay_ia = generar_overlay_disclosure()
+    if overlay_ia and os.path.exists(overlay_ia) and escenas and escenas[0]["tipo"] == "img":
+        try:
+            base = Image.open(escenas[0]["path"]).convert("RGBA")
+            ovl = Image.open(overlay_ia)
+            base.alpha_composite(ovl, (0, 0))
+            ruta_ovl = escenas[0]["path"].replace(".jpg", "_ia.jpg")
+            base.convert("RGB").save(ruta_ovl, "JPEG", quality=92)
+            escenas[0]["path"] = ruta_ovl
+        except Exception as e:
+            print(f"⚠️ No se pudo aplicar overlay IA: {e}")
+
     render = RenderEscenas(escenas, size, total)
     video  = VideoClip(render.frame, duration=total).set_audio(audio)
     video.write_videofile(salida, fps=FPS, codec="libx264", audio_codec="aac", audio_bitrate="192k", threads=4,
@@ -1461,7 +1479,7 @@ def renderizar(escenas, total, audio, size, salida):
     return salida
 
 # =================================================================
-# MINIATURAS ÉLITE v6.9 (identidad forzable)
+# MINIATURAS ÉLITE (con rotación de estilos)
 # =================================================================
 def obtener_fuente(size):
     os.makedirs("fonts", exist_ok=True)
@@ -1514,7 +1532,7 @@ def buscar_rostro_terror_pexels(query_base=""):
             ruta = f"temp_thumb_rostro_{random.randint(1000,9999)}.jpg"
             if descargar(url, ruta, 15 * 1024 * 1024):
                 USADOS.add(url)
-                print(f"   👤 Rostro de terror encontrado: {q}")
+                print(f"   👤 Rostro de terror: {q}")
                 return ruta
         except Exception as e:
             print(f"   ⚠️ Query '{q}': {e}")
@@ -1550,7 +1568,7 @@ def buscar_cuerpo_terror_pexels(query_base=""):
             ruta = f"temp_thumb_cuerpo_{random.randint(1000,9999)}.jpg"
             if descargar(url, ruta, 15 * 1024 * 1024):
                 USADOS.add(url)
-                print(f"   🖐️ Cuerpo en tensión encontrado: {q}")
+                print(f"   🖐️ Cuerpo en tensión: {q}")
                 return ruta
         except Exception as e:
             print(f"   ⚠️ Query '{q}': {e}")
@@ -1577,11 +1595,17 @@ def elegir_estilo_miniatura():
     ]
     return random.choice(estilos)
 
-# ═══ v6.9: estilo de identidad fijo para el canal ═══
+# ═══ v7.0: estilos disponibles para rotación ═══
 ESTILOS_IDENTIDAD = [
     {"nombre": "miedo_rojo", "color_texto": (255, 255, 255),
      "color_acento": (255, 20, 20), "stroke": (0, 0, 0),
      "elemento": "flecha_roja"},
+    {"nombre": "advertencia_amarillo", "color_texto": (255, 220, 0),
+     "color_acento": (255, 255, 255), "stroke": (0, 0, 0),
+     "elemento": "triangulo_peligro"},
+    {"nombre": "misterio_blanco", "color_texto": (255, 255, 255),
+     "color_acento": (255, 30, 30), "stroke": (0, 0, 0),
+     "elemento": "x_roja"},
 ]
 
 def dividir_lineas(palabras):
@@ -1596,13 +1620,12 @@ def dividir_lineas(palabras):
     return mejor[1]
 
 def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_estilo=None):
-    """v6.9: acepta forzar_estilo para identidad fija del canal."""
     TW, TH = 1280, 720
     if forzar_estilo:
         match = next((s for s in ESTILOS_IDENTIDAD if s["nombre"] == forzar_estilo), None)
         if match:
             estilo = match
-            print(f"   🎨 Estilo identidad forzado: {estilo['nombre']}")
+            print(f"   🎨 Estilo identidad: {estilo['nombre']}")
     estilo = estilo or elegir_estilo_miniatura()
 
     try:
@@ -1737,11 +1760,11 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
             if os.path.getsize(salida) < 1_900_000:
                 break
 
-        print(f"✅ Miniatura v6.9 [{estilo['nombre']}]: '{' / '.join(lineas)}' ({size_final}px)")
+        print(f"✅ Miniatura v7.0 [{estilo['nombre']}]: '{' / '.join(lineas)}' ({size_final}px)")
         return True
 
     except Exception as e:
-        print(f"❌ Error miniatura v6.9: {e}")
+        print(f"❌ Error miniatura: {e}")
         traceback.print_exc()
         try:
             img = Image.new("RGB", (TW, TH), (10, 15, 25))
@@ -1755,13 +1778,36 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
             return False
 
 # =================================================================
-# SEO ELITE (CURIOSITY GAP)
+# SEO ELITE
 # =================================================================
 def _ascii_tag_yt(t):
     nfd = unicodedata.normalize('NFD', str(t))
     sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
     limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower())
     return re.sub(r'\s+', ' ', limpio).strip()
+
+# ═══════════════════════════ v7.0 SANITIZAR TAGS ═══════════════════════════
+def _sanitizar_tags(tags, max_tags=15, max_chars_tag=28, max_words=3):
+    """Filtro agresivo para evitar invalidTags de YouTube."""
+    limpios, vistos = [], set()
+    for t in tags or []:
+        if not isinstance(t, str):
+            continue
+        t = _ascii_tag_yt(t)
+        if not t or t in vistos:
+            continue
+        if len(t) > max_chars_tag:
+            t = " ".join(t.split()[:max_words])
+        if len(t.split()) > max_words or len(t) < 3:
+            continue
+        if re.search(r"\d{3,}", t):
+            continue
+        vistos.add(t)
+        limpios.append(t)
+        if len(limpios) >= max_tags:
+            break
+    return limpios
+# ═══════════════════════════════════════════════════════════════════════════
 
 def construir_tags(plan, tema, sugerencias, estado_mx=""):
     nombre_tema  = _ascii_tag_yt(tema["tema"].replace("_", " "))
@@ -1813,8 +1859,8 @@ def construir_tags(plan, tema, sugerencias, estado_mx=""):
             break
         resultado.append(tag)
         total_chars += costo
-    print(f"🏷️  Tags ({len(resultado)}): {', '.join(resultado[:5])}...")
-    return resultado
+    # v7.0: sanitizar antes de devolver
+    return _sanitizar_tags(resultado)
 
 def construir_hashtags(tema):
     hs = ["#RelatosDeTerror", "#Terror", "#Paranormal"] + tema.get("hashtags", [])[:2] + ["#Mexico"]
@@ -1836,10 +1882,8 @@ def construir_descripcion(plan, tema, caps_ts, sugerencias, hashtags):
         (f"🔎 Temas relacionados: {rel}" if rel else ""),
         f"📱 Facebook: {FACEBOOK_LINK}",
     ]
-
     if ACTIVAR_DISCLOSURE_IA:
         partes.append(DISCLOSURE_TEXT.strip())
-
     partes.append(hashtags)
 
     desc = "\n\n".join(p for p in partes if p and p.strip())
@@ -1865,6 +1909,35 @@ def generar_srt(segs, ruta):
     return ruta
 
 # =================================================================
+# v7.0: ROTACIÓN DE VOZ Y ESTILO + COMENTARIO FIJADO
+# =================================================================
+def seleccionar_voz_semana(estado):
+    """Selecciona la voz basándose en el ID del video anterior."""
+    idx = len(estado.get("videos", [])) % len(VOCES_ROTACION)
+    voz = VOCES_ROTACION[idx]
+    print(f"🎤 Voz de la semana: {voz['voz']} ({voz['estilo']})")
+    return voz
+
+def seleccionar_estilo_semana(estado):
+    """Selecciona el estilo de miniatura basándose en el ID del video anterior."""
+    idx = len(estado.get("videos", [])) % len(IDENTIDAD_VISUAL["estilos_rotacion"])
+    return IDENTIDAD_VISUAL["estilos_rotacion"][idx]
+
+def generar_comentario_fijado(plan, tema):
+    """Comentario fijado que humaniza + disclosure + pregunta."""
+    pregunta = plan.get("pregunta_comentario") or random.choice([
+        f"¿Ustedes qué harían si les pasara algo así en {random.choice(tema['contextos'])}?",
+        "¿Creen que estas leyendas tienen algo de real?",
+        "¿Cuál es la historia más extraña que les ha pasado?",
+    ])
+    return (
+        f"📖 Este relato fue adaptado con asistencia de IA para narrar una "
+        f"leyenda compartida por la comunidad.\n\n"
+        f"{pregunta} Los leo 👇\n\n"
+        f"— El equipo de Sombras 🌙"
+    )
+
+# =================================================================
 # PUBLICACIÓN
 # =================================================================
 def deberia_publicar(estado):
@@ -1876,8 +1949,10 @@ def deberia_publicar(estado):
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=TZ)
         horas = (datetime.now(TZ) - dt).total_seconds() / 3600
-        if horas < INTERVALO_MIN_HORAS:
-            print(f"⏸️ Han pasado {horas:.1f}h (mínimo {INTERVALO_MIN_HORAS}h).")
+        # v7.0: variación aleatoria ±15% para romper patrón exacto
+        min_horas = INTERVALO_MIN_HORAS * random.uniform(0.85, 1.15)
+        if horas < min_horas:
+            print(f"⏸️ Han pasado {horas:.1f}h (mínimo aleatorio {min_horas:.1f}h).")
             return False
     except ValueError:
         pass
@@ -1911,6 +1986,15 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
             if st:
                 print(f"   ⬆️ {int(st.progress() * 100)}%")
         except (HttpError, ssl.SSLEOFError, ConnectionError, socket.timeout, OSError) as e:
+            # ═══ v7.0: si es invalidTags, reintentar con tags limpios ═══
+            if isinstance(e, HttpError) and e.resp.status == 400 and "invalidTags" in str(e):
+                print(f"⚠️ YouTube rechazó los tags. Reintentando con tags ultra-conservadores...")
+                tags_safe = _sanitizar_tags(tags, max_tags=10, max_chars_tag=20, max_words=2)
+                print(f"   🏷️ Tags seguros ({len(tags_safe)}): {tags_safe}")
+                body["snippet"]["tags"] = tags_safe
+                req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+                continue
+
             es_reintento = isinstance(e, HttpError) and e.resp.status in (429, 500, 502, 503, 504)
             es_reintento = es_reintento or isinstance(e, (ssl.SSLEOFError, ConnectionError, socket.timeout, OSError))
             if es_reintento and reintentos < 8:
@@ -1958,7 +2042,7 @@ def extras_post_subida(youtube, vid, miniatura, srt, comentario):
             print(f"⚠️ Comentario: {e}\n   Texto para fijar: {comentario}")
 
 # =================================================================
-# SHORT EMBUDO
+# SHORT EMBUDO (opcional, solo si GENERAR_SHORT=true)
 # =================================================================
 def crear_short(segs_orig, plan, fondo, salida="short_final.mp4"):
     segs   = [{**s} for s in segs_orig]
@@ -1976,7 +2060,7 @@ def crear_short(segs_orig, plan, fondo, salida="short_final.mp4"):
         t0 += s["dur"]
     t = t0
 
-    cta    = generar_audio("La historia completa ya está en el canal. Suscríbete para no perderte la siguiente.", "cta", "resolucion")
+    cta    = generar_audio("La historia completa ya está en el canal. Suscríbete.", "cta", "resolucion")
     escenas = construir_escenas(sel)
     extras, total = [], t
     if cta:
@@ -2044,7 +2128,7 @@ def verificar_envs():
     except HttpError as e:
         err_str = str(e)
         if "insufficientPermissions" in err_str or "insufficient authentication scopes" in err_str:
-            print("⚠️ Token sin permiso de lectura (youtube.readonly). El bot publica igual.")
+            print("⚠️ Token sin permiso de lectura. El bot publica igual.")
         elif "401" in err_str or "invalid_grant" in err_str or "invalid_token" in err_str:
             print(f"❌ YouTube token expirado o revocado: {e}")
             sys.exit(1)
@@ -2057,7 +2141,7 @@ def verificar_envs():
     return yt
 
 # =================================================================
-# MAIN (reconstruido v6.9 — v6.8 venía truncado en `portada = eleg`)
+# MAIN
 # =================================================================
 def main():
     youtube = verificar_envs()
@@ -2069,26 +2153,29 @@ def main():
     elif not deberia_publicar(estado):
         sys.exit(0)
 
+    # v7.0: seleccionar voz y estilo de la semana
+    voz_semana = seleccionar_voz_semana(estado)
+    VOZ_CANAL["voz"] = voz_semana["voz"]
+    VOZ_CANAL["tono"] = voz_semana["tono"]
+    estilo_semana = seleccionar_estilo_semana(estado)
+
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v6.9 BOLA DE NIEVE")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v7.0 BLINDAJE")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
-    print(f"📚 Temas: {len(TEMAS)} | Formatos: {len(FORMATOS_NARRACION)} | SEG_ESCENA={SEG_ESCENA}s")
-    print(f"🎯 v6.9: OUTLIERS + LOCK PERFIL + AVATAR + IDENTIDAD VISUAL")
+    print(f"📚 Temas: {len(TEMAS)} | SEG_ESCENA={SEG_ESCENA}s | INTERVALO={INTERVALO_MIN_HORAS}h")
+    print(f"🎯 v7.0: {estilo_semana} + voice rotation + disclosure multi-capa")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
 
-    # ═══ 1) Tema (con outliers) ═══
     tema = elegir_tema(estado, youtube)
     contexto = random.choice(tema["contextos"])
     estado_mx = random.choice(ESTADOS_MEXICO)
 
-    # ═══ 2) Formato/perfil con lock (bola de nieve) ═══
     formato, perfil, lock_activo = elegir_formato_perfil(estado)
     print(f"🎭 Formato: {formato['nombre']} | Narrador: {perfil}"
           + (" [LOCKED]" if lock_activo else ""))
 
-    # ═══ 3) Uniforme del nicho (informativo) ═══
     uniforme = detectar_uniforme_nicho(youtube, tema["keywords"][0])
     if uniforme:
         contra = uniforme.get("contra_patrones", [])
@@ -2104,7 +2191,6 @@ def main():
 
     titulos_previos = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})["titulos"][-20:]
 
-    # ═══ 4) Plan con validación de audiencia ═══
     avatar_actual = estado.get("avatar_audiencia")
     plan = titulo = None
     for intento in range(4):
@@ -2113,13 +2199,11 @@ def main():
                                 formato_narracion=formato, perfil_narrador=perfil)
             if plan.get("palabras_clave") and tema_ya_usado(" ".join(map(str, plan["palabras_clave"]))):
                 raise ValueError("tema repetido")
-
             ok_aud, motivo = validar_misma_audiencia(avatar_actual, plan, tema)
             if not ok_aud:
                 print(f"   ⚠️ Plan rechazado por audiencia: {motivo}")
                 plan = None
                 continue
-
             titulo = elegir_titulo(plan["titulos"])
             if not titulo:
                 raise ValueError("sin título válido")
@@ -2205,37 +2289,33 @@ def main():
 
     print(f"🏷️  Tags ({len(tags)}): {', '.join(tags[:6])}...")
 
-    # ═══ v6.9: MINIATURA CON IDENTIDAD ═══
     print("🖼️  Buscando rostro de terror para miniatura...")
     portada = elegir_texto_portada(plan.get("palabras_portada"), titulo)
-    print(f"   📝 Texto de portada elegido: '{portada}'")
+    print(f"   📝 Texto de portada: '{portada}'")
 
     img_miniatura = None
     miniatura_ok = False
 
-    # Nivel 1: Rostro de terror
     img_miniatura = buscar_rostro_terror_pexels(tema["tema"] + " scared face")
     if img_miniatura:
         miniatura_ok = crear_miniatura_v68(
             img_miniatura, portada, "miniatura.jpg",
-            forzar_estilo=IDENTIDAD_VISUAL["estilo_thumb"]
+            forzar_estilo=estilo_semana
         )
         if miniatura_ok:
             print("   ✅ Miniatura con ROSTRO de terror generada")
 
-    # Nivel 2: Cuerpo/manos con tensión
     if not miniatura_ok:
         print("   🔄 Sin rostro. Buscando cuerpo/manos con tensión...")
         img_miniatura = buscar_cuerpo_terror_pexels(tema["tema"])
         if img_miniatura:
             miniatura_ok = crear_miniatura_v68(
                 img_miniatura, portada, "miniatura.jpg",
-                forzar_estilo=IDENTIDAD_VISUAL["estilo_thumb"]
+                forzar_estilo=estilo_semana
             )
             if miniatura_ok:
                 print("   ✅ Miniatura con CUERPO en tensión generada")
 
-    # Nivel 3: escena abstracta
     if not miniatura_ok:
         print("   🔄 Pexels sin resultados. Usando escena abstracta...")
         escena_mini = str(plan.get("miniatura_escena", "dark hallway horror night"))
@@ -2246,22 +2326,20 @@ def main():
                 USADOS.add(urls[0])
                 miniatura_ok = crear_miniatura_v68(
                     ruta, portada, "miniatura.jpg",
-                    forzar_estilo=IDENTIDAD_VISUAL["estilo_thumb"]
+                    forzar_estilo=estilo_semana
                 )
                 if miniatura_ok:
                     print("   ✅ Miniatura con ESCENA generada")
 
     miniatura = "miniatura.jpg" if miniatura_ok else None
     if not miniatura:
-        print("   ⚠️ No se pudo generar miniatura. Se subirá sin miniatura.")
+        print("   ⚠️ No se pudo generar miniatura.")
 
-    # ═══ Renderizar video largo ═══
     escenas = construir_escenas(segs)
     audio, _ = mezclar_audio(segs, total, fondo)
     print("🎬 Renderizando video largo...")
     renderizar(escenas, total, audio, (W, H), "video_final.mp4")
 
-    # ═══ Slot ═══
     if PROGRAMAR_PICO:
         slot = proximo_slot()
         print(f"🕖 Video Largo: {slot:%Y-%m-%d %H:%M} CDMX")
@@ -2271,10 +2349,11 @@ def main():
 
     vid = subir_video(youtube, "video_final.mp4", titulo, descripcion, tags,
                       utc_iso(slot) if slot else None)
-    comentario = str(plan.get("pregunta_comentario") or "¿Qué habrías hecho tú? Te leo 👇")
+    # v7.0: comentario fijado con disclosure + pregunta
+    comentario = generar_comentario_fijado(plan, tema)
     extras_post_subida(youtube, vid, miniatura, srt, comentario)
 
-    # ═══ Short embudo ═══
+    # Short embudo (solo si GENERAR_SHORT=true)
     if GENERAR_SHORT:
         print("📱 Creando Short embudo...")
         try:
@@ -2288,7 +2367,7 @@ def main():
                     f"#Shorts {hashtags}" +
                     (DISCLOSURE_TEXT if ACTIVAR_DISCLOSURE_IA else "")
                 )
-                tags_short = tags[:12] + ["shorts"]
+                tags_short = _sanitizar_tags(tags[:12] + ["shorts"])
                 slot_short = None
                 if PROGRAMAR_PICO and slot:
                     slot_short = slot + timedelta(hours=2)
@@ -2304,7 +2383,6 @@ def main():
             print(f"❌ Error creando/subiendo short: {e}")
             traceback.print_exc()
 
-    # ═══ Guardar estado ═══
     ahora = datetime.now(TZ).isoformat()
     guardar_titulo_largo(titulo)
     guardar_tema(tema["tema"])
@@ -2314,13 +2392,14 @@ def main():
         "elemento_imposible": plan.get("elemento_imposible"),
         "estado_mx": estado_mx,
         "duracion_min": round(total / 60, 1),
+        "voz": VOZ_CANAL["voz"],
+        "estilo_miniatura": estilo_semana,
         "fecha": ahora,
     })
     estado["videos"] = estado["videos"][-60:]
     estado["temas_recientes"] = (estado["temas_recientes"] + [tema["tema"]])[-6:]
     estado["ultima_publicacion"] = ahora
 
-    # ═══ v6.9: avatar + perfil lock ═══
     if not estado.get("avatar_audiencia"):
         avatar_nuevo = generar_avatar_audiencia(plan, tema)
         if avatar_nuevo:
@@ -2333,7 +2412,7 @@ def main():
 
     guardar_json(MUSICA_ESTADO_FILE, estado)
     limpiar_temporales()
-    print("🎉 Proceso completo: 1 video largo + 1 short programados.")
+    print("🎉 Proceso completo: 1 video largo programado.")
 
 if __name__ == "__main__":
     try:
