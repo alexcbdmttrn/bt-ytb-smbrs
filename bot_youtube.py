@@ -896,6 +896,19 @@ def verificar_envs():
     yt = crear_cliente_youtube()
     if yt is None: sys.exit(1)
     return yt
+    
+def generar_avatar_audiencia(plan, tema):
+    tits = plan.get("titulos") or [""]
+    prompt = f"Extrae el AVATAR de audiencia.\nTÍTULO: {tits[0] if tits else ''} | ELEMENTO: {plan.get('elemento_imposible', '')} | TEMA: {tema['tema']}\nSOLO JSON: {{\"edad\":\"rango\",\"genero\":\"M/F/ambos\",\"intereses\":[\"i1\",\"i2\"], \"dolor\":\"qué busca\",\"nivel\":\"casual\"}}"
+    try:
+        txt = llm(prompt, temperature=0.6, max_tokens=400, json_mode=True)
+        return parsear_json(txt)
+    except Exception: 
+        return None
+
+def bloquear_perfil(estado, formato, perfil, video_id):
+    estado["perfil_lock"] = {"formato_nombre": formato["nombre"], "perfil": perfil, "video_id_ancla": video_id, "desde": datetime.now(TZ).isoformat()}
+    guardar_json(MUSICA_ESTADO_FILE, estado)
 
 def main():
     global NUM_CAPITULOS, VOZ_CANAL
