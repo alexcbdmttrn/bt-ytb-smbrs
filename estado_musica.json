@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunken Dread.mp3",
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
     "Black Maw.mp3",
@@ -9,13 +8,14 @@
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
     "Cold Hollow.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Sunless Vault.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-19T16:12:41.428359-06:00",
+  "ultima_publicacion": "2026-11-20T18:04:07.196380-06:00",
   "videos": [
     {
       "id": "23Oa6bFQzd8",
@@ -390,15 +390,35 @@
       "voz": "es-ES-AlvaroNeural",
       "estilo_miniatura": "miedo_rojo",
       "fecha": "2026-11-19T16:12:41.428359-06:00"
+    },
+    {
+      "id": "qkoDmWAkj74",
+      "titulo": "La bruja del cerro en Durango: su sombra te busca #Shorts",
+      "tema": "brujas",
+      "tipo": "short",
+      "fecha": "2026-11-20T18:04:07.196357-06:00"
+    },
+    {
+      "id": "BR4PHCm2uqM",
+      "titulo": "Por qué NADIE sube al Cerro de la Bruja en Durango: el fuego no quema su sombra",
+      "tema": "brujas",
+      "formato": "primera_persona",
+      "perfil": "bombero voluntario de un pueblo pequeño",
+      "elemento_imposible": "su sombra camina sin ella",
+      "estado_mx": "Durango",
+      "duracion_min": 8.4,
+      "voz": "es-MX-JorgeNeural",
+      "estilo_miniatura": "misterio_blanco",
+      "fecha": "2026-11-20T18:04:07.196380-06:00"
     }
   ],
   "temas_recientes": [
-    "hotel_embrujado",
     "casa_embrujada",
     "espejo_maldito",
     "carretera",
     "payaso_maldito",
-    "posesion"
+    "posesion",
+    "brujas"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
@@ -414,9 +434,9 @@
     "por_que_ve_esto": "Busca una historia corta e inquietante que le provoque escalofríos y ganas de compartirla con amigos."
   },
   "perfil_lock": {
-    "formato_nombre": "diario",
-    "perfil": "mecánico que trabajó en un taller viejo heredado",
-    "video_id_ancla": "RUtEMYCbXk0",
-    "desde": "2026-11-19T16:12:41.429279-06:00"
+    "formato_nombre": "primera_persona",
+    "perfil": "bombero voluntario de un pueblo pequeño",
+    "video_id_ancla": "BR4PHCm2uqM",
+    "desde": "2026-11-20T18:04:07.197305-06:00"
   }
 }
