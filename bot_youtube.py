@@ -28,9 +28,9 @@ MUSICA_ESTADO_FILE = "estado_musica.json"
 TITULOS_LARGOS_FILE = "titulos_largos_publicados.json"
 TEMAS_SHORTS_FILE = "temas_shorts.json"
 DURACION_MINIMA_SEGUNDOS = 480
-DURACION_MAXIMA_SEGUNDOS = 600
-MAX_INTENTOS_EXPANSION = 1
-NUM_CAPITULOS = 4 
+DURACION_MAXIMA_SEGUNDOS = 720
+MAX_INTENTOS_EXPANSION = 3
+NUM_CAPITULOS = 4
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 18.0
 W, H, FPS = 1920, 1080, 24
@@ -364,25 +364,34 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
         previo = textos[-1][-700:] if textos else ""
         extra = f"Empieza con: \"{plan['gancho']}\" e INTEGRA '{elemento_imposible}'." if i == 0 else (f"Cierra con final abierto. Menciona '{elemento_imposible}'." if i == len(caps) - 1 else f"Cliffhanger. Menciona '{elemento_imposible}'.")
         formato_cap = f"ENTRADA DE DIARIO 'Día {i*3+1}'." if nombre_formato == "diario" else f"Mantén formato {nombre_formato}."
-        prompt = f"CAPÍTULO {i+1}/{len(caps)} de documental de terror.\nFORMATO: {nombre_formato.upper()} {formato_instruccion} {formato_cap}\nNARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}\nLUGAR: {contexto}, {estado_mx} | ÁNGULO: {tema['angulo']}\nELEMENTO: \"{elemento_imposible}\"\nÍNDICE: {indice}\nESTE CAP: {cap.get('titulo', '')} → {cap.get('resumen', '')}\n{extra}\nFINAL ANTERIOR: {previo}\nREGLAS: 250-350 palabras. Español mexicano. MÁXIMO TERROR CONCRETO. SHOWING. SOLO texto."
+        prompt = f"CAPÍTULO {i+1}/{len(caps)} de documental de terror.\nFORMATO: {nombre_formato.upper()} {formato_instruccion} {formato_cap}\nNARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}\nLUGAR: {contexto}, {estado_mx} | ÁNGULO: {tema['angulo']}\nELEMENTO: \"{elemento_imposible}\"\nÍNDICE: {indice}\nESTE CAP: {cap.get('titulo', '')} → {cap.get('resumen', '')}\n{extra}\nFINAL ANTERIOR: {previo}\nREGLAS: EXACTAMENTE 300-400 palabras por capítulo. Español mexicano. MÁXIMO TERROR CONCRETO. SHOWING. SOLO texto. NO te quedes corto: si sientes que terminas antes de 300 palabras, agrega más detalles sensoriales, diálogos internos, o una escena secundaria que alimente el cliffhanger."
         texto = None
         for intento in range(3):
-            t = llm(prompt, temperature=0.85, max_tokens=800); t = limpiar_texto_narracion(t) if t else ""
-            if len(t.split()) >= 200: texto = t; break
+            t = llm(prompt, temperature=0.85, max_tokens=1000); t = limpiar_texto_narracion(t) if t else ""
+            if len(t.split()) >= 280: texto = t; break
+            elif len(t.split()) >= 200 and intento == 2: texto = t; break
         if not texto: raise RuntimeError(f"Error cap {i+1}")
         textos.append(texto); print(f"   ✅ Cap {i+1}/{len(caps)}: {len(texto.split())} pal.")
     return textos
 
-def expandir_texto(titulo, texto_actual):
-    prompt = f'Relato: "{titulo}". Final:\n"""\n{texto_actual[-500:]}\n"""\nAñade 200-300 palabras. SOLO texto.'
+def expandir_texto(titulo, texto_actual, ronda=1):
+    cantidad = 400 if ronda == 1 else 300
+    prompt = f'Relato: "{titulo}". Final actual:\n"""\n{texto_actual[-800:]}\n"""\nAñade EXACTAMENTE {cantidad} palabras que profundicen el desenlace con un giro perturbador adicional. Mismo tono, mismo narrador, mismo lugar. NO resuelvas todo. NO repitas lo ya dicho. SOLO el texto nuevo, sin títulos ni explicaciones.'
     for _ in range(2):
-        t = llm(prompt, temperature=0.8, max_tokens=900); t = limpiar_texto_narracion(t) if t else ""
-        if len(t.split()) > 150: return t
+        t = llm(prompt, temperature=0.8, max_tokens=1200); t = limpiar_texto_narracion(t) if t else ""
+        if len(t.split()) > 250: return t
     return ""
 
 OUTROS = ["Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete y activa la campanita. Cuéntame: ¿tú qué habrías hecho?", "Esa fue la historia de hoy. Si llegaste hasta el final, déjame un like y suscríbete. ¿Tú habrías entrado? Te leo."]
 FORMATOS_NARRACION = [{"nombre": "primera_persona", "instruccion": "Primera persona directa."}, {"nombre": "confesion", "instruccion": "Confesión urgente."}, {"nombre": "carta_mensaje", "instruccion": "Carta/mensaje."}, {"nombre": "diario", "instruccion": "Diario con fechas."}, {"nombre": "testigo", "instruccion": "Testigo cuenta lo de otro."}]
 PERFILES_NARRADOR = ["velador", "conductor nocturno", "médico de guardia", "ama de casa", "turista", "jornalero", "estudiante", "taxista", "mecánico", "maestro rural", "obrero", "fotógrafo", "cuidador", "comerciante", "bombero"]
+
+def generar_avatar_audiencia(plan, tema):
+    return None
+
+def bloquear_perfil(estado, formato, perfil, vid):
+    estado["perfil_lock"] = {"formato": formato["nombre"], "perfil": perfil, "video_id": vid}
+    return True
 
 # ================= SEGMENTOS Y AUDIO =================
 def dividir_en_segmentos(texto, max_palabras=SEG_MAX_PALABRAS):
@@ -896,19 +905,6 @@ def verificar_envs():
     yt = crear_cliente_youtube()
     if yt is None: sys.exit(1)
     return yt
-    
-def generar_avatar_audiencia(plan, tema):
-    tits = plan.get("titulos") or [""]
-    prompt = f"Extrae el AVATAR de audiencia.\nTÍTULO: {tits[0] if tits else ''} | ELEMENTO: {plan.get('elemento_imposible', '')} | TEMA: {tema['tema']}\nSOLO JSON: {{\"edad\":\"rango\",\"genero\":\"M/F/ambos\",\"intereses\":[\"i1\",\"i2\"], \"dolor\":\"qué busca\",\"nivel\":\"casual\"}}"
-    try:
-        txt = llm(prompt, temperature=0.6, max_tokens=400, json_mode=True)
-        return parsear_json(txt)
-    except Exception: 
-        return None
-
-def bloquear_perfil(estado, formato, perfil, video_id):
-    estado["perfil_lock"] = {"formato_nombre": formato["nombre"], "perfil": perfil, "video_id_ancla": video_id, "desde": datetime.now(TZ).isoformat()}
-    guardar_json(MUSICA_ESTADO_FILE, estado)
 
 def main():
     global NUM_CAPITULOS, VOZ_CANAL
@@ -916,20 +912,20 @@ def main():
     if os.getenv("FORCE_PUBLISH") == "true": print("⚡ FORCE_PUBLISH activo")
     elif not deberia_publicar(estado): sys.exit(0)
 
-    NUM_CAPITULOS = random.choice([3, 4, 4, 5])
+    NUM_CAPITULOS = random.choice([4, 4, 5, 5])
     VOZ_CANAL = seleccionar_voz_semana(estado); estilo_semana = seleccionar_estilo_semana(estado)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v7.0 BLINDAJE")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v7.1 BLINDAJE")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | SEG_ESCENA={SEG_ESCENA}s | INTERVALO={INTERVALO_MIN_HORAS}h")
-    print(f"🎯 v7.0: {estilo_semana} + voice rotation + disclosure multi-capa")
+    print(f"🎯 v7.1: {estilo_semana} + voice rotation + disclosure multi-capa + duración blindada")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
     tema = elegir_tema(estado, youtube); contexto = random.choice(tema["contextos"]); estado_mx = random.choice(ESTADOS_MEXICO)
     formato = random.choice(FORMATOS_NARRACION); perfil = random.choice(PERFILES_NARRADOR)
-    print(f"🎭 Formato: {formato['nombre']} | Narrador: {perfil}")
+    print(f"🎭 Formato: {formato['nombre']} | Narrador: {perfil} | Capítulos: {NUM_CAPITULOS}")
 
     sugerencias = list(dict.fromkeys(sugerencias_youtube(tema["seed"]) + sugerencias_youtube("relato de terror " + tema["keywords"][0])))[:10]
     fondo = seleccionar_fondo(estado); titulos_previos = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})["titulos"][-20:]
@@ -952,24 +948,49 @@ def main():
     print(f"📌 Título: {titulo}"); print(f"🎯 Elemento imposible: {plan.get('elemento_imposible', 'N/A')}"); print(f"📍 Estado: {estado_mx}")
 
     capitulos_txt = generar_capitulos(plan, tema, contexto, estado_mx); n_caps = len(capitulos_txt); segs = crear_segmentos(capitulos_txt)
-    print(f"🧩 {len(segs)} segmentos, {sum(len(c.split()) for c in capitulos_txt)} palabras")
+    total_palabras = sum(len(c.split()) for c in capitulos_txt)
+    print(f"🧩 {len(segs)} segmentos, {total_palabras} palabras (meta: 1200-1600)")
 
     segs = sintetizar(segs); total = construir_timeline(segs); intentos = 0
+    
     while total < DURACION_MINIMA_SEGUNDOS and intentos < MAX_INTENTOS_EXPANSION:
-        print(f"⚠️ {total/60:.1f} min < mínimo. Expandiendo ({intentos+1})...")
-        extra = expandir_texto(titulo, " ".join(s["texto"] for s in segs)); intentos += 1
-        if not extra: break
+        deficit_min = (DURACION_MINIMA_SEGUNDOS - total) / 60
+        print(f"⚠️ {total/60:.1f} min < mínimo (8 min). Déficit: {deficit_min:.1f} min. Expansión {intentos+1}/{MAX_INTENTOS_EXPANSION}...")
+        extra = expandir_texto(titulo, " ".join(s["texto"] for s in segs), ronda=intentos+1); intentos += 1
+        if not extra:
+            print(f"   ⚠️ Expansión {intentos} devolvió vacío. Reintentando...")
+            continue
         nuevos = [{"cap": n_caps - 1, "texto": p, "cap_ini": False, "etapa": "resolucion", "id": f"x{intentos}_{k}", "expansion": True} for k, p in enumerate(dividir_en_segmentos(extra))]
         segs += sintetizar(nuevos); total = construir_timeline(segs)
+        print(f"   ✅ Tras expansión {intentos}: {total/60:.1f} min")
+
+    if total < DURACION_MINIMA_SEGUNDOS:
+        print(f"🚨 Generando capítulo de emergencia para alcanzar mínimo...")
+        prompt_emerg = f"""Escribe un CAPÍTULO FINAL de emergencia para un documental de terror.
+Título: "{titulo}". Narrador: {plan.get('protagonista', 'Marco')}. Lugar: {contexto}, {estado_mx}.
+Ángulo: {tema['angulo']}. Elemento imposible: {plan.get('elemento_imposible', 'detalle')}.
+Contexto previo: {(" ".join(s["texto"] for s in segs))[-600:]}
+Escribe 400-500 palabras que añadan una revelación final perturbadora. Español mexicano. Solo texto."""
+        t_emerg = llm(prompt_emerg, temperature=0.9, max_tokens=1200)
+        t_emerg = limpiar_texto_narracion(t_emerg) if t_emerg else ""
+        if len(t_emerg.split()) >= 300:
+            nuevos = [{"cap": n_caps, "texto": p, "cap_ini": k == 0, "etapa": "resolucion", "id": f"emerg_{k}", "expansion": True} for k, p in enumerate(dividir_en_segmentos(t_emerg))]
+            segs += sintetizar(nuevos); total = construir_timeline(segs)
+            print(f"   ✅ Cap emergencia añadido. Total: {total/60:.1f} min")
 
     if total > DURACION_MAXIMA_SEGUNDOS:
-        print(f"⚠️ {total/60:.1f} min > máximo. Recortando...")
+        print(f"⚠️ {total/60:.1f} min > máximo ({DURACION_MAXIMA_SEGUNDOS/60:.0f} min). Recortando expansiones primero...")
         while total > DURACION_MAXIMA_SEGUNDOS:
             idx = next((i for i in range(len(segs) - 1, -1, -1) if segs[i].get("expansion")), None)
             if idx is None: break
             segs.pop(idx); total = construir_timeline(segs)
-    if total < DURACION_MINIMA_SEGUNDOS: print("❌ Duración insuficiente. Abortando."); sys.exit(1)
-
+        while total > DURACION_MAXIMA_SEGUNDOS and len(segs) > 15:
+            segs.pop(); total = construir_timeline(segs)
+    
+    if total < DURACION_MINIMA_SEGUNDOS: 
+        print(f"❌ Duración insuficiente tras todas las expansiones ({total/60:.1f} min). Abortando.")
+        sys.exit(1)
+        
     outro = [{"cap": n_caps - 1, "texto": random.choice(OUTROS), "cap_ini": False, "etapa": "resolucion", "id": "outro", "outro": True}]
     segs += sintetizar(outro); total = construir_timeline(segs); print(f"⏱️ Duración final: {total/60:.1f} min")
 
