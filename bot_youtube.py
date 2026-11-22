@@ -30,7 +30,7 @@ TEMAS_SHORTS_FILE = "temas_shorts.json"
 DURACION_MINIMA_SEGUNDOS = 480
 DURACION_MAXIMA_SEGUNDOS = 720
 MAX_INTENTOS_EXPANSION = 3
-NUM_CAPITULOS = 4
+NUM_CAPITULOS = 4 
 SEG_MAX_PALABRAS = 55
 SEG_ESCENA = 18.0
 W, H, FPS = 1920, 1080, 24
@@ -48,20 +48,29 @@ PERFIL_LOCK_VIDEOS = int(os.getenv("PERFIL_LOCK_VIDEOS", "5"))
 OUTLIER_MAX_SUBS = int(os.getenv("OUTLIER_MAX_SUBS", "50000"))
 OUTLIER_MIN_RATIO = float(os.getenv("OUTLIER_MIN_RATIO", "3.5"))
 OUTLIER_CACHE_HORAS = int(os.getenv("OUTLIER_CACHE_HORAS", "24"))
-IDENTIDAD_VISUAL = {"estilos_rotacion": ["miedo_rojo", "advertencia_amarillo", "misterio_blanco"]}
+
+FONT_URLS = [
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf",
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/Oswald-Bold.ttf",
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf",
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/righteous/Righteous-Regular.ttf"
+]
+
+IDENTIDAD_VISUAL = {"estilos_rotacion": ["miedo_rojo", "advertencia_amarillo", "misterio_blanco", "shock_cyan", "secreto_naranja"]}
 DISCLOSURE_TEXT = f"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📢 CONTENIDO CON ASISTENCIA DE IA\n\nEste relato fue creado con asistencia de Inteligencia Artificial:\n\n• Guion: generado con IA, revisado y editado por el equipo\n• Narración: voz sintética neural\n• Imágenes: material de archivo y recursos libres de regalías\n• Edición: automatizada con supervisión humana\n\n🎯 PROPÓSITO: Entretener y preservar el folclor de terror mexicano.\n⚠️ Este contenido es ficción narrativa con fines de entretenimiento.\nNo pretende ser un testimonio real ni sustituir asesoría profesional.\n\n📧 Contacto: {EMAIL_CONTACTO}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 VOCES_ROTACION = [
-    {"voz": "es-MX-JorgeNeural", "tono": "-4Hz", "estilo": "narrativo_masculino"}, {"voz": "es-MX-DaliaNeural", "tono": "-2Hz", "estilo": "narrativo_femenino"},
-    {"voz": "es-ES-AlvaroNeural", "tono": "-3Hz", "estilo": "dramatico_es"}, {"voz": "es-MX-ManuelNeural", "tono": "-2Hz", "estilo": "conversacional"},
-    {"voz": "es-CO-GonzaloNeural", "tono": "-3Hz", "estilo": "suspenso_colombiano"}, {"voz": "es-US-AlonsoNeural", "tono": "-2Hz", "estilo": "rapido_neutro"},
-    {"voz": "es-AR-TomasNeural", "tono": "+1Hz", "estilo": "argentino_intenso"}, {"voz": "es-MX-DaliaNeural", "tono": "-4Hz", "estilo": "susurro_femenino"}
+    {"voz": "es-MX-JorgeNeural", "estilo": "narrativo_masculino"}, {"voz": "es-MX-DaliaNeural", "estilo": "narrativo_femenino"},
+    {"voz": "es-ES-AlvaroNeural", "estilo": "dramatico_es"}, {"voz": "es-MX-ManuelNeural", "estilo": "conversacional"},
+    {"voz": "es-CO-GonzaloNeural", "estilo": "suspenso_colombiano"}, {"voz": "es-US-AlonsoNeural", "estilo": "rapido_neutro"},
+    {"voz": "es-AR-TomasNeural", "estilo": "argentino_intenso"}, {"voz": "es-MX-DaliaNeural", "estilo": "susurro_femenino"},
+    {"voz": "es-ES-ElviraNeural", "estilo": "femenino_es"}, {"voz": "es-CL-LorenzoNeural", "estilo": "chileno_narrador"}
 ]
-VOZ_CANAL = dict(VOCES_ROTACION[0])
+VOZ_CANAL = {"voz": "es-MX-JorgeNeural", "tono": "-4Hz", "rate": "+6%"}
 VOCES_RESPALDO = ["es-MX-JorgeNeural", "es-ES-AlvaroNeural", "es-CO-GonzaloNeural", "es-US-AlonsoNeural"]
 RATE_ETAPA = {"apertura": "+6%", "tension": "+6%", "destino": "+4%", "climax": "-2%", "resolucion": "+2%"}
 PAUSA_ETAPA = {"apertura": 0.5, "tension": 0.45, "destino": 0.5, "climax": 0.75, "resolucion": 0.6}
 PROB_VIDEO = {"apertura": 0.5, "tension": 0.5, "destino": 0.6, "climax": 0.5, "resolucion": 0.4}
-FUENTE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"
+FUENTE_URL = FONT_URLS[0]
 FONDOS_DISPONIBLES = ["Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3", "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"]
 ESTADOS_MEXICO = ["Aguascalientes", "Baja California", "Campeche", "Chiapas", "Chihuahua", "Coahuila", "Colima", "Durango", "Estado de México", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"]
 
@@ -191,6 +200,13 @@ def titulo_largo_ya_publicado(titulo):
         if n == tn or (len(p1) > 3 and len(p2) > 3 and len(p1 & p2) / min(len(p1), len(p2)) > 0.7): return True
     return False
 
+def titulo_empieza_igual(titulo):
+    data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
+    primeras3 = titulo.lower().split()[:3]
+    for t in data["titulos"][-15:]:
+        if t.lower().split()[:3] == primeras3: return True
+    return False
+
 def guardar_titulo_largo(titulo):
     data = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})
     if titulo not in data["titulos"]: data["titulos"].append(titulo)
@@ -291,7 +307,7 @@ def elegir_tema(estado, youtube):
     return elegido
 
 # ================= TÍTULOS Y PLAN =================
-GANCHOS = ["nunca", "nadie", "jamás", "solo", "prohibido", "secreto", "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "entré", "confieso", "recuerdo", "desapareció", "apareció", "cambió", "por qué", "cómo", "noche", "oscuridad", "por qué nadie", "nadie sube a", "el secreto de", "lo que ocultan"]
+GANCHOS = ["nunca", "nadie", "jamás", "solo", "prohibido", "secreto", "escuché", "vi ", "descubrí", "encontré", "sobreviví", "trabajé", "entré", "confieso", "recuerdo", "desapareció", "apareció", "cambió", "por qué", "cómo", "noche", "oscuridad"]
 PROHIBIDAS = ["testimonio real", "caso real", "100% real", "verídico", "evidencia", "pruebas", "autoridades", "filtrado"]
 GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror"]
 SIGLAS_INTOCABLES = {"ADN", "ARN", "NASA", "ONU", "IA", "EEUU", "COVID", "VIH", "SIDA", "OVNI", "PIB", "UE", "OMS", "POV", "TDAH", "OCD", "IQ", "CI", "FGR", "CIA", "FBI", "DEA", "DNI", "GPS", "CCTV", "USB", "LED", "RIP"}
@@ -312,7 +328,6 @@ def puntuar_titulo(t):
     else: s -= 2
     s += min(8, sum(1 for g in GANCHOS if g in tl) * 2)
     if re.search(r"\d", t): s += 3
-    if re.search(r'\b(por qué nadie|nadie sube|el secreto de|lo que ocultan)\b', tl): s += 10
     if any(p in tl for p in PROHIBIDAS): s -= 8
     if any(tl.startswith(g) for g in GENERICAS): s -= 6
     return s
@@ -322,14 +337,14 @@ def elegir_titulo(candidatos):
     for c in candidatos:
         if not isinstance(c, str): continue
         base = limpiar_titulo(c)
-        if len(base) < 25 or titulo_largo_ya_publicado(base): continue
+        if len(base) < 25 or titulo_largo_ya_publicado(base) or titulo_empieza_igual(base): continue
         puntuados.append((puntuar_titulo(base), base))
     if not puntuados: return None
     puntuados.sort(reverse=True); return puntuados[0][1][:100]
 
 def elegir_texto_portada(opciones, titulo):
     pt = set(re.findall(r"\w+", titulo.lower())); mejor = None
-    fallbacks = ["NO SUBAS", "PROHIBIDO", "EL SECRETO", "NO ENTRES", "OCULTAN", "NO MIRES", "PELIGRO"]
+    fallbacks = ["NO SUBAS", "PROHIBIDO", "EL SECRETO", "NO ENTRES", "OCULTAN", "NO MIRES", "PELIGRO", "CUIDADO", "ALERTA"]
     for o in opciones or []:
         if not isinstance(o, str): continue
         o = re.sub(r"[^\w¿?¡! ]", "", o).strip().upper(); w = o.split()
@@ -340,15 +355,15 @@ def elegir_texto_portada(opciones, titulo):
         if mejor is None or sc > mejor[0]: mejor = (sc, o)
     return mejor[1] if mejor else random.choice(fallbacks)
 
-ESQUEMA_PLAN = "{\n \"titulos\": [\"6 títulos de 45-68 caracteres. AL MENOS 3 DEBEN usar la fórmula de Misterio Local.\"],\n \"anio_suceso\": 2014, \"protagonista\": \"nombre\", \"elemento_imposible\": \"detalle\", \"gancho\": \"1-2 frases\",\n \"resumen\": \"sinopsis\", \"palabras_clave\": [\"5 keywords SEO\"], \"palabras_portada\": [\"3 opciones MAYÚSCULAS\"],\n \"miniatura_escena\": \"4-6 palabras inglés\", \"descripcion_gancho\": \"2 líneas\", \"titulo_short\": \"máx 55 caracteres\",\n \"pregunta_comentario\": \"pregunta\", \"tags\": [\"10 tags\"], \"capitulos\": [{\"titulo\": \"2-4 palabras\", \"resumen\": \"qué pasa\"}]\n}"
+ESQUEMA_PLAN = "{\n \"titulos\": [\"8 títulos de 45-68 caracteres. CADA TÍTULO DEBE TENER UNA ESTRUCTURA SINTÁCTICA COMPLETAMENTE DISTINTA. No repitas prefijos como 'Por qué nadie'.\"],\n \"anio_suceso\": 2014, \"protagonista\": \"nombre\", \"elemento_imposible\": \"detalle\", \"gancho\": \"1-2 frases\",\n \"resumen\": \"sinopsis\", \"palabras_clave\": [\"5 keywords SEO\"], \"palabras_portada\": [\"3 opciones MAYÚSCULAS\"],\n \"miniatura_escena\": \"4-6 palabras inglés\", \"descripcion_gancho\": \"2 líneas\", \"titulo_short\": \"máx 55 caracteres\",\n \"pregunta_comentario\": \"pregunta\", \"tags\": [\"10 tags\"], \"capitulos\": [{\"titulo\": \"2-4 palabras\", \"resumen\": \"qué pasa\"}]\n}"
 
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos, formato_narracion=None, perfil_narrador=None):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"; sug  = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     hint = tema.get("elemento_imposible_hint", "")
     if formato_narracion is None: formato_narracion = FORMATOS_NARRACION[0]
     if perfil_narrador is None: perfil_narrador = "persona común"
-    prompt = f"Eres showrunner de TERROR. Guion de ~8-12 min, {NUM_CAPITULOS} capítulos.\nTEMA: {tema['tema']} | ÁNGULO: {tema['angulo']} | LUGAR: {contexto}, {estado_mx}.\n{hint}\nFORMATO: {formato_narracion['nombre'].upper()} {formato_narracion['instruccion']}\nPERFIL: {perfil_narrador}\nBÚSQUEDAS: {sug}\nTÍTULOS YA PUBLICADOS: {prev}\nREGLA: AL MENOS 3 de los 6 títulos DEBEN ser pregunta/tabú local. 'elemento_imposible' en AL MENOS 3 títulos.\nSOLO JSON: {ESQUEMA_PLAN}"
-    txt = llm(prompt, temperature=0.9, max_tokens=2400, json_mode=True); plan = parsear_json(txt)
+    prompt = f"Eres showrunner de TERROR. Guion de ~8-12 min, {NUM_CAPITULOS} capítulos.\nTEMA: {tema['tema']} | ÁNGULO: {tema['angulo']} | LUGAR: {contexto}, {estado_mx}.\n{hint}\nFORMATO: {formato_narracion['nombre'].upper()} {formato_narracion['instruccion']}\nPERFIL: {perfil_narrador}\nBÚSQUEDAS: {sug}\nTÍTULOS YA PUBLICADOS: {prev}\nREGLA ESTRICTA: Genera 8 títulos. NO REPITAS ESTRUCTURAS. Si usas 'Por qué', el siguiente debe ser una afirmación, otro una confesión, etc.\nSOLO JSON: {ESQUEMA_PLAN}"
+    txt = llm(prompt, temperature=0.95, max_tokens=2400, json_mode=True); plan = parsear_json(txt)
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3 and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS and plan.get("gancho") and plan.get("palabras_portada") and plan.get("elemento_imposible")): raise ValueError("plan incompleto")
     return plan
 
@@ -364,7 +379,7 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
         previo = textos[-1][-700:] if textos else ""
         extra = f"Empieza con: \"{plan['gancho']}\" e INTEGRA '{elemento_imposible}'." if i == 0 else (f"Cierra con final abierto. Menciona '{elemento_imposible}'." if i == len(caps) - 1 else f"Cliffhanger. Menciona '{elemento_imposible}'.")
         formato_cap = f"ENTRADA DE DIARIO 'Día {i*3+1}'." if nombre_formato == "diario" else f"Mantén formato {nombre_formato}."
-        prompt = f"CAPÍTULO {i+1}/{len(caps)} de documental de terror.\nFORMATO: {nombre_formato.upper()} {formato_instruccion} {formato_cap}\nNARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}\nLUGAR: {contexto}, {estado_mx} | ÁNGULO: {tema['angulo']}\nELEMENTO: \"{elemento_imposible}\"\nÍNDICE: {indice}\nESTE CAP: {cap.get('titulo', '')} → {cap.get('resumen', '')}\n{extra}\nFINAL ANTERIOR: {previo}\nREGLAS: EXACTAMENTE 300-400 palabras por capítulo. Español mexicano. MÁXIMO TERROR CONCRETO. SHOWING. SOLO texto. NO te quedes corto: si sientes que terminas antes de 300 palabras, agrega más detalles sensoriales, diálogos internos, o una escena secundaria que alimente el cliffhanger."
+        prompt = f"CAPÍTULO {i+1}/{len(caps)} de documental de terror.\nFORMATO: {nombre_formato.upper()} {formato_instruccion} {formato_cap}\nNARRADOR: {plan.get('protagonista', 'Marco')} — {perfil_narrador}\nLUGAR: {contexto}, {estado_mx} | ÁNGULO: {tema['angulo']}\nELEMENTO: \"{elemento_imposible}\"\nÍNDICE: {indice}\nESTE CAP: {cap.get('titulo', '')} → {cap.get('resumen', '')}\n{extra}\nFINAL ANTERIOR: {previo}\nREGLAS: EXACTAMENTE 300-400 palabras por capítulo. Español mexicano. MÁXIMO TERROR CONCRETO. SHOWING. SOLO texto."
         texto = None
         for intento in range(3):
             t = llm(prompt, temperature=0.85, max_tokens=1000); t = limpiar_texto_narracion(t) if t else ""
@@ -376,7 +391,7 @@ def generar_capitulos(plan, tema, contexto, estado_mx):
 
 def expandir_texto(titulo, texto_actual, ronda=1):
     cantidad = 400 if ronda == 1 else 300
-    prompt = f'Relato: "{titulo}". Final actual:\n"""\n{texto_actual[-800:]}\n"""\nAñade EXACTAMENTE {cantidad} palabras que profundicen el desenlace con un giro perturbador adicional. Mismo tono, mismo narrador, mismo lugar. NO resuelvas todo. NO repitas lo ya dicho. SOLO el texto nuevo, sin títulos ni explicaciones.'
+    prompt = f'Relato: "{titulo}". Final actual:\n"""\n{texto_actual[-800:]}\n"""\nAñade EXACTAMENTE {cantidad} palabras que profundicen el desenlace con un giro perturbador adicional. Mismo tono, mismo narrador, mismo lugar. NO resuelvas todo. NO repitas lo ya dicho. SOLO el texto nuevo.'
     for _ in range(2):
         t = llm(prompt, temperature=0.8, max_tokens=1200); t = limpiar_texto_narracion(t) if t else ""
         if len(t.split()) > 250: return t
@@ -386,12 +401,8 @@ OUTROS = ["Y hasta aquí llega mi historia. Si te mantuvo despierto, suscríbete
 FORMATOS_NARRACION = [{"nombre": "primera_persona", "instruccion": "Primera persona directa."}, {"nombre": "confesion", "instruccion": "Confesión urgente."}, {"nombre": "carta_mensaje", "instruccion": "Carta/mensaje."}, {"nombre": "diario", "instruccion": "Diario con fechas."}, {"nombre": "testigo", "instruccion": "Testigo cuenta lo de otro."}]
 PERFILES_NARRADOR = ["velador", "conductor nocturno", "médico de guardia", "ama de casa", "turista", "jornalero", "estudiante", "taxista", "mecánico", "maestro rural", "obrero", "fotógrafo", "cuidador", "comerciante", "bombero"]
 
-def generar_avatar_audiencia(plan, tema):
-    return None
-
-def bloquear_perfil(estado, formato, perfil, vid):
-    estado["perfil_lock"] = {"formato": formato["nombre"], "perfil": perfil, "video_id": vid}
-    return True
+def generar_avatar_audiencia(plan, tema): return None
+def bloquear_perfil(estado, formato, perfil, vid): return True
 
 # ================= SEGMENTOS Y AUDIO =================
 def dividir_en_segmentos(texto, max_palabras=SEG_MAX_PALABRAS):
@@ -608,11 +619,13 @@ def renderizar(escenas, total, audio, size, salida):
     render.cerrar(); video.close(); return salida
 
 # ================= MINIATURAS =================
-def obtener_fuente(size):
-    os.makedirs("fonts", exist_ok=True); ruta = "fonts/Anton-Regular.ttf"
+def obtener_fuente(size, font_idx=0):
+    os.makedirs("fonts", exist_ok=True); 
+    url = FONT_URLS[font_idx % len(FONT_URLS)]
+    ruta = f"fonts/font_{font_idx}.ttf"
     if not os.path.exists(ruta):
         try:
-            r = requests.get(FUENTE_URL, timeout=20)
+            r = requests.get(url, timeout=20)
             if r.status_code == 200 and len(r.content) > 20000:
                 with open(ruta, "wb") as f: f.write(r.content)
         except Exception: pass
@@ -697,52 +710,77 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
         match = next((s for s in ESTILOS_IDENTIDAD if s["nombre"] == forzar_estilo), None)
         if match: estilo = match
     estilo = estilo or elegir_estilo_miniatura()
+    layout = random.choice([1, 2, 3, 4])
+    font_idx = random.randint(0, len(FONT_URLS)-1)
     try:
         if img_rostro_path and os.path.exists(img_rostro_path):
             img = Image.open(img_rostro_path).convert("RGB")
-            if img.width < img.height:
-                img_rostro = ImageOps.fit(img, (int(TW * 0.60), TH), Image.LANCZOS, centering=(0.5, 0.3))
-                img = Image.new("RGB", (TW, TH), (5, 5, 15)); img.paste(img_rostro, (0, 0))
-            else: img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
+            img = ImageOps.fit(img, (TW, TH), Image.LANCZOS)
         else:
             img = Image.new("RGB", (TW, TH), (8, 10, 20))
             for y in range(TH):
                 c = (int(5 + 20 * y / TH), int(10 + 25 * y / TH), int(20 + 35 * y / TH))
                 ImageDraw.Draw(img).line([(0, y), (TW, y)], fill=c)
+        
         img = ImageEnhance.Contrast(img).enhance(1.55); img = ImageEnhance.Color(img).enhance(1.25); img = ImageEnhance.Sharpness(img).enhance(2.3); img = ImageEnhance.Brightness(img).enhance(0.92)
         grad = Image.new("L", (TW, TH), 0); gd = ImageDraw.Draw(grad)
-        for x in range(TW):
-            alpha = int(255 * max(0, min(1, (x / TW - 0.35) / 0.40))); gd.line([(x, 0), (x, TH)], fill=alpha)
+        
+        # Generar gradiente según layout
+        if layout == 1: # Texto a la derecha
+            for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(255 * max(0, min(1, (x / TW - 0.35) / 0.40))))
+        elif layout == 2: # Texto a la izquierda
+            for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(255 * max(0, min(1, ((TW-x) / TW - 0.35) / 0.40))))
+        elif layout == 3: # Texto abajo
+            for y in range(TH): gd.line([(0, y), (TW, y)], fill=int(255 * max(0, min(1, (y / TH - 0.3) / 0.5))))
+        else: # Texto arriba
+            for y in range(TH): gd.line([(0, y), (TW, y)], fill=int(255 * max(0, min(1, ((TH-y) / TH - 0.3) / 0.5))))
+            
         img = Image.composite(Image.new("RGB", (TW, TH), (0, 0, 0)), img, grad)
         arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.55); img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
         texto_upper = texto.upper(); palabras = texto_upper.split()[:4]; lineas = dividir_lineas(palabras)
-        x_inicio = int(TW * 0.55); max_w_texto = TW - x_inicio - 40; max_h_texto = int(TH * 0.75)
+        
+        if layout == 1: x_inicio, max_w_texto = int(TW * 0.55), TW - int(TW * 0.55) - 40
+        elif layout == 2: x_inicio, max_w_texto = 40, int(TW * 0.45) - 40
+        else: x_inicio, max_w_texto = 60, TW - 120
+        
+        max_h_texto = int(TH * 0.75)
         size_final = 60
         for size in range(140, 55, -6):
-            font = obtener_fuente(size); cajas = [font.getbbox(l) for l in lineas]; ancho_max = max(b[2] - b[0] for b in cajas); alto_total = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
+            font = obtener_fuente(size, font_idx); cajas = [font.getbbox(l) for l in lineas]; ancho_max = max(b[2] - b[0] for b in cajas); alto_total = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
             if ancho_max <= max_w_texto and alto_total <= max_h_texto: size_final = size; break
-        font = obtener_fuente(size_final); cajas = [font.getbbox(l) for l in lineas]; alto_total = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
-        y = (TH - alto_total) // 2; pos_lineas = []
+        
+        font = obtener_fuente(size_final, font_idx); cajas = [font.getbbox(l) for l in lineas]; alto_total = sum(b[3] - b[1] for b in cajas) + 18 * (len(lineas) - 1)
+        
+        if layout == 1 or layout == 2: y = (TH - alto_total) // 2
+        elif layout == 3: y = TH - alto_total - 60
+        else: y = 60
+        
+        pos_lineas = []
         for l, b in zip(lineas, cajas):
             ancho_l = b[2] - b[0]; x = x_inicio + (max_w_texto - ancho_l) // 2; pos_lineas.append((l, x, y - b[1])); y += (b[3] - b[1]) + 18
+        
         glow = Image.new("RGBA", (TW, TH), (0, 0, 0, 0)); gdraw = ImageDraw.Draw(glow)
         for l, x, yy in pos_lineas: gdraw.text((x, yy), l, font=font, fill=estilo["color_acento"] + (255,), stroke_width=14, stroke_fill=estilo["color_acento"] + (255,))
         img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(24)))
+        
         draw = ImageDraw.Draw(img); borde = max(8, size_final // 14)
         for i, (l, x, yy) in enumerate(pos_lineas): draw.text((x, yy), l, font=font, fill=(estilo["color_acento"] if (i == len(pos_lineas) - 1) else estilo["color_texto"]) + (255,), stroke_width=borde, stroke_fill=estilo["stroke"] + (255,))
+        
         elem = estilo.get("elemento", "ninguno")
         if elem == "flecha_roja":
-            ax, ay = int(TW * 0.52), int(TH * 0.85); draw.polygon([(ax, ay), (ax + 80, ay - 40), (ax + 80, ay - 20), (ax + 140, ay - 20), (ax + 140, ay + 20), (ax + 80, ay + 20), (ax + 80, ay + 40)], fill=(255, 20, 20, 255))
+            ax, ay = (int(TW * 0.52), int(TH * 0.85)) if layout == 1 else (int(TW * 0.40), int(TH * 0.85)); draw.polygon([(ax, ay), (ax + 80, ay - 40), (ax + 80, ay - 20), (ax + 140, ay - 20), (ax + 140, ay + 20), (ax + 80, ay + 20), (ax + 80, ay + 40)], fill=(255, 20, 20, 255))
         elif elem == "triangulo_peligro":
-            cx, cy = int(TW * 0.30), int(TH * 0.55); size_t = 90; draw.polygon([(cx, cy - size_t), (cx - size_t, cy + size_t // 2), (cx + size_t, cy + size_t // 2)], fill=(255, 220, 0, 255), outline=(0, 0, 0, 255)); draw.text((cx - 15, cy - 20), "!", font=obtener_fuente(int(size_t * 1.2)), fill=(0, 0, 0, 255))
+            cx, cy = int(TW * 0.30), int(TH * 0.55); size_t = 90; draw.polygon([(cx, cy - size_t), (cx - size_t, cy + size_t // 2), (cx + size_t, cy + size_t // 2)], fill=(255, 220, 0, 255), outline=(0, 0, 0, 255)); draw.text((cx - 15, cy - 20), "!", font=obtener_fuente(int(size_t * 1.2), font_idx), fill=(0, 0, 0, 255))
         elif elem == "x_roja":
             cx, cy = int(TW * 0.28), int(TH * 0.5); r = 100; draw.line([(cx - r, cy - r), (cx + r, cy + r)], fill=(255, 20, 20, 255), width=22); draw.line([(cx + r, cy - r), (cx - r, cy + r)], fill=(255, 20, 20, 255), width=22)
+            
         rgb = img.convert("RGB")
         for q in (92, 87, 82, 76, 70):
             rgb.save(salida, "JPEG", quality=q, optimize=True)
             if os.path.getsize(salida) < 1_900_000: break
+        print(f"✅ Miniatura [Layout {layout}] [Font {font_idx}]")
         return True
-    except Exception: return False
+    except Exception as e: print(f"❌ Error miniatura: {e}"); return False
 
 # ================= SEO Y TAGS =================
 def _ascii_tag_yt(t):
@@ -799,10 +837,12 @@ def generar_srt(segs, ruta):
     return ruta
 
 def seleccionar_voz_semana(estado):
-    return VOCES_ROTACION[len(estado.get("videos", [])) % len(VOCES_ROTACION)]
+    v = random.choice(VOCES_ROTACION)
+    # Aleatorizar rate y pitch para que suene como una persona totalmente distinta
+    return {"voz": v["voz"], "tono": f"{random.randint(-5, 2)}Hz", "rate": f"+{random.randint(5, 15)}%"}
 
 def seleccionar_estilo_semana(estado):
-    return IDENTIDAD_VISUAL["estilos_rotacion"][len(estado.get("videos", [])) % len(IDENTIDAD_VISUAL["estilos_rotacion"])]
+    return random.choice(IDENTIDAD_VISUAL["estilos_rotacion"])
 
 def generar_comentario_fijado(plan, tema):
     pregunta = plan.get("pregunta_comentario") or random.choice([f"¿Ustedes qué harían si les pasara algo así en {random.choice(tema['contextos'])}?", "¿Creen que estas leyendas tienen algo de real?", "¿Cuál es la historia más extraña que les ha pasado?"])
@@ -912,14 +952,14 @@ def main():
     if os.getenv("FORCE_PUBLISH") == "true": print("⚡ FORCE_PUBLISH activo")
     elif not deberia_publicar(estado): sys.exit(0)
 
-    NUM_CAPITULOS = random.choice([4, 4, 5, 5])
+    NUM_CAPITULOS = random.choice([3, 4, 4, 5, 5, 6])
     VOZ_CANAL = seleccionar_voz_semana(estado); estilo_semana = seleccionar_estilo_semana(estado)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v7.1 BLINDAJE")
-    print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} | 🎬 videos: {USAR_VIDEOS}")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.0 MEGA DIVERSIDAD")
+    print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} ({VOZ_CANAL['rate']}, {VOZ_CANAL['tono']}) | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | SEG_ESCENA={SEG_ESCENA}s | INTERVALO={INTERVALO_MIN_HORAS}h")
-    print(f"🎯 v7.1: {estilo_semana} + voice rotation + disclosure multi-capa + duración blindada")
+    print(f"🎯 v9.0: Layouts aleatorios, fuentes variadas, títulos irrepetibles")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
@@ -931,7 +971,7 @@ def main():
     fondo = seleccionar_fondo(estado); titulos_previos = cargar_json(TITULOS_LARGOS_FILE, {"titulos": []})["titulos"][-20:]
 
     plan = titulo = None
-    for intento in range(4):
+    for intento in range(6):
         try:
             plan = generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos, formato_narracion=formato, perfil_narrador=perfil)
             if plan.get("palabras_clave") and tema_ya_usado(" ".join(map(str, plan["palabras_clave"]))): raise ValueError("tema repetido")
@@ -940,7 +980,7 @@ def main():
             plan["_formato_instruccion"] = formato["instruccion"]; plan["_perfil_narrador"] = perfil; plan["_nombre_formato"] = formato["nombre"]
             break
         except Exception as e:
-            print(f"⚠️ Plan intento {intento+1}/4: {e}"); plan = None; time.sleep(5)
+            print(f"⚠️ Plan intento {intento+1}/6: {e}"); plan = None; time.sleep(5)
     if not plan: print("❌ No se pudo generar un plan válido."); sys.exit(1)
 
     try: anio = int(plan.get("anio_suceso"))
