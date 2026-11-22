@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "The Deep Rot.mp3",
     "Black Maw.mp3",
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
@@ -9,26 +8,15 @@
     "Cold Hollow.mp3",
     "Black Maw.mp3",
     "Sunless Vault.mp3",
-    "The Deep Rot.mp3"
+    "The Deep Rot.mp3",
+    "Hollow Marrow.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-21T20:10:13.716144-06:00",
+  "ultima_publicacion": "2026-11-22T02:02:17.186195-06:00",
   "videos": [
-    {
-      "id": "23Oa6bFQzd8",
-      "titulo": "Trabajé de noche en Cancún y la IA supo mi secreto | Relato de Terror",
-      "tema": "ia_maldita",
-      "fecha": "2026-09-20T13:02:40.586627-06:00"
-    },
-    {
-      "id": "gGM0WkZIKvM",
-      "titulo": "Escuché el audio maldito en mi casa de Nayarit a las 3 AM | Relato de Terror",
-      "tema": "creepypasta",
-      "fecha": "2026-09-22T11:05:34.717927-06:00"
-    },
     {
       "id": "Pro9dKG6gVM",
       "titulo": "El archivo OCULTO en la deep web sabía mi nombre | Relato de Terror",
@@ -430,15 +418,35 @@
       "voz": "es-ES-AlvaroNeural",
       "estilo_miniatura": "advertencia_amarillo",
       "fecha": "2026-11-21T20:10:13.716144-06:00"
+    },
+    {
+      "id": "gXCDpdnsXKU",
+      "titulo": "El velador que oye llorar al río de Morelos #Shorts",
+      "tema": "llorona",
+      "tipo": "short",
+      "fecha": "2026-11-22T02:02:17.186157-06:00"
+    },
+    {
+      "id": "fyWIEOm38CQ",
+      "titulo": "¿Por qué NADIE cruza el río del pueblo de noche? El lloro es real",
+      "tema": "llorona",
+      "formato": "testigo",
+      "perfil": "velador",
+      "elemento_imposible": "El llanto de la llorona se graba en el agua y solo lo escucha quien va a morir o su velador",
+      "estado_mx": "Morelos",
+      "duracion_min": 10.9,
+      "voz": "es-CO-GonzaloNeural",
+      "estilo_miniatura": "miedo_rojo",
+      "fecha": "2026-11-22T02:02:17.186195-06:00"
     }
   ],
   "temas_recientes": [
-    "espejo_maldito",
     "carretera",
     "payaso_maldito",
     "posesion",
     "brujas",
-    "chupacabras"
+    "chupacabras",
+    "llorona"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
