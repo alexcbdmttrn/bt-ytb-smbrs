@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Black Maw.mp3",
     "Ash and Marrow.mp3",
     "Hollow Marrow.mp3",
     "Sunless Vault.mp3",
@@ -9,26 +8,15 @@
     "Black Maw.mp3",
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
-    "Hollow Marrow.mp3"
+    "Hollow Marrow.mp3",
+    "Sunken Dread.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-22T02:02:17.186195-06:00",
+  "ultima_publicacion": "2026-11-23T00:59:00.413226-06:00",
   "videos": [
-    {
-      "id": "Pro9dKG6gVM",
-      "titulo": "El archivo OCULTO en la deep web sabía mi nombre | Relato de Terror",
-      "tema": "deep_web",
-      "fecha": "2026-09-24T23:55:53.366896-06:00"
-    },
-    {
-      "id": "twrfVcu-bLw",
-      "titulo": "El número desconocido me llamó 7 noches al SÓTANO | Relato de Terror",
-      "tema": "llamada_misteriosa",
-      "fecha": "2026-09-25T22:35:37.907628-06:00"
-    },
     {
       "id": "0Cpsfq5tqMM",
       "titulo": "El espejo de la subasta en Colima me susurra a las 3:33 AM | Relato de Terror",
@@ -438,15 +426,35 @@
       "voz": "es-CO-GonzaloNeural",
       "estilo_miniatura": "miedo_rojo",
       "fecha": "2026-11-22T02:02:17.186195-06:00"
+    },
+    {
+      "id": "NE9QcfEh0AM",
+      "titulo": "El cuaderno de Oaxaca: la maldición de los Acevedo #Shorts",
+      "tema": "maldicion",
+      "tipo": "short",
+      "fecha": "2026-11-23T00:59:00.413200-06:00"
+    },
+    {
+      "id": "y9MPAYisPnY",
+      "titulo": "¿Quién apagó las velas del altar familiar en 2014?",
+      "tema": "maldicion",
+      "formato": "diario",
+      "perfil": "comerciante",
+      "elemento_imposible": "El cuaderno de cuentas de la familia se escribe solo con el nombre del siguiente que morirá, y la fecha aparece tachada con sangre seca.",
+      "estado_mx": "Oaxaca",
+      "duracion_min": 10.7,
+      "voz": "es-ES-AlvaroNeural",
+      "estilo_miniatura": "miedo_rojo",
+      "fecha": "2026-11-23T00:59:00.413226-06:00"
     }
   ],
   "temas_recientes": [
-    "carretera",
     "payaso_maldito",
     "posesion",
     "brujas",
     "chupacabras",
-    "llorona"
+    "llorona",
+    "maldicion"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
