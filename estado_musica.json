@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Hollow Marrow.mp3",
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
     "Cold Hollow.mp3",
@@ -9,26 +8,15 @@
     "The Deep Rot.mp3",
     "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
-    "Ash and Marrow.mp3"
+    "Ash and Marrow.mp3",
+    "Sunless Vault.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-24T11:39:38.996570-06:00",
+  "ultima_publicacion": "2026-11-25T08:22:06.213396-06:00",
   "videos": [
-    {
-      "id": "aiEJAgv2rzM",
-      "titulo": "Si ves una gasolinera abierta a las 3 AM en Zacatecas, NO pares",
-      "tema": "carretera",
-      "fecha": "2026-09-28T19:50:17.242544-06:00"
-    },
-    {
-      "id": "Pi_mFaUnsu8",
-      "titulo": "La voz de mi mamá me siguió 4 noches en la carretera | Relato de Terror",
-      "tema": "skinwalker",
-      "fecha": "2026-09-29T16:16:00.616043-06:00"
-    },
     {
       "id": "caEDwB1xys8",
       "titulo": "Si encuentras un ritual en una cueva, NO lo termines | Relato de Terror",
@@ -454,15 +442,35 @@
       "voz": "es-MX-ManuelNeural",
       "estilo_miniatura": "misterio_blanco",
       "fecha": "2026-11-24T11:39:38.996570-06:00"
+    },
+    {
+      "id": "qoFzKidl4lY",
+      "titulo": "El skinwalker que imitaba voces en Sonora #Shorts",
+      "tema": "skinwalker",
+      "tipo": "short",
+      "fecha": "2026-11-25T08:22:06.213369-06:00"
+    },
+    {
+      "id": "fHvluTdkTsE",
+      "titulo": "Lo que mi tía escuchó en el bosque la noche del 2014",
+      "tema": "skinwalker",
+      "formato": "testigo",
+      "perfil": "ama de casa",
+      "elemento_imposible": "La criatura imita la voz de cualquier persona con una precisión perfecta, pero no puede pronunciar el nombre de Dios.",
+      "estado_mx": "Sonora",
+      "duracion_min": 12.1,
+      "voz": "es-MX-DaliaNeural",
+      "estilo_miniatura": "miedo_rojo",
+      "fecha": "2026-11-25T08:22:06.213396-06:00"
     }
   ],
   "temas_recientes": [
-    "posesion",
     "brujas",
     "chupacabras",
     "llorona",
     "maldicion",
-    "mina_abandonada"
+    "mina_abandonada",
+    "skinwalker"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
