@@ -355,14 +355,14 @@ def elegir_texto_portada(opciones, titulo):
         if mejor is None or sc > mejor[0]: mejor = (sc, o)
     return mejor[1] if mejor else random.choice(fallbacks)
 
-ESQUEMA_PLAN = "{\n \"titulos\": [\"8 títulos de 45-68 caracteres. CADA TÍTULO DEBE TENER UNA ESTRUCTURA SINTÁCTICA COMPLETAMENTE DISTINTA. No repitas prefijos como 'Por qué nadie'.\"],\n \"anio_suceso\": 2014, \"protagonista\": \"nombre\", \"elemento_imposible\": \"detalle\", \"gancho\": \"1-2 frases\",\n \"resumen\": \"sinopsis\", \"palabras_clave\": [\"5 keywords SEO\"], \"palabras_portada\": [\"3 opciones MAYÚSCULAS\"],\n \"miniatura_escena\": \"4-6 palabras inglés\", \"descripcion_gancho\": \"2 líneas\", \"titulo_short\": \"máx 55 caracteres\",\n \"pregunta_comentario\": \"pregunta\", \"tags\": [\"10 tags\"], \"capitulos\": [{\"titulo\": \"2-4 palabras\", \"resumen\": \"qué pasa\"}]\n}"
+ESQUEMA_PLAN = "{\n \"titulos\": [\"8 títulos de 45-68 caracteres. CADA TÍTULO DEBE TENER UNA ESTRUCTURA SINTÁCTICA COMPLETAMENTE DISTINTA.\"],\n \"anio_suceso\": 2014, \"protagonista\": \"nombre\", \"elemento_imposible\": \"detalle\", \"gancho\": \"1-2 frases\",\n \"resumen\": \"sinopsis\", \"palabras_clave\": [\"5 keywords SEO\"], \"palabras_portada\": [\"3 opciones MAYÚSCULAS\"],\n \"miniatura_escena\": \"4-6 palabras inglés\", \"descripcion_gancho\": \"2 líneas\", \"titulo_short\": \"máx 55 caracteres\",\n \"pregunta_comentario\": \"pregunta\", \"tags\": [\"15 tags\"], \"capitulos\": [{\"titulo\": \"2-4 palabras\", \"resumen\": \"qué pasa\"}]\n}"
 
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos, formato_narracion=None, perfil_narrador=None):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"; sug  = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     hint = tema.get("elemento_imposible_hint", "")
     if formato_narracion is None: formato_narracion = FORMATOS_NARRACION[0]
     if perfil_narrador is None: perfil_narrador = "persona común"
-    prompt = f"Eres showrunner de TERROR. Guion de ~8-12 min, {NUM_CAPITULOS} capítulos.\nTEMA: {tema['tema']} | ÁNGULO: {tema['angulo']} | LUGAR: {contexto}, {estado_mx}.\n{hint}\nFORMATO: {formato_narracion['nombre'].upper()} {formato_narracion['instruccion']}\nPERFIL: {perfil_narrador}\nBÚSQUEDAS: {sug}\nTÍTULOS YA PUBLICADOS: {prev}\nREGLA ESTRICTA: Genera 8 títulos. NO REPITAS ESTRUCTURAS. Si usas 'Por qué', el siguiente debe ser una afirmación, otro una confesión, etc.\nSOLO JSON: {ESQUEMA_PLAN}"
+    prompt = f"Eres showrunner de TERROR. Guion de ~8-12 min, {NUM_CAPITULOS} capítulos.\nTEMA: {tema['tema']} | ÁNGULO: {tema['angulo']} | LUGAR: {contexto}, {estado_mx}.\n{hint}\nFORMATO: {formato_narracion['nombre'].upper()} {formato_narracion['instruccion']}\nPERFIL: {perfil_narrador}\nBÚSQUEDAS: {sug}\nTÍTULOS YA PUBLICADOS: {prev}\nREGLA ESTRICTA: Genera 8 títulos. NO REPITAS ESTRUCTURAS.\nSOLO JSON: {ESQUEMA_PLAN}"
     txt = llm(prompt, temperature=0.95, max_tokens=2400, json_mode=True); plan = parsear_json(txt)
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3 and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS and plan.get("gancho") and plan.get("palabras_portada") and plan.get("elemento_imposible")): raise ValueError("plan incompleto")
     return plan
@@ -722,21 +722,22 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
                 c = (int(5 + 20 * y / TH), int(10 + 25 * y / TH), int(20 + 35 * y / TH))
                 ImageDraw.Draw(img).line([(0, y), (TW, y)], fill=c)
         
-        img = ImageEnhance.Contrast(img).enhance(1.55); img = ImageEnhance.Color(img).enhance(1.25); img = ImageEnhance.Sharpness(img).enhance(2.3); img = ImageEnhance.Brightness(img).enhance(0.92)
+        # SUBIR BRILLO y BAJAR CONTRASTE PARA QUE SE VEA LA IMAGEN
+        img = ImageEnhance.Contrast(img).enhance(1.35); img = ImageEnhance.Color(img).enhance(1.25); img = ImageEnhance.Sharpness(img).enhance(2.3); img = ImageEnhance.Brightness(img).enhance(1.15)
         grad = Image.new("L", (TW, TH), 0); gd = ImageDraw.Draw(grad)
         
-        # Generar gradiente según layout
+        # Gradiente más suave
         if layout == 1: # Texto a la derecha
-            for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(255 * max(0, min(1, (x / TW - 0.35) / 0.40))))
+            for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(200 * max(0, min(1, (x / TW - 0.40) / 0.60))))
         elif layout == 2: # Texto a la izquierda
-            for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(255 * max(0, min(1, ((TW-x) / TW - 0.35) / 0.40))))
+            for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(200 * max(0, min(1, ((TW-x) / TW - 0.40) / 0.60))))
         elif layout == 3: # Texto abajo
-            for y in range(TH): gd.line([(0, y), (TW, y)], fill=int(255 * max(0, min(1, (y / TH - 0.3) / 0.5))))
+            for y in range(TH): gd.line([(0, y), (TW, y)], fill=int(200 * max(0, min(1, (y / TH - 0.35) / 0.65))))
         else: # Texto arriba
-            for y in range(TH): gd.line([(0, y), (TW, y)], fill=int(255 * max(0, min(1, ((TH-y) / TH - 0.3) / 0.5))))
+            for y in range(TH): gd.line([(0, y), (TW, y)], fill=int(200 * max(0, min(1, ((TH-y) / TH - 0.35) / 0.65))))
             
         img = Image.composite(Image.new("RGB", (TW, TH), (0, 0, 0)), img, grad)
-        arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.55); img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
+        arr = np.asarray(img, dtype=np.float32) * vignette((TW, TH), 1.0, 0.25); img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
         texto_upper = texto.upper(); palabras = texto_upper.split()[:4]; lineas = dividir_lineas(palabras)
         
         if layout == 1: x_inicio, max_w_texto = int(TW * 0.55), TW - int(TW * 0.55) - 40
@@ -758,7 +759,14 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
         pos_lineas = []
         for l, b in zip(lineas, cajas):
             ancho_l = b[2] - b[0]; x = x_inicio + (max_w_texto - ancho_l) // 2; pos_lineas.append((l, x, y - b[1])); y += (b[3] - b[1]) + 18
-        
+            
+        # DIBUJAR FONDO NEGRO DETRAS DEL TEXTO PARA QUE RESALTE
+        overlay_bg = Image.new("RGBA", (TW, TH), (0,0,0,0)); bg_draw = ImageDraw.Draw(overlay_bg)
+        for l, x, yy in pos_lineas:
+            bbox = font.getbbox(l)
+            bg_draw.rectangle([x - 15, yy - 10, x + (bbox[2]-bbox[0]) + 15, yy + (bbox[3]-bbox[1]) + 10], fill=(0,0,0,160))
+        img = Image.alpha_composite(img, overlay_bg)
+
         glow = Image.new("RGBA", (TW, TH), (0, 0, 0, 0)); gdraw = ImageDraw.Draw(glow)
         for l, x, yy in pos_lineas: gdraw.text((x, yy), l, font=font, fill=estilo["color_acento"] + (255,), stroke_width=14, stroke_fill=estilo["color_acento"] + (255,))
         img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(24)))
@@ -787,7 +795,8 @@ def _ascii_tag_yt(t):
     nfd = unicodedata.normalize('NFD', str(t)); sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
     limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower()); return re.sub(r'\s+', ' ', limpio).strip()
 
-def _sanitizar_tags(tags, max_tags=15, max_chars_tag=28, max_words=3):
+def _sanitizar_tags(tags, max_tags=30, max_chars_tag=40, max_words=5):
+    # Se relajan los límites para permitir Long-Tail Keywords
     limpios, vistos = [], set()
     for t in tags or []:
         if not isinstance(t, str): continue
@@ -801,14 +810,34 @@ def _sanitizar_tags(tags, max_tags=15, max_chars_tag=28, max_words=3):
     random.shuffle(limpios); return limpios
 
 def construir_tags(plan, tema, sugerencias, estado_mx=""):
-    nombre_tema = _ascii_tag_yt(tema["tema"].replace("_", " ")); estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
-    exactos = list(plan.get("tags", []))[:5]
-    broad = ["terror", "miedo", "horror", "paranormal", "misterio", "relatos de terror", "historias de terror"]
-    curiosity_gap = [f"que hay en {nombre_tema}", f"por que nadie sube a {nombre_tema}", f"el secreto de {nombre_tema}", f"lo que ocultan en {nombre_tema}"]
-    if estado_ascii: curiosity_gap.append(f"misterio en {estado_ascii}")
-    long_tail = [f"terror en {estado_ascii}", f"leyendas de {estado_ascii}", f"historias de terror {nombre_tema}", f"relatos de terror {nombre_tema}"]
-    todos = exactos + curiosity_gap + long_tail + broad + list(sugerencias)[:3] + list(tema["keywords"])[:3]
-    return _sanitizar_tags(todos)
+    nombre_tema = _ascii_tag_yt(tema["tema"].replace("_", " "))
+    estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
+    
+    # 1. Tags de la IA (hasta 15)
+    exactos = list(plan.get("tags", []))[:15]
+    
+    # 2. Tags generales
+    broad = ["terror", "miedo", "horror", "paranormal", "misterio", "relatos de terror", "historias de terror", "documental de terror"]
+    
+    # 3. Tags combinados (Long-Tail SEO)
+    long_tail = []
+    if estado_ascii:
+        long_tail += [f"terror en {estado_ascii}", f"leyendas de {estado_ascii}", f"misterio en {estado_ascii}"]
+    
+    long_tail += [
+        f"historias de terror {nombre_tema}", f"relatos de terror {nombre_tema}", 
+        f"que hay en {nombre_tema}", f"el secreto de {nombre_tema}", 
+        f"por que nadie sube a {nombre_tema}", f"lo que ocultan en {nombre_tema}",
+        f"peligro en {nombre_tema}", f"{nombre_tema} real", f"caso de {nombre_tema}"
+    ]
+    
+    # 4. Tags específicos del tema + Búsquedas
+    especificos = list(tema["keywords"])
+    busquedas = list(sugerencias)[:10]
+    
+    # Juntar todo y sanitizar
+    todos = exactos + broad + long_tail + especificos + busquedas
+    return _sanitizar_tags(todos, max_tags=35, max_chars_tag=45, max_words=6)
 
 def construir_hashtags(tema):
     hs = ["#RelatosDeTerror", "#Terror", "#Paranormal"] + tema.get("hashtags", [])[:2] + ["#Mexico"]
@@ -838,7 +867,6 @@ def generar_srt(segs, ruta):
 
 def seleccionar_voz_semana(estado):
     v = random.choice(VOCES_ROTACION)
-    # Aleatorizar rate y pitch para que suene como una persona totalmente distinta
     return {"voz": v["voz"], "tono": f"{random.randint(-5, 2)}Hz", "rate": f"+{random.randint(5, 15)}%"}
 
 def seleccionar_estilo_semana(estado):
@@ -870,7 +898,9 @@ def utc_iso(dt): return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.
 def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
     status = {"privacyStatus": "public", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
     if publish_at: status.update({"privacyStatus": "private", "publishAt": publish_at})
-    tags = _sanitizar_tags(tags, max_tags=15, max_chars_tag=22, max_words=2)
+    
+    tags = _sanitizar_tags(tags, max_tags=35, max_chars_tag=45, max_words=6)
+    
     body = {"snippet": {"title": titulo[:100], "description": descripcion[:5000], "tags": tags, "categoryId": "24", "defaultLanguage": "es", "defaultAudioLanguage": "es"}, "status": status}
     media = MediaFileUpload(ruta, chunksize=8 * 1024 * 1024, resumable=True, mimetype="video/mp4")
     req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
@@ -882,7 +912,7 @@ def subir_video(youtube, ruta, titulo, descripcion, tags, publish_at=None):
         except (HttpError, ssl.SSLEOFError, ConnectionError, socket.timeout, OSError) as e:
             if isinstance(e, HttpError) and e.resp.status == 400 and "invalidTags" in str(e):
                 print(f"⚠️ invalidTags. Reintentando con tags seguros...")
-                body["snippet"]["tags"] = _sanitizar_tags(tags, max_tags=10, max_chars_tag=20, max_words=2)
+                body["snippet"]["tags"] = _sanitizar_tags(tags, max_tags=15, max_chars_tag=20, max_words=3)
                 req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
                 continue
             es_reintento = (isinstance(e, HttpError) and e.resp.status in (429, 500, 502, 503, 504)) or isinstance(e, (ssl.SSLEOFError, ConnectionError, socket.timeout, OSError))
@@ -956,10 +986,10 @@ def main():
     VOZ_CANAL = seleccionar_voz_semana(estado); estilo_semana = seleccionar_estilo_semana(estado)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.0 MEGA DIVERSIDAD")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.1 MEGA SEO & VISUAL FIX")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} ({VOZ_CANAL['rate']}, {VOZ_CANAL['tono']}) | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | SEG_ESCENA={SEG_ESCENA}s | INTERVALO={INTERVALO_MIN_HORAS}h")
-    print(f"🎯 v9.0: Layouts aleatorios, fuentes variadas, títulos irrepetibles")
+    print(f"🎯 v9.1: Miniaturas iluminadas + 35 tags long-tail")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
