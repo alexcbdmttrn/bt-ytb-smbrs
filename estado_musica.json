@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Sunless Vault.mp3",
     "The Deep Rot.mp3",
     "Cold Hollow.mp3",
     "Black Maw.mp3",
@@ -9,26 +8,15 @@
     "Hollow Marrow.mp3",
     "Sunken Dread.mp3",
     "Ash and Marrow.mp3",
-    "Sunless Vault.mp3"
+    "Sunless Vault.mp3",
+    "Black Maw.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-25T08:22:06.213396-06:00",
+  "ultima_publicacion": "2026-11-26T04:56:46.417881-06:00",
   "videos": [
-    {
-      "id": "caEDwB1xys8",
-      "titulo": "Si encuentras un ritual en una cueva, NO lo termines | Relato de Terror",
-      "tema": "ritual",
-      "fecha": "2026-09-30T13:12:05.283584-06:00"
-    },
-    {
-      "id": "0D_ReapbF78",
-      "titulo": "Trabajé de velador y la cámara 4 vio lo que no estaba | Relato de Terror",
-      "tema": "velador",
-      "fecha": "2026-10-01T18:01:11.780526-06:00"
-    },
     {
       "id": "1vePLa3tgIM",
       "titulo": "Trabajé 7 noches de guardia y el paciente de la 3 seguía ahí después de morir",
@@ -462,15 +450,35 @@
       "voz": "es-MX-DaliaNeural",
       "estilo_miniatura": "miedo_rojo",
       "fecha": "2026-11-25T08:22:06.213396-06:00"
+    },
+    {
+      "id": "_SOKQrMuwqc",
+      "titulo": "El sótano de Puebla que no debí invocar #Shorts",
+      "tema": "demonios",
+      "tipo": "short",
+      "fecha": "2026-11-26T04:56:46.417856-06:00"
+    },
+    {
+      "id": "tU4lN0Ryaqc",
+      "titulo": "Mi diario de 2014: el demonio del sótano en Puebla sigue contestando",
+      "tema": "demonios",
+      "formato": "diario",
+      "perfil": "fotógrafo",
+      "elemento_imposible": "Una entidad demoníaca responde a una invocación accidental y aparece en las fotos reveladas, pero no en el visor digital; se alimenta de la atención de quien mira.",
+      "estado_mx": "Puebla",
+      "duracion_min": 12.2,
+      "voz": "es-ES-AlvaroNeural",
+      "estilo_miniatura": "secreto_naranja",
+      "fecha": "2026-11-26T04:56:46.417881-06:00"
     }
   ],
   "temas_recientes": [
-    "brujas",
     "chupacabras",
     "llorona",
     "maldicion",
     "mina_abandonada",
-    "skinwalker"
+    "skinwalker",
+    "demonios"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
