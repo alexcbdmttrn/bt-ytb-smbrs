@@ -258,11 +258,20 @@ def detectar_outliers(youtube, keyword, max_subs=OUTLIER_MAX_SUBS, min_ratio=OUT
         s = youtube.search().list(part="id,snippet", q=keyword, type="video", order="viewCount", publishedAfter=desde, relevanceLanguage="es", regionCode="MX", maxResults=25).execute()
         vids = [i["id"]["videoId"] for i in s.get("items", [])]
         if not vids: return []
+        
         v_resp = youtube.videos().list(part="statistics,snippet", id=",".join(vids)).execute()
         ch_ids, rows = set(), []
         for v in v_resp.get("items", []):
             ch = v["snippet"]["channelId"]; ch_ids.add(ch)
-            rows.append({"video_id": v["id"], "title": v["snippet"]["title"], "channel_id": ch, "channel_title": v["snippet"]["channelTitle"], "views": int(v["statistics"].get("viewCount", 0))})
+            vistas = int(v["statistics"].get("viewCount", 0))
+            likes = int(v["statistics"].get("likeCount", 0))
+            
+            # V9.2 ENGAGED VIEWS FILTER: Si tiene mas de 1000 vistas y menos del 1% de likes, es vista inflada (TV)
+            if vistas > 1000 and (likes / vistas) < 0.01:
+                continue
+                
+            rows.append({"video_id": v["id"], "title": v["snippet"]["title"], "channel_id": ch, "channel_title": v["snippet"]["channelTitle"], "views": vistas})
+            
         subs_map = {}
         for chunk in _chunks(list(ch_ids), 50):
             c = youtube.channels().list(part="statistics", id=",".join(chunk)).execute()
@@ -726,7 +735,6 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
         img = ImageEnhance.Contrast(img).enhance(1.35); img = ImageEnhance.Color(img).enhance(1.25); img = ImageEnhance.Sharpness(img).enhance(2.3); img = ImageEnhance.Brightness(img).enhance(1.15)
         grad = Image.new("L", (TW, TH), 0); gd = ImageDraw.Draw(grad)
         
-        # Gradiente más suave
         if layout == 1: # Texto a la derecha
             for x in range(TW): gd.line([(x, 0), (x, TH)], fill=int(200 * max(0, min(1, (x / TW - 0.40) / 0.60))))
         elif layout == 2: # Texto a la izquierda
@@ -760,7 +768,7 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
         for l, b in zip(lineas, cajas):
             ancho_l = b[2] - b[0]; x = x_inicio + (max_w_texto - ancho_l) // 2; pos_lineas.append((l, x, y - b[1])); y += (b[3] - b[1]) + 18
             
-        # DIBUJAR FONDO NEGRO DETRAS DEL TEXTO PARA QUE RESALTE
+        # FONDO NEGRO DETRÁS DEL TEXTO PARA QUE RESALTE
         overlay_bg = Image.new("RGBA", (TW, TH), (0,0,0,0)); bg_draw = ImageDraw.Draw(overlay_bg)
         for l, x, yy in pos_lineas:
             bbox = font.getbbox(l)
@@ -795,7 +803,7 @@ def _ascii_tag_yt(t):
     nfd = unicodedata.normalize('NFD', str(t)); sin_acentos = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
     limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower()); return re.sub(r'\s+', ' ', limpio).strip()
 
-def _sanitizar_tags(tags, max_tags=30, max_chars_tag=40, max_words=5):
+def _sanitizar_tags(tags, max_tags=35, max_chars_tag=45, max_words=6):
     # Se relajan los límites para permitir Long-Tail Keywords
     limpios, vistos = [], set()
     for t in tags or []:
@@ -813,13 +821,9 @@ def construir_tags(plan, tema, sugerencias, estado_mx=""):
     nombre_tema = _ascii_tag_yt(tema["tema"].replace("_", " "))
     estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
     
-    # 1. Tags de la IA (hasta 15)
     exactos = list(plan.get("tags", []))[:15]
-    
-    # 2. Tags generales
     broad = ["terror", "miedo", "horror", "paranormal", "misterio", "relatos de terror", "historias de terror", "documental de terror"]
     
-    # 3. Tags combinados (Long-Tail SEO)
     long_tail = []
     if estado_ascii:
         long_tail += [f"terror en {estado_ascii}", f"leyendas de {estado_ascii}", f"misterio en {estado_ascii}"]
@@ -831,11 +835,9 @@ def construir_tags(plan, tema, sugerencias, estado_mx=""):
         f"peligro en {nombre_tema}", f"{nombre_tema} real", f"caso de {nombre_tema}"
     ]
     
-    # 4. Tags específicos del tema + Búsquedas
     especificos = list(tema["keywords"])
     busquedas = list(sugerencias)[:10]
     
-    # Juntar todo y sanitizar
     todos = exactos + broad + long_tail + especificos + busquedas
     return _sanitizar_tags(todos, max_tags=35, max_chars_tag=45, max_words=6)
 
@@ -986,10 +988,10 @@ def main():
     VOZ_CANAL = seleccionar_voz_semana(estado); estilo_semana = seleccionar_estilo_semana(estado)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.1 MEGA SEO & VISUAL FIX")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.2 MEGA SEO & VISUAL FIX")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} ({VOZ_CANAL['rate']}, {VOZ_CANAL['tono']}) | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | SEG_ESCENA={SEG_ESCENA}s | INTERVALO={INTERVALO_MIN_HORAS}h")
-    print(f"🎯 v9.1: Miniaturas iluminadas + 35 tags long-tail")
+    print(f"🎯 v9.2: Miniaturas iluminadas + 35 tags long-tail + Filtro Engaged Views")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
