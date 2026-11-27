@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "The Deep Rot.mp3",
     "Cold Hollow.mp3",
     "Black Maw.mp3",
     "Sunless Vault.mp3",
@@ -9,26 +8,15 @@
     "Sunken Dread.mp3",
     "Ash and Marrow.mp3",
     "Sunless Vault.mp3",
-    "Black Maw.mp3"
+    "Black Maw.mp3",
+    "Cold Hollow.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-26T04:56:46.417881-06:00",
+  "ultima_publicacion": "2026-11-27T08:11:13.748570-06:00",
   "videos": [
-    {
-      "id": "1vePLa3tgIM",
-      "titulo": "Trabajé 7 noches de guardia y el paciente de la 3 seguía ahí después de morir",
-      "tema": "hospital",
-      "fecha": "2026-10-02T17:52:04.131858-06:00"
-    },
-    {
-      "id": "yJ9bRgL76s4",
-      "titulo": "El túnel de Nuevo León me llevó a los Backrooms y no encontré salida",
-      "tema": "backrooms",
-      "fecha": "2026-10-03T17:00:44.094852-06:00"
-    },
     {
       "id": "5cncPgKLve8",
       "titulo": "4 noches escuché mi voz en el desierto de Querétaro y no era yo",
@@ -470,15 +458,35 @@
       "voz": "es-ES-AlvaroNeural",
       "estilo_miniatura": "secreto_naranja",
       "fecha": "2026-11-26T04:56:46.417881-06:00"
+    },
+    {
+      "id": "XshzTorRodo",
+      "titulo": "El ser que habló sin mover la boca en Hidalgo #Shorts",
+      "tema": "encuentro_cercano",
+      "tipo": "short",
+      "fecha": "2026-11-27T08:11:13.748547-06:00"
+    },
+    {
+      "id": "WF_0Pw-R9xI",
+      "titulo": "Nadie en el campo de Hidalgo quiere recordar la noche del 2014",
+      "tema": "encuentro_cercano",
+      "formato": "testigo",
+      "perfil": "maestro rural",
+      "elemento_imposible": "El ser se comunicaba sin mover la boca, y su voz sonaba dentro de la cabeza de todos a la vez.",
+      "estado_mx": "Hidalgo",
+      "duracion_min": 11.4,
+      "voz": "es-MX-DaliaNeural",
+      "estilo_miniatura": "misterio_blanco",
+      "fecha": "2026-11-27T08:11:13.748570-06:00"
     }
   ],
   "temas_recientes": [
-    "chupacabras",
     "llorona",
     "maldicion",
     "mina_abandonada",
     "skinwalker",
-    "demonios"
+    "demonios",
+    "encuentro_cercano"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
