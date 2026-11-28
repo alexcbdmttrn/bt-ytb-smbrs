@@ -205,6 +205,8 @@ def titulo_empieza_igual(titulo):
     primeras3 = titulo.lower().split()[:3]
     for t in data["titulos"][-15:]:
         if t.lower().split()[:3] == primeras3: return True
+    tl = titulo.lower()
+    if tl.startswith("5 cosas") or tl.startswith("lo que tu") or tl.startswith("por qué nunca"): return True
     return False
 
 def guardar_titulo_largo(titulo):
@@ -258,20 +260,13 @@ def detectar_outliers(youtube, keyword, max_subs=OUTLIER_MAX_SUBS, min_ratio=OUT
         s = youtube.search().list(part="id,snippet", q=keyword, type="video", order="viewCount", publishedAfter=desde, relevanceLanguage="es", regionCode="MX", maxResults=25).execute()
         vids = [i["id"]["videoId"] for i in s.get("items", [])]
         if not vids: return []
-        
         v_resp = youtube.videos().list(part="statistics,snippet", id=",".join(vids)).execute()
         ch_ids, rows = set(), []
         for v in v_resp.get("items", []):
             ch = v["snippet"]["channelId"]; ch_ids.add(ch)
-            vistas = int(v["statistics"].get("viewCount", 0))
-            likes = int(v["statistics"].get("likeCount", 0))
-            
-            # V9.2 ENGAGED VIEWS FILTER: Si tiene mas de 1000 vistas y menos del 1% de likes, es vista inflada (TV)
-            if vistas > 1000 and (likes / vistas) < 0.01:
-                continue
-                
+            vistas = int(v["statistics"].get("viewCount", 0)); likes = int(v["statistics"].get("likeCount", 0))
+            if vistas > 1000 and (likes / vistas) < 0.01: continue 
             rows.append({"video_id": v["id"], "title": v["snippet"]["title"], "channel_id": ch, "channel_title": v["snippet"]["channelTitle"], "views": vistas})
-            
         subs_map = {}
         for chunk in _chunks(list(ch_ids), 50):
             c = youtube.channels().list(part="statistics", id=",".join(chunk)).execute()
@@ -288,7 +283,7 @@ def detectar_outliers(youtube, keyword, max_subs=OUTLIER_MAX_SUBS, min_ratio=OUT
     except Exception: return []
 
 def cruzar_temas(tema_original, outlier):
-    prompt = f"Estratega de YouTube. Cruza estos temas para un video de terror.\nTEMA: {tema_original['tema']} | ÁNGULO: {tema_original['angulo']}\nOUTLIER: {outlier['title']} ({outlier['views']} vistas)\nReglas: UN video, buscable, conserva nicho, sugiere ELEMENTO IMPOSIBLE.\nSOLO JSON: {{\"tema\":\"slug\",\"angulo\":\"...\",\"keywords\":[\"k1\",\"k2\",\"k3\",\"k4\",\"k5\"], \"elemento_imposible_sugerido\":\"...\"}}"
+    prompt = f"Estratega de YouTube. Cruza estos temas para un video de terror.\nTEMA: {tema_original['tema']} | ÁNGULO: {tema_original['angulo']}\nOUTLIER: {outlier['title']} ({outlier['views']} vistas)\nReglas: UN video, buscable, conserva nicho, sugiere ELEMENTO IMPOSIBLE. PROHIBIDO AÑOS EN TITULOS.\nSOLO JSON: {{\"tema\":\"slug\",\"angulo\":\"...\",\"keywords\":[\"k1\",\"k2\",\"k3\",\"k4\",\"k5\"], \"elemento_imposible_sugerido\":\"...\"}}"
     try:
         txt = llm(prompt, temperature=0.9, max_tokens=600, json_mode=True); d = parsear_json(txt)
         if d.get("tema") and d.get("angulo") and d.get("keywords"): return d
@@ -322,11 +317,14 @@ GENERICAS = ["misterio", "leyenda", "relato", "caso", "historia de terror"]
 SIGLAS_INTOCABLES = {"ADN", "ARN", "NASA", "ONU", "IA", "EEUU", "COVID", "VIH", "SIDA", "OVNI", "PIB", "UE", "OMS", "POV", "TDAH", "OCD", "IQ", "CI", "FGR", "CIA", "FBI", "DEA", "DNI", "GPS", "CCTV", "USB", "LED", "RIP"}
 
 def limpiar_titulo(t):
-    t = t.strip().strip('"').strip("'"); t = re.sub(r"\s+", " ", t); t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", "", t, flags=re.I).rstrip(".")
+    t = t.strip().strip('"').strip("'"); t = re.sub(r"\s+", " ", t)
+    # POLICÍA DE FECHAS: Eliminamos cualquier año (19xx o 20xx) del título
+    t = re.sub(r"\b(19|20)\d{2}\b", "", t)
+    t = re.sub(r"\s*[-|–]\s*relato de terror\s*$", "", t, flags=re.I).rstrip(".")
     palabras = t.split(); caps = [w for w in palabras if len(re.sub(r"\W", " ", w)) >= 3 and w.isupper() and w not in SIGLAS_INTOCABLES]
     if len(caps) > 3:
         keep = set(caps[:2]) | SIGLAS_INTOCABLES; palabras = [w if (not w.isupper() or w in keep or len(w) < 3) else w.capitalize() for w in palabras]
-    return " ".join(palabras)
+    return " ".join(palabras).replace("  ", " ").strip()
 
 def puntuar_titulo(t):
     s, n, tl = 0, len(t), t.lower()
@@ -336,7 +334,11 @@ def puntuar_titulo(t):
     elif n > 95 or n < 25: s -= 8
     else: s -= 2
     s += min(8, sum(1 for g in GANCHOS if g in tl) * 2)
-    if re.search(r"\d", t): s += 3
+    
+    # Penalización si se cuela un año (por si las dudas)
+    if re.search(r"\b(19|20)\d{2}\b", t): s -= 15
+    elif re.search(r"\d", t): s += 3
+        
     if any(p in tl for p in PROHIBIDAS): s -= 8
     if any(tl.startswith(g) for g in GENERICAS): s -= 6
     return s
@@ -356,7 +358,9 @@ def elegir_texto_portada(opciones, titulo):
     fallbacks = ["NO SUBAS", "PROHIBIDO", "EL SECRETO", "NO ENTRES", "OCULTAN", "NO MIRES", "PELIGRO", "CUIDADO", "ALERTA"]
     for o in opciones or []:
         if not isinstance(o, str): continue
-        o = re.sub(r"[^\w¿?¡! ]", "", o).strip().upper(); w = o.split()
+        o = re.sub(r"[^\w¿?¡! ]", "", o).strip().upper()
+        if re.search(r"\b(19|20)\d{2}\b", o): continue # Evitar años en miniatura
+        w = o.split()
         if not 1 <= len(w) <= 4: continue
         solape = len({x.lower() for x in w} & pt) / len(w)
         sc = (3 if len(w) in (2, 3) else 1) - 2 * solape + (1 if "?" in o else 0)
@@ -364,14 +368,14 @@ def elegir_texto_portada(opciones, titulo):
         if mejor is None or sc > mejor[0]: mejor = (sc, o)
     return mejor[1] if mejor else random.choice(fallbacks)
 
-ESQUEMA_PLAN = "{\n \"titulos\": [\"8 títulos de 45-68 caracteres. CADA TÍTULO DEBE TENER UNA ESTRUCTURA SINTÁCTICA COMPLETAMENTE DISTINTA.\"],\n \"anio_suceso\": 2014, \"protagonista\": \"nombre\", \"elemento_imposible\": \"detalle\", \"gancho\": \"1-2 frases\",\n \"resumen\": \"sinopsis\", \"palabras_clave\": [\"5 keywords SEO\"], \"palabras_portada\": [\"3 opciones MAYÚSCULAS\"],\n \"miniatura_escena\": \"4-6 palabras inglés\", \"descripcion_gancho\": \"2 líneas\", \"titulo_short\": \"máx 55 caracteres\",\n \"pregunta_comentario\": \"pregunta\", \"tags\": [\"15 tags\"], \"capitulos\": [{\"titulo\": \"2-4 palabras\", \"resumen\": \"qué pasa\"}]\n}"
+ESQUEMA_PLAN = "{\n \"titulos\": [\"8 títulos de 45-68 caracteres. CADA TÍTULO DEBE TENER UNA ESTRUCTURA SINTÁCTICA COMPLETAMENTE DISTINTA. PROHIBIDO INCLUIR AÑOS (ej: 2014) EN LOS TÍTULOS.\"],\n \"anio_suceso\": 2014, \"protagonista\": \"nombre\", \"elemento_imposible\": \"detalle\", \"gancho\": \"1-2 frases\",\n \"resumen\": \"sinopsis\", \"palabras_clave\": [\"5 keywords SEO\"], \"palabras_portada\": [\"3 opciones MAYÚSCULAS\"],\n \"miniatura_escena\": \"4-6 palabras inglés\", \"descripcion_gancho\": \"2 líneas\", \"titulo_short\": \"máx 55 caracteres\",\n \"pregunta_comentario\": \"pregunta\", \"tags\": [\"15 tags\"], \"capitulos\": [{\"titulo\": \"2-4 palabras\", \"resumen\": \"qué pasa\"}]\n}"
 
 def generar_plan(tema, contexto, estado_mx, sugerencias, titulos_previos, formato_narracion=None, perfil_narrador=None):
     prev = "\n".join(f"- {t}" for t in titulos_previos) or "Ninguno"; sug  = "\n".join(f"- {s}" for s in sugerencias) or "Ninguna"
     hint = tema.get("elemento_imposible_hint", "")
     if formato_narracion is None: formato_narracion = FORMATOS_NARRACION[0]
     if perfil_narrador is None: perfil_narrador = "persona común"
-    prompt = f"Eres showrunner de TERROR. Guion de ~8-12 min, {NUM_CAPITULOS} capítulos.\nTEMA: {tema['tema']} | ÁNGULO: {tema['angulo']} | LUGAR: {contexto}, {estado_mx}.\n{hint}\nFORMATO: {formato_narracion['nombre'].upper()} {formato_narracion['instruccion']}\nPERFIL: {perfil_narrador}\nBÚSQUEDAS: {sug}\nTÍTULOS YA PUBLICADOS: {prev}\nREGLA ESTRICTA: Genera 8 títulos. NO REPITAS ESTRUCTURAS.\nSOLO JSON: {ESQUEMA_PLAN}"
+    prompt = f"Eres showrunner de TERROR. Guion de ~8-12 min, {NUM_CAPITULOS} capítulos.\nTEMA: {tema['tema']} | ÁNGULO: {tema['angulo']} | LUGAR: {contexto}, {estado_mx}.\n{hint}\nFORMATO: {formato_narracion['nombre'].upper()} {formato_narracion['instruccion']}\nPERFIL: {perfil_narrador}\nBÚSQUEDAS: {sug}\nTÍTULOS YA PUBLICADOS: {prev}\nREGLA ESTRICTA: Genera 8 títulos. NO REPITAS ESTRUCTURAS. PROHIBIDO USAR AÑOS O FECHAS EN LOS TÍTULOS (ej: '2014'). Si el año es importante, solo menciónalo dentro de la historia, no en el título.\nSOLO JSON: {ESQUEMA_PLAN}"
     txt = llm(prompt, temperature=0.95, max_tokens=2400, json_mode=True); plan = parsear_json(txt)
     if not (isinstance(plan.get("titulos"), list) and len(plan["titulos"]) >= 3 and isinstance(plan.get("capitulos"), list) and len(plan["capitulos"]) >= NUM_CAPITULOS and plan.get("gancho") and plan.get("palabras_portada") and plan.get("elemento_imposible")): raise ValueError("plan incompleto")
     return plan
@@ -731,7 +735,6 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
                 c = (int(5 + 20 * y / TH), int(10 + 25 * y / TH), int(20 + 35 * y / TH))
                 ImageDraw.Draw(img).line([(0, y), (TW, y)], fill=c)
         
-        # SUBIR BRILLO y BAJAR CONTRASTE PARA QUE SE VEA LA IMAGEN
         img = ImageEnhance.Contrast(img).enhance(1.35); img = ImageEnhance.Color(img).enhance(1.25); img = ImageEnhance.Sharpness(img).enhance(2.3); img = ImageEnhance.Brightness(img).enhance(1.15)
         grad = Image.new("L", (TW, TH), 0); gd = ImageDraw.Draw(grad)
         
@@ -768,7 +771,6 @@ def crear_miniatura_v68(img_rostro_path, texto, salida, estilo=None, forzar_esti
         for l, b in zip(lineas, cajas):
             ancho_l = b[2] - b[0]; x = x_inicio + (max_w_texto - ancho_l) // 2; pos_lineas.append((l, x, y - b[1])); y += (b[3] - b[1]) + 18
             
-        # FONDO NEGRO DETRÁS DEL TEXTO PARA QUE RESALTE
         overlay_bg = Image.new("RGBA", (TW, TH), (0,0,0,0)); bg_draw = ImageDraw.Draw(overlay_bg)
         for l, x, yy in pos_lineas:
             bbox = font.getbbox(l)
@@ -804,7 +806,6 @@ def _ascii_tag_yt(t):
     limpio = re.sub(r'[^a-z0-9 ]', '', sin_acentos.lower()); return re.sub(r'\s+', ' ', limpio).strip()
 
 def _sanitizar_tags(tags, max_tags=35, max_chars_tag=45, max_words=6):
-    # Se relajan los límites para permitir Long-Tail Keywords
     limpios, vistos = [], set()
     for t in tags or []:
         if not isinstance(t, str): continue
@@ -820,24 +821,12 @@ def _sanitizar_tags(tags, max_tags=35, max_chars_tag=45, max_words=6):
 def construir_tags(plan, tema, sugerencias, estado_mx=""):
     nombre_tema = _ascii_tag_yt(tema["tema"].replace("_", " "))
     estado_ascii = _ascii_tag_yt(estado_mx) if estado_mx else ""
-    
     exactos = list(plan.get("tags", []))[:15]
     broad = ["terror", "miedo", "horror", "paranormal", "misterio", "relatos de terror", "historias de terror", "documental de terror"]
-    
     long_tail = []
-    if estado_ascii:
-        long_tail += [f"terror en {estado_ascii}", f"leyendas de {estado_ascii}", f"misterio en {estado_ascii}"]
-    
-    long_tail += [
-        f"historias de terror {nombre_tema}", f"relatos de terror {nombre_tema}", 
-        f"que hay en {nombre_tema}", f"el secreto de {nombre_tema}", 
-        f"por que nadie sube a {nombre_tema}", f"lo que ocultan en {nombre_tema}",
-        f"peligro en {nombre_tema}", f"{nombre_tema} real", f"caso de {nombre_tema}"
-    ]
-    
-    especificos = list(tema["keywords"])
-    busquedas = list(sugerencias)[:10]
-    
+    if estado_ascii: long_tail += [f"terror en {estado_ascii}", f"leyendas de {estado_ascii}", f"misterio en {estado_ascii}"]
+    long_tail += [f"historias de terror {nombre_tema}", f"relatos de terror {nombre_tema}", f"que hay en {nombre_tema}", f"el secreto de {nombre_tema}", f"por que nadie sube a {nombre_tema}", f"lo que ocultan en {nombre_tema}", f"peligro en {nombre_tema}", f"{nombre_tema} real", f"caso de {nombre_tema}"]
+    especificos = list(tema["keywords"]); busquedas = list(sugerencias)[:10]
     todos = exactos + broad + long_tail + especificos + busquedas
     return _sanitizar_tags(todos, max_tags=35, max_chars_tag=45, max_words=6)
 
@@ -988,10 +977,10 @@ def main():
     VOZ_CANAL = seleccionar_voz_semana(estado); estilo_semana = seleccionar_estilo_semana(estado)
     
     print("=" * 70)
-    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.2 MEGA SEO & VISUAL FIX")
+    print("👻 SOMBRAS DE MEDIANOCHE - BOT v9.3 ANTI-FECHAS")
     print(f"📅 {datetime.now(TZ):%Y-%m-%d %H:%M} | 🎤 {VOZ_CANAL['voz']} ({VOZ_CANAL['rate']}, {VOZ_CANAL['tono']}) | 🎬 videos: {USAR_VIDEOS}")
     print(f"📚 Temas: {len(TEMAS)} | SEG_ESCENA={SEG_ESCENA}s | INTERVALO={INTERVALO_MIN_HORAS}h")
-    print(f"🎯 v9.2: Miniaturas iluminadas + 35 tags long-tail + Filtro Engaged Views")
+    print(f"🎯 v9.3: Bloqueo de años en títulos y miniaturas")
     print("=" * 70)
 
     actualizar_rendimiento(youtube, estado)
