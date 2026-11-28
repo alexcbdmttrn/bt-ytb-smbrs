@@ -1,6 +1,5 @@
 {
   "ultimos_fondos": [
-    "Cold Hollow.mp3",
     "Black Maw.mp3",
     "Sunless Vault.mp3",
     "The Deep Rot.mp3",
@@ -9,26 +8,15 @@
     "Ash and Marrow.mp3",
     "Sunless Vault.mp3",
     "Black Maw.mp3",
-    "Cold Hollow.mp3"
+    "Cold Hollow.mp3",
+    "Ash and Marrow.mp3"
   ],
   "ultima_publicacion_exitosa": "2026-11-15",
   "fecha": "2026-09-18",
   "publicaciones_hoy": 1,
   "dia_descanso": null,
-  "ultima_publicacion": "2026-11-27T08:11:13.748570-06:00",
+  "ultima_publicacion": "2026-11-28T11:00:08.382263-06:00",
   "videos": [
-    {
-      "id": "5cncPgKLve8",
-      "titulo": "4 noches escuché mi voz en el desierto de Querétaro y no era yo",
-      "tema": "skinwalker",
-      "fecha": "2026-10-04T23:08:53.734382-06:00"
-    },
-    {
-      "id": "oFkukyo2MKg",
-      "titulo": "Si ves un círculo de sal en un cementerio, NO lo pises | Relato de Terror",
-      "tema": "ritual",
-      "fecha": "2026-10-05T23:57:01.317033-06:00"
-    },
     {
       "id": "Xi7LMRx9sdg",
       "titulo": "Vi al Nahual del río a las 3 AM en Baja California | Relato de Terror",
@@ -478,15 +466,35 @@
       "voz": "es-MX-DaliaNeural",
       "estilo_miniatura": "misterio_blanco",
       "fecha": "2026-11-27T08:11:13.748570-06:00"
+    },
+    {
+      "id": "0ASIRdHI9HE",
+      "titulo": "El hotel con cuartos que no existen #Shorts",
+      "tema": "hotel_embrujado",
+      "tipo": "short",
+      "fecha": "2026-11-28T11:00:08.382238-06:00"
+    },
+    {
+      "id": "_h5hqZV3RgM",
+      "titulo": "Me pidieron fotografiar el cuarto 17, pero no existe",
+      "tema": "hotel_embrujado",
+      "formato": "primera_persona",
+      "perfil": "fotógrafo",
+      "elemento_imposible": "Habitaciones que cambian de lugar en el plano y un huésped fallecido que sigue registrándose cada noche",
+      "estado_mx": "Estado de México",
+      "duracion_min": 10.9,
+      "voz": "es-CO-GonzaloNeural",
+      "estilo_miniatura": "miedo_rojo",
+      "fecha": "2026-11-28T11:00:08.382263-06:00"
     }
   ],
   "temas_recientes": [
-    "llorona",
     "maldicion",
     "mina_abandonada",
     "skinwalker",
     "demonios",
-    "encuentro_cercano"
+    "encuentro_cercano",
+    "hotel_embrujado"
   ],
   "avatar_audiencia": {
     "edad": "18-35",
